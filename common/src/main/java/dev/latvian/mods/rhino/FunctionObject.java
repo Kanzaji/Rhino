@@ -84,7 +84,7 @@ public class FunctionObject extends BaseFunction {
 	 * @param scope               enclosing scope of function
 	 * @see Scriptable
 	 */
-	public FunctionObject(String name, Member methodOrConstructor, Scriptable scope) {
+	public FunctionObject(Context cx, String name, Member methodOrConstructor, Scriptable scope) {
 		if (methodOrConstructor instanceof Constructor) {
 			member = new MemberBox((Constructor<?>) methodOrConstructor);
 			isStatic = true; // well, doesn't take a 'this'
@@ -100,12 +100,12 @@ public class FunctionObject extends BaseFunction {
 			// Either variable args or an error.
 			if (types[1].isArray()) {
 				if (!isStatic || types[0] != ScriptRuntime.ContextClass || types[1].getComponentType() != ScriptRuntime.ObjectClass || types[2] != ScriptRuntime.FunctionClass || types[3] != Boolean.TYPE) {
-					throw Context.reportRuntimeError1("msg.varargs.ctor", methodName);
+					throw Context.reportRuntimeError1(cx, "msg.varargs.ctor", methodName);
 				}
 				parmsLength = VARARGS_CTOR;
 			} else {
 				if (!isStatic || types[0] != ScriptRuntime.ContextClass || types[1] != ScriptRuntime.ScriptableClass || types[2].getComponentType() != ScriptRuntime.ObjectClass || types[3] != ScriptRuntime.FunctionClass) {
-					throw Context.reportRuntimeError1("msg.varargs.fun", methodName);
+					throw Context.reportRuntimeError1(cx, "msg.varargs.fun", methodName);
 				}
 				parmsLength = VARARGS_METHOD;
 			}
@@ -116,7 +116,7 @@ public class FunctionObject extends BaseFunction {
 				for (int i = 0; i != arity; ++i) {
 					int tag = getTypeTag(types[i]);
 					if (tag == JAVA_UNSUPPORTED_TYPE) {
-						throw Context.reportRuntimeError2("msg.bad.parms", types[i].getName(), methodName);
+						throw Context.reportRuntimeError2(cx, "msg.bad.parms", types[i].getName(), methodName);
 					}
 					typeTags[i] = (byte) tag;
 				}
@@ -134,7 +134,7 @@ public class FunctionObject extends BaseFunction {
 		} else {
 			Class<?> ctorType = member.getDeclaringClass();
 			if (!ScriptRuntime.ScriptableClass.isAssignableFrom(ctorType)) {
-				throw Context.reportRuntimeError1("msg.bad.ctor.return", ctorType.getName());
+				throw Context.reportRuntimeError1(cx, "msg.bad.ctor.return", ctorType.getName());
 			}
 		}
 
@@ -237,13 +237,13 @@ public class FunctionObject extends BaseFunction {
 		}
 	}
 
-	static Method findSingleMethod(Method[] methods, String name) {
+	static Method findSingleMethod(Context cx, Method[] methods, String name) {
 		Method found = null;
 		for (int i = 0, N = methods.length; i != N; ++i) {
 			Method method = methods[i];
 			if (method != null && name.equals(method.getName())) {
 				if (found != null) {
-					throw Context.reportRuntimeError2("msg.no.overload", name, method.getDeclaringClass().getName());
+					throw Context.reportRuntimeError2(cx, "msg.no.overload", name, method.getDeclaringClass().getName());
 				}
 				found = method;
 			}

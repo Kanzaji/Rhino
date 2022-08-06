@@ -36,7 +36,7 @@ public enum MemberType {
 		if (value instanceof Boolean) {
 			return BOOLEAN;
 		}
-		throw ScriptRuntime.errorWithClassName("msg.invalid.type", value);
+		throw ScriptRuntime.errorWithClassName(Context.getCurrentContext(), "msg.invalid.type", value);
 	}
 
 	@Override

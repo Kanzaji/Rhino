@@ -166,7 +166,7 @@ public final class JavaAdapter implements IdFunctionCall {
 		// next argument is implementation, must be scriptable
 		Scriptable obj = ScriptableObject.ensureScriptable(args[classCount]);
 
-		Class<?> adapterClass = getAdapterClass(scope, superClass, interfaces, obj);
+		Class<?> adapterClass = getAdapterClass(cx, scope, superClass, interfaces, obj);
 		Object adapter;
 
 		int argsCount = N - classCount - 1;
@@ -185,7 +185,7 @@ public final class JavaAdapter implements IdFunctionCall {
 				int index = ctors.findCachedFunction(cx, ctorArgs);
 				if (index < 0) {
 					String sig = NativeJavaMethod.scriptSignature(args);
-					throw Context.reportRuntimeError2("msg.no.java.ctor", adapterClass.getName(), sig);
+					throw Context.reportRuntimeError2(cx, "msg.no.java.ctor", adapterClass.getName(), sig);
 				}
 
 				// Found the constructor, so try invoking it.
@@ -258,7 +258,7 @@ public final class JavaAdapter implements IdFunctionCall {
 
 		Scriptable delegee = (Scriptable) in.readObject();
 
-		Class<?> adapterClass = getAdapterClass(self, superClass, interfaces, delegee);
+		Class<?> adapterClass = getAdapterClass(cx, self, superClass, interfaces, delegee);
 
 		Class<?>[] ctorParms = {ScriptRuntime.ContextFactoryClass, ScriptRuntime.ScriptableClass, ScriptRuntime.ScriptableClass};
 		Object[] ctorArgs = {factory, delegee, self};
@@ -292,7 +292,7 @@ public final class JavaAdapter implements IdFunctionCall {
 		return map;
 	}
 
-	private static Class<?> getAdapterClass(Scriptable scope, Class<?> superClass, Class<?>[] interfaces, Scriptable obj) {
+	private static Class<?> getAdapterClass(Context cx, Scriptable scope, Class<?> superClass, Class<?>[] interfaces, Scriptable obj) {
 		ClassCache cache = ClassCache.get(scope);
 		Map<JavaAdapterSignature, Class<?>> generated = cache.getInterfaceAdapterCacheMap();
 
@@ -302,7 +302,7 @@ public final class JavaAdapter implements IdFunctionCall {
 		Class<?> adapterClass = generated.get(sig);
 		if (adapterClass == null) {
 			String adapterName = "adapter" + cache.newClassSerialNumber();
-			byte[] code = createAdapterCode(names, adapterName, superClass, interfaces, null);
+			byte[] code = createAdapterCode(cx, names, adapterName, superClass, interfaces, null);
 
 			adapterClass = loadAdapterClass(adapterName, code);
 			if (cache.isCachingEnabled()) {
@@ -312,7 +312,7 @@ public final class JavaAdapter implements IdFunctionCall {
 		return adapterClass;
 	}
 
-	public static byte[] createAdapterCode(ObjToIntMap functionNames, String adapterName, Class<?> superClass, Class<?>[] interfaces, String scriptClassName) {
+	public static byte[] createAdapterCode(Context cx, ObjToIntMap functionNames, String adapterName, Class<?> superClass, Class<?>[] interfaces, String scriptClassName) {
 		ClassFileWriter cfw = new ClassFileWriter(adapterName, superClass.getName(), "<adapter>");
 		cfw.addField("factory", "Ldev/latvian/mods/rhino/ContextFactory;", (short) (ClassFileWriter.ACC_PUBLIC | ClassFileWriter.ACC_FINAL));
 		cfw.addField("delegee", "Ldev/latvian/mods/rhino/Scriptable;", (short) (ClassFileWriter.ACC_PUBLIC | ClassFileWriter.ACC_FINAL));
@@ -367,7 +367,7 @@ public final class JavaAdapter implements IdFunctionCall {
 				String methodSignature = getMethodSignature(method, argTypes);
 				String methodKey = methodName + methodSignature;
 				if (!generatedOverrides.has(methodKey)) {
-					generateMethod(cfw, adapterName, methodName, argTypes, method.getReturnType(), true);
+					generateMethod(cx, cfw, adapterName, methodName, argTypes, method.getReturnType(), true);
 					generatedOverrides.put(methodKey, 0);
 					generatedMethods.put(methodName, 0);
 				}
@@ -394,7 +394,7 @@ public final class JavaAdapter implements IdFunctionCall {
 				String methodSignature = getMethodSignature(method, argTypes);
 				String methodKey = methodName + methodSignature;
 				if (!generatedOverrides.has(methodKey)) {
-					generateMethod(cfw, adapterName, methodName, argTypes, method.getReturnType(), true);
+					generateMethod(cx, cfw, adapterName, methodName, argTypes, method.getReturnType(), true);
 					generatedOverrides.put(methodKey, 0);
 					generatedMethods.put(methodName, 0);
 
@@ -420,7 +420,7 @@ public final class JavaAdapter implements IdFunctionCall {
 			for (int k = 0; k < length; k++) {
 				parms[k] = ScriptRuntime.ObjectClass;
 			}
-			generateMethod(cfw, adapterName, functionName, parms, ScriptRuntime.ObjectClass, false);
+			generateMethod(cx, cfw, adapterName, functionName, parms, ScriptRuntime.ObjectClass, false);
 		}
 		return cfw.toByteArray();
 	}
@@ -721,7 +721,7 @@ public final class JavaAdapter implements IdFunctionCall {
 		}
 	}
 
-	private static void generateMethod(ClassFileWriter cfw, String genName, String methodName, Class<?>[] parms, Class<?> returnType, boolean convertResult) {
+	private static void generateMethod(Context cx, ClassFileWriter cfw, String genName, String methodName, Class<?>[] parms, Class<?> returnType, boolean convertResult) {
 		StringBuilder sb = new StringBuilder();
 		int paramsEnd = appendMethodSignature(parms, returnType, sb);
 		String methodSignature = sb.toString();
@@ -750,7 +750,7 @@ public final class JavaAdapter implements IdFunctionCall {
 		if (parms.length > 64) {
 			// If it will be an issue, then passing a static boolean array
 			// can be an option, but for now using simple bitmask
-			throw Context.reportRuntimeError0("JavaAdapter can not subclass methods with more then" + " 64 arguments.");
+			throw Context.reportRuntimeError0(cx, "JavaAdapter can not subclass methods with more then" + " 64 arguments.");
 		}
 		long convertionMask = 0;
 		for (int i = 0; i != parms.length; ++i) {

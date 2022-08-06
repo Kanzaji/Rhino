@@ -119,7 +119,7 @@ public class NativeJavaMethod extends BaseFunction {
 		if (index < 0) {
 			Class<?> c = methods[0].method().getDeclaringClass();
 			String sig = c.getName() + '.' + getFunctionName() + '(' + scriptSignature(args) + ')';
-			throw Context.reportRuntimeError1("msg.java.no_such_method", sig);
+			throw Context.reportRuntimeError1(cx, "msg.java.no_such_method", sig);
 		}
 
 		MemberBox meth = methods[index];
@@ -188,7 +188,7 @@ public class NativeJavaMethod extends BaseFunction {
 			Class<?> c = meth.getDeclaringClass();
 			for (; ; ) {
 				if (o == null) {
-					throw Context.reportRuntimeError3("msg.nonjava.method", getFunctionName(), ScriptRuntime.toString(thisObj), c.getName());
+					throw Context.reportRuntimeError3(cx, "msg.nonjava.method", getFunctionName(), ScriptRuntime.toString(thisObj), c.getName());
 				}
 				if (o instanceof Wrapper) {
 					javaObject = ((Wrapper) o).unwrap();
@@ -427,9 +427,9 @@ public class NativeJavaMethod extends BaseFunction {
 		String memberClass = firstFitMember.getDeclaringClass().getName();
 
 		if (methodsOrCtors[0].isCtor()) {
-			throw Context.reportRuntimeError3("msg.constructor.ambiguous", memberName, scriptSignature(args), buf.toString());
+			throw Context.reportRuntimeError3(cx, "msg.constructor.ambiguous", memberName, scriptSignature(args), buf.toString());
 		}
-		throw Context.reportRuntimeError4("msg.method.ambiguous", memberClass, memberName, scriptSignature(args), buf.toString());
+		throw Context.reportRuntimeError4(cx, "msg.method.ambiguous", memberClass, memberName, scriptSignature(args), buf.toString());
 	}
 
 	/**

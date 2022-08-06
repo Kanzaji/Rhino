@@ -37,7 +37,7 @@ public final class NativeContinuation extends IdScriptableObject implements Func
 
 	@Override
 	public Scriptable construct(Context cx, Scriptable scope, Object[] args) {
-		throw Context.reportRuntimeError("Direct call is not supported");
+		throw Context.reportRuntimeError(cx, "Direct call is not supported");
 	}
 
 	@Override
@@ -82,7 +82,7 @@ public final class NativeContinuation extends IdScriptableObject implements Func
 		}
 		int id = f.methodId();
 		switch (id) {
-			case Id_constructor -> throw Context.reportRuntimeError("Direct call is not supported");
+			case Id_constructor -> throw Context.reportRuntimeError(cx, "Direct call is not supported");
 		}
 		throw new IllegalArgumentException(String.valueOf(id));
 	}

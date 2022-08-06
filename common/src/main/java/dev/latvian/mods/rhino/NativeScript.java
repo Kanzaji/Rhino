@@ -55,7 +55,7 @@ class NativeScript extends BaseFunction {
 
 	@Override
 	public Scriptable construct(Context cx, Scriptable scope, Object[] args) {
-		throw Context.reportRuntimeError0("msg.script.is.not.constructor");
+		throw Context.reportRuntimeError0(cx, "msg.script.is.not.constructor");
 	}
 
 	@Override
@@ -112,7 +112,7 @@ class NativeScript extends BaseFunction {
 				return "not_supported";
 			}
 			case Id_exec -> {
-				throw Context.reportRuntimeError1("msg.cant.call.indirect", "exec");
+				throw Context.reportRuntimeError1(cx, "msg.cant.call.indirect", "exec");
 			}
 			case Id_compile -> {
 				NativeScript real = realThis(thisObj, f);

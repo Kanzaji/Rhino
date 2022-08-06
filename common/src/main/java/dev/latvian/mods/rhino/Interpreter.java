@@ -93,7 +93,7 @@ public final class Interpreter extends Icode implements Evaluator {
 			this.parentFrame = parentFrame;
 			frameIndex = (parentFrame == null) ? 0 : parentFrame.frameIndex + 1;
 			if (frameIndex > cx.getMaximumInterpreterStackDepth()) {
-				throw Context.reportRuntimeError("Exceeded maximum stack depth");
+				throw Context.reportRuntimeError(cx, "Exceeded maximum stack depth");
 			}
 
 			// Initialize initial values of variables that change during
@@ -127,7 +127,7 @@ public final class Interpreter extends Icode implements Evaluator {
 				}
 			} else {
 				scope = callerScope;
-				ScriptRuntime.initScript(fnOrScript, thisObj, cx, scope, fnOrScript.idata.evalScriptFlag);
+				ScriptRuntime.initScript(cx, fnOrScript, thisObj, scope, fnOrScript.idata.evalScriptFlag);
 			}
 
 			if (idata.itsNestedFunctions != null) {
@@ -1390,7 +1390,7 @@ public final class Interpreter extends Icode implements Evaluator {
 								indexReg = iCode[frame.pc++];
 								// fallthrough
 							case Token.SETCONSTVAR:
-								stackTop = doSetConstVar(frame, stack, sDbl, stackTop, vars, varDbls, varAttributes, indexReg);
+								stackTop = doSetConstVar(cx, frame, stack, sDbl, stackTop, vars, varDbls, varAttributes, indexReg);
 								continue;
 							case Icode_SETVAR1:
 								indexReg = iCode[frame.pc++];
@@ -2024,10 +2024,10 @@ public final class Interpreter extends Icode implements Evaluator {
 		return stackTop;
 	}
 
-	private static int doSetConstVar(CallFrame frame, Object[] stack, double[] sDbl, int stackTop, Object[] vars, double[] varDbls, int[] varAttributes, int indexReg) {
+	private static int doSetConstVar(Context cx, CallFrame frame, Object[] stack, double[] sDbl, int stackTop, Object[] vars, double[] varDbls, int[] varAttributes, int indexReg) {
 		if (!frame.useActivation) {
 			if ((varAttributes[indexReg] & ScriptableObject.READONLY) == 0) {
-				throw Context.reportRuntimeError1("msg.var.redecl", frame.idata.argNames[indexReg]);
+				throw Context.reportRuntimeError1(cx, "msg.var.redecl", frame.idata.argNames[indexReg]);
 			}
 			if ((varAttributes[indexReg] & ScriptableObject.UNINITIALIZED_CONST) != 0) {
 				vars[indexReg] = stack[stackTop];

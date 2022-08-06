@@ -47,17 +47,6 @@ public class Kit {
 		return null;
 	}
 
-	static Object newInstanceOrNull(Class<?> cl) {
-		try {
-			return cl.newInstance();
-		} catch (SecurityException x) {
-		} catch (LinkageError ex) {
-		} catch (InstantiationException x) {
-		} catch (IllegalAccessException x) {
-		}
-		return null;
-	}
-
 	/**
 	 * Check that testClass is accessible from the given loader.
 	 */

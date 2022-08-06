@@ -331,7 +331,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 			regexp.classList = new RECharSet[state.classCount];
 			regexp.classCount = state.classCount;
 		}
-		int endPC = emitREBytecode(state, regexp, 0, state.result);
+		int endPC = emitREBytecode(cx, state, regexp, 0, state.result);
 		regexp.program[endPC++] = REOP_END;
 
 		if (debug) {
@@ -1158,23 +1158,23 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 		return true;
 	}
 
-	private static void resolveForwardJump(byte[] array, int from, int pc) {
+	private static void resolveForwardJump(Context cx, byte[] array, int from, int pc) {
 		if (from > pc) {
 			throw Kit.codeBug();
 		}
-		addIndex(array, from, pc - from);
+		addIndex(cx, array, from, pc - from);
 	}
 
 	private static int getOffset(byte[] array, int pc) {
 		return getIndex(array, pc);
 	}
 
-	private static int addIndex(byte[] array, int pc, int index) {
+	private static int addIndex(Context cx, byte[] array, int pc, int index) {
 		if (index < 0) {
 			throw Kit.codeBug();
 		}
 		if (index > 0xFFFF) {
-			throw Context.reportRuntimeError("Too complex regexp");
+			throw Context.reportRuntimeError(cx, "Too complex regexp");
 		}
 		array[pc] = (byte) (index >> 8);
 		array[pc + 1] = (byte) (index);
@@ -1187,7 +1187,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 
 	private static final int INDEX_LEN = 2;
 
-	private static int emitREBytecode(CompilerState state, RECompiled re, int pc, RENode t) {
+	private static int emitREBytecode(Context cx, CompilerState state, RECompiled re, int pc, RENode t) {
 		RENode nextAlt;
 		int nextAltFixup, nextTermFixup;
 		byte[] program = re.program;
@@ -1202,28 +1202,28 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 				case REOP_ALTPREREQi:
 				case REOP_ALTPREREQ2:
 					boolean ignoreCase = t.op == REOP_ALTPREREQi;
-					addIndex(program, pc, ignoreCase ? upcase(t.chr) : t.chr);
+					addIndex(cx, program, pc, ignoreCase ? upcase(t.chr) : t.chr);
 					pc += INDEX_LEN;
-					addIndex(program, pc, ignoreCase ? upcase((char) t.index) : t.index);
+					addIndex(cx, program, pc, ignoreCase ? upcase((char) t.index) : t.index);
 					pc += INDEX_LEN;
 					// fall through to REOP_ALT
 				case REOP_ALT:
 					nextAlt = t.kid2;
 					nextAltFixup = pc;    /* address of next alternate */
 					pc += INDEX_LEN;
-					pc = emitREBytecode(state, re, pc, t.kid);
+					pc = emitREBytecode(cx, state, re, pc, t.kid);
 					program[pc++] = REOP_JUMP;
 					nextTermFixup = pc;    /* address of following term */
 					pc += INDEX_LEN;
-					resolveForwardJump(program, nextAltFixup, pc);
-					pc = emitREBytecode(state, re, pc, nextAlt);
+					resolveForwardJump(cx, program, nextAltFixup, pc);
+					pc = emitREBytecode(cx, state, re, pc, nextAlt);
 
 					program[pc++] = REOP_JUMP;
 					nextAltFixup = pc;
 					pc += INDEX_LEN;
 
-					resolveForwardJump(program, nextTermFixup, pc);
-					resolveForwardJump(program, nextAltFixup, pc);
+					resolveForwardJump(cx, program, nextTermFixup, pc);
+					resolveForwardJump(cx, program, nextAltFixup, pc);
 					break;
 				case REOP_FLAT:
 					/*
@@ -1241,8 +1241,8 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 						} else {
 							program[pc - 1] = REOP_FLAT;
 						}
-						pc = addIndex(program, pc, t.flatIndex);
-						pc = addIndex(program, pc, t.length);
+						pc = addIndex(cx, program, pc, t.flatIndex);
+						pc = addIndex(cx, program, pc, t.length);
 					} else {
 						if (t.chr < 256) {
 							if ((state.flags & JSREG_FOLD) != 0) {
@@ -1257,32 +1257,32 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 							} else {
 								program[pc - 1] = REOP_UCFLAT1;
 							}
-							pc = addIndex(program, pc, t.chr);
+							pc = addIndex(cx, program, pc, t.chr);
 						}
 					}
 					break;
 				case REOP_LPAREN:
-					pc = addIndex(program, pc, t.parenIndex);
-					pc = emitREBytecode(state, re, pc, t.kid);
+					pc = addIndex(cx, program, pc, t.parenIndex);
+					pc = emitREBytecode(cx, state, re, pc, t.kid);
 					program[pc++] = REOP_RPAREN;
-					pc = addIndex(program, pc, t.parenIndex);
+					pc = addIndex(cx, program, pc, t.parenIndex);
 					break;
 				case REOP_BACKREF:
-					pc = addIndex(program, pc, t.parenIndex);
+					pc = addIndex(cx, program, pc, t.parenIndex);
 					break;
 				case REOP_ASSERT:
 					nextTermFixup = pc;
 					pc += INDEX_LEN;
-					pc = emitREBytecode(state, re, pc, t.kid);
+					pc = emitREBytecode(cx, state, re, pc, t.kid);
 					program[pc++] = REOP_ASSERTTEST;
-					resolveForwardJump(program, nextTermFixup, pc);
+					resolveForwardJump(cx, program, nextTermFixup, pc);
 					break;
 				case REOP_ASSERT_NOT:
 					nextTermFixup = pc;
 					pc += INDEX_LEN;
-					pc = emitREBytecode(state, re, pc, t.kid);
+					pc = emitREBytecode(cx, state, re, pc, t.kid);
 					program[pc++] = REOP_ASSERTNOTTEST;
-					resolveForwardJump(program, nextTermFixup, pc);
+					resolveForwardJump(cx, program, nextTermFixup, pc);
 					break;
 				case REOP_QUANT:
 					if ((t.min == 0) && (t.max == -1)) {
@@ -1295,23 +1295,23 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 						if (!t.greedy) {
 							program[pc - 1] = REOP_MINIMALQUANT;
 						}
-						pc = addIndex(program, pc, t.min);
+						pc = addIndex(cx, program, pc, t.min);
 						// max can be -1 which addIndex does not accept
-						pc = addIndex(program, pc, t.max + 1);
+						pc = addIndex(cx, program, pc, t.max + 1);
 					}
-					pc = addIndex(program, pc, t.parenCount);
-					pc = addIndex(program, pc, t.parenIndex);
+					pc = addIndex(cx, program, pc, t.parenCount);
+					pc = addIndex(cx, program, pc, t.parenIndex);
 					nextTermFixup = pc;
 					pc += INDEX_LEN;
-					pc = emitREBytecode(state, re, pc, t.kid);
+					pc = emitREBytecode(cx, state, re, pc, t.kid);
 					program[pc++] = REOP_ENDCHILD;
-					resolveForwardJump(program, nextTermFixup, pc);
+					resolveForwardJump(cx, program, nextTermFixup, pc);
 					break;
 				case REOP_CLASS:
 					if (!t.sense) {
 						program[pc - 1] = REOP_NCLASS;
 					}
-					pc = addIndex(program, pc, t.index);
+					pc = addIndex(cx, program, pc, t.index);
 					re.classList[t.index] = new RECharSet(t.bmsize, t.startIndex, t.kidlen, t.sense);
 					break;
 				default:
@@ -2456,7 +2456,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 	private static void reportWarning(Context cx, String messageId, String arg) {
 		if (cx.hasFeature(Context.FEATURE_STRICT_MODE)) {
 			String msg = ScriptRuntime.getMessage1(messageId, arg);
-			Context.reportWarning(msg);
+			Context.reportWarning(cx, msg);
 		}
 	}
 

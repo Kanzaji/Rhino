@@ -335,7 +335,7 @@ public class ScriptRuntime {
 		if (val instanceof Scriptable) {
 			val = ((Scriptable) val).getDefaultValue(NumberClass);
 			if ((val instanceof Scriptable) && !isSymbol(val)) {
-				throw errorWithClassName("msg.primitive.expected", val);
+				throw errorWithClassName(Context.getCurrentContext(), "msg.primitive.expected", val);
 			}
 			return toNumber(val);
 		}
@@ -766,7 +766,7 @@ public class ScriptRuntime {
 		if (val instanceof Scriptable) {
 			val = ((Scriptable) val).getDefaultValue(StringClass);
 			if ((val instanceof Scriptable) && !isSymbol(val)) {
-				throw errorWithClassName("msg.primitive.expected", val);
+				throw errorWithClassName(Context.getCurrentContext(), "msg.primitive.expected", val);
 			}
 			return toString(val);
 		}
@@ -796,7 +796,7 @@ public class ScriptRuntime {
 
 	public static String numberToString(double d, int base) {
 		if ((base < 2) || (base > 36)) {
-			throw Context.reportRuntimeError1("msg.bad.radix", Integer.toString(base));
+			throw Context.reportRuntimeError1(Context.getCurrentContext(), "msg.bad.radix", Integer.toString(base));
 		}
 
 		if (Double.isNaN(d)) {
@@ -944,7 +944,7 @@ public class ScriptRuntime {
 		if (wrapped instanceof Scriptable) {
 			return (Scriptable) wrapped;
 		}
-		throw errorWithClassName("msg.invalid.type", val);
+		throw errorWithClassName(cx, "msg.invalid.type", val);
 	}
 
 	public static Scriptable newObject(Context cx, Scriptable scope, String constructorName, Object[] args) {
@@ -1063,9 +1063,9 @@ public class ScriptRuntime {
 			return (Function) ctorVal;
 		}
 		if (ctorVal == Scriptable.NOT_FOUND) {
-			throw Context.reportRuntimeError1("msg.ctor.not.found", constructorName);
+			throw Context.reportRuntimeError1(cx, "msg.ctor.not.found", constructorName);
 		}
-		throw Context.reportRuntimeError1("msg.not.ctor", constructorName);
+		throw Context.reportRuntimeError1(cx, "msg.not.ctor", constructorName);
 	}
 
 	/**
@@ -1278,7 +1278,7 @@ public class ScriptRuntime {
 		Object result = ScriptableObject.getProperty(obj, property);
 		if (result == Scriptable.NOT_FOUND) {
 			if (cx.hasFeature(Context.FEATURE_STRICT_MODE)) {
-				Context.reportWarning(ScriptRuntime.getMessage1("msg.ref.undefined.prop", property));
+				Context.reportWarning(cx, ScriptRuntime.getMessage1("msg.ref.undefined.prop", property));
 			}
 			result = Undefined.instance;
 		}
@@ -1628,7 +1628,7 @@ public class ScriptRuntime {
 			// been defined, creates a new property in the
 			// top scope unless strict mode is specified.
 			if (cx.hasFeature(Context.FEATURE_STRICT_MODE) || cx.hasFeature(Context.FEATURE_STRICT_VARS)) {
-				Context.reportWarning(ScriptRuntime.getMessage1("msg.assn.create.strict", id));
+				Context.reportWarning(cx, ScriptRuntime.getMessage1("msg.assn.create.strict", id));
 			}
 			// Find the top scope by walking up the scope chain.
 			bound = ScriptableObject.getTopLevelScope(scope);
@@ -1942,7 +1942,7 @@ public class ScriptRuntime {
 			}
 		} else if (callType == Node.SPECIALCALL_WITH) {
 			if (NativeWith.isWithFunction(fun)) {
-				throw Context.reportRuntimeError1("msg.only.from.new", "With");
+				throw Context.reportRuntimeError1(cx, "msg.only.from.new", "With");
 			}
 		} else {
 			throw Kit.codeBug();
@@ -2044,10 +2044,10 @@ public class ScriptRuntime {
 		Object x = args[0];
 		if (!(x instanceof CharSequence)) {
 			if (cx.hasFeature(Context.FEATURE_STRICT_MODE) || cx.hasFeature(Context.FEATURE_STRICT_EVAL)) {
-				throw Context.reportRuntimeError0("msg.eval.nonstring.strict");
+				throw Context.reportRuntimeError0(cx, "msg.eval.nonstring.strict");
 			}
 			String message = ScriptRuntime.getMessage0("msg.eval.nonstring");
-			Context.reportWarning(message);
+			Context.reportWarning(cx, message);
 			return x;
 		}
 		if (filename == null) {
@@ -2714,7 +2714,7 @@ public class ScriptRuntime {
 		}
 	}
 
-	public static void initScript(NativeFunction funObj, Scriptable thisObj, Context cx, Scriptable scope, boolean evalScript) {
+	public static void initScript(Context cx, NativeFunction funObj, Scriptable thisObj, Scriptable scope, boolean evalScript) {
 		if (cx.topCallScope == null) {
 			throw new IllegalStateException();
 		}
@@ -3133,7 +3133,7 @@ public class ScriptRuntime {
 	}
 
 	static void checkDeprecated(Context cx, String name) {
-		throw Context.reportRuntimeError(getMessage1("msg.deprec.ctor", name));
+		throw Context.reportRuntimeError(cx, getMessage1("msg.deprec.ctor", name));
 	}
 
 	public static String getMessage0(String messageId) {
@@ -3323,7 +3323,7 @@ public class ScriptRuntime {
 		final String omitParam = ScriptRuntime.getMessage0("params.omit.non.js.object.warning");
 		if (!"true".equals(omitParam)) {
 			String message = ScriptRuntime.getMessage2("msg.non.js.object.warning", nonJSObject, nonJSObject.getClass().getName());
-			Context.reportWarning(message);
+			Context.reportWarning(Context.getCurrentContext(), message);
 			// Just to be sure that it would be noticed
 			System.err.println(message);
 		}
@@ -3381,21 +3381,6 @@ public class ScriptRuntime {
 		return siteObj;
 	}
 
-	public static void storeUint32Result(Context cx, long value) {
-		if ((value >>> 32) != 0) {
-			throw new IllegalArgumentException();
-		}
-		cx.scratchUint32 = value;
-	}
-
-	public static long lastUint32Result(Context cx) {
-		long value = cx.scratchUint32;
-		if ((value >>> 32) != 0) {
-			throw new IllegalStateException();
-		}
-		return value;
-	}
-
 	private static void storeScriptable(Context cx, Scriptable value) {
 		// The previously stored scratchScriptable should be consumed
 		if (cx.scratchScriptable != null) {
@@ -3425,23 +3410,8 @@ public class ScriptRuntime {
 		return (((obj instanceof NativeSymbol) && ((NativeSymbol) obj).isSymbol())) || (obj instanceof SymbolKey);
 	}
 
-	public static RuntimeException errorWithClassName(String msg, Object val) {
-		return Context.reportRuntimeError1(msg, val.getClass().getName());
-	}
-
-	/**
-	 * Equivalent to executing "new Error(message, sourceFileName, sourceLineNo)" from JavaScript.
-	 *
-	 * @param cx      the current context
-	 * @param scope   the current scope
-	 * @param message the message
-	 * @return a JavaScriptException you should throw
-	 */
-	public static JavaScriptException throwError(Context cx, Scriptable scope, String message) {
-		int[] linep = {0};
-		String filename = Context.getSourcePositionFromStack(linep);
-		final Scriptable error = newBuiltinObject(cx, scope, TopLevel.Builtins.Error, new Object[]{message, filename, linep[0]});
-		return new JavaScriptException(error, filename, linep[0]);
+	public static RuntimeException errorWithClassName(Context cx, String msg, Object val) {
+		return Context.reportRuntimeError1(cx, msg, val.getClass().getName());
 	}
 
 

@@ -439,7 +439,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 		int info = findInstanceIdInfo(name);
 		if (info != 0) {
 			if (start == this && isSealed()) {
-				throw Context.reportRuntimeError1("msg.modify.sealed", name);
+				throw Context.reportRuntimeError1(Context.getCurrentContext(), "msg.modify.sealed", name);
 			}
 			int attr = (info >>> 16);
 			if ((attr & READONLY) == 0) {
@@ -456,7 +456,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 			int id = prototypeValues.findId(name);
 			if (id != 0) {
 				if (start == this && isSealed()) {
-					throw Context.reportRuntimeError1("msg.modify.sealed", name);
+					throw Context.reportRuntimeError1(Context.getCurrentContext(), "msg.modify.sealed", name);
 				}
 				prototypeValues.set(id, start, value);
 				return;
@@ -470,7 +470,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 		int info = findInstanceIdInfo(key);
 		if (info != 0) {
 			if (start == this && isSealed()) {
-				throw Context.reportRuntimeError0("msg.modify.sealed");
+				throw Context.reportRuntimeError0(Context.getCurrentContext(), "msg.modify.sealed");
 			}
 			int attr = (info >>> 16);
 			if ((attr & READONLY) == 0) {
@@ -487,7 +487,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 			int id = prototypeValues.findId(key);
 			if (id != 0) {
 				if (start == this && isSealed()) {
-					throw Context.reportRuntimeError0("msg.modify.sealed");
+					throw Context.reportRuntimeError0(Context.getCurrentContext(), "msg.modify.sealed");
 				}
 				prototypeValues.set(id, start, value);
 				return;

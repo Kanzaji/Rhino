@@ -1,5 +1,6 @@
 package dev.latvian.mods.rhino.classdata;
 
+import dev.latvian.mods.rhino.Context;
 import dev.latvian.mods.rhino.ScriptRuntime;
 import dev.latvian.mods.rhino.util.Possible;
 import org.jetbrains.annotations.Nullable;
@@ -61,7 +62,7 @@ public class ClassMember {
 		return Possible.EMPTY;
 	}
 
-	private Possible<MethodInfo> method(MethodSignature sig, Object[] args) {
+	private Possible<MethodInfo> method(Context cx, MethodSignature sig, Object[] args) {
 		if (methods == null) {
 			return Possible.absent();
 		}
@@ -76,7 +77,7 @@ public class ClassMember {
 			p = Possible.absent();
 
 			for (var m : methods.values()) {
-				if (m.signature.matches(sig, classData.cache.context)) {
+				if (m.signature.matches(sig, cx)) {
 					p = Possible.of(m);
 					break;
 				}

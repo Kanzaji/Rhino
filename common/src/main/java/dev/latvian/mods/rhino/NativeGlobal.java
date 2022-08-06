@@ -99,7 +99,7 @@ public class NativeGlobal implements Serializable, IdFunctionCall {
 				}
 
 				case Id_escape:
-					return js_escape(args);
+					return js_escape(cx, args);
 
 				case Id_eval:
 					return js_eval(cx, scope, args);
@@ -330,7 +330,7 @@ public class NativeGlobal implements Serializable, IdFunctionCall {
 	 * for the strange constant names should be directed there.
 	 */
 
-	private static Object js_escape(Object[] args) {
+	private static Object js_escape(Context cx, Object[] args) {
 		final int URL_XALPHAS = 1, URL_XPALPHAS = 2, URL_PATH = 4;
 
 		String s = ScriptRuntime.toString(args, 0);
@@ -339,7 +339,7 @@ public class NativeGlobal implements Serializable, IdFunctionCall {
 		if (args.length > 1) { // the 'mask' argument.  Non-ECMA.
 			double d = ScriptRuntime.toNumber(args[1]);
 			if (Double.isNaN(d) || ((mask = (int) d) != d) || 0 != (mask & ~(URL_XALPHAS | URL_XPALPHAS | URL_PATH))) {
-				throw Context.reportRuntimeError0("msg.bad.esc.mask");
+				throw Context.reportRuntimeError0(cx, "msg.bad.esc.mask");
 			}
 		}
 

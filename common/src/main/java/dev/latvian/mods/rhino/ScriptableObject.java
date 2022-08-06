@@ -238,18 +238,18 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 			String fName = name == null ? "f" : name.toString();
 			if (getter != null) {
 				if (getter instanceof MemberBox) {
-					desc.defineProperty("get", new FunctionObject(fName, ((MemberBox) getter).member(), scope), EMPTY);
+					desc.defineProperty("get", new FunctionObject(cx, fName, ((MemberBox) getter).member(), scope), EMPTY);
 				} else if (getter instanceof Member) {
-					desc.defineProperty("get", new FunctionObject(fName, (Member) getter, scope), EMPTY);
+					desc.defineProperty("get", new FunctionObject(cx, fName, (Member) getter, scope), EMPTY);
 				} else {
 					desc.defineProperty("get", getter, EMPTY);
 				}
 			}
 			if (setter != null) {
 				if (setter instanceof MemberBox) {
-					desc.defineProperty("set", new FunctionObject(fName, ((MemberBox) setter).member(), scope), EMPTY);
+					desc.defineProperty("set", new FunctionObject(cx, fName, ((MemberBox) setter).member(), scope), EMPTY);
 				} else if (setter instanceof Member) {
-					desc.defineProperty("set", new FunctionObject(fName, (Member) setter, scope), EMPTY);
+					desc.defineProperty("set", new FunctionObject(cx, fName, (Member) setter, scope), EMPTY);
 				} else {
 					desc.defineProperty("set", setter, EMPTY);
 				}
@@ -769,7 +769,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 		if (!force) {
 			int attributes = gslot.getAttributes();
 			if ((attributes & READONLY) != 0) {
-				throw Context.reportRuntimeError1("msg.modify.readonly", name);
+				throw Context.reportRuntimeError1(Context.getCurrentContext(), "msg.modify.readonly", name);
 			}
 		}
 		if (isSetter) {
@@ -1111,7 +1111,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * If the method's name is "jsConstructor", the method is
 	 * considered to define the body of the constructor. Only one
 	 * method of this name may be defined. You may use the varargs forms
-	 * for constructors documented in {@link FunctionObject#FunctionObject(String, Member, Scriptable)}
+	 * for constructors documented in {@link FunctionObject#FunctionObject(Context, String, Member, Scriptable)}
 	 * <p>
 	 * If no method is found that can serve as constructor, a Java
 	 * constructor will be selected to serve as the JavaScript
@@ -1209,7 +1209,8 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * @since 1.6R2
 	 */
 	public static <T extends Scriptable> String defineClass(Scriptable scope, Class<T> clazz, boolean sealed, boolean mapInheritance) throws IllegalAccessException, InstantiationException, InvocationTargetException {
-		BaseFunction ctor = buildClassCtor(scope, clazz, sealed, mapInheritance);
+		Context cx = Context.getCurrentContext();
+		BaseFunction ctor = buildClassCtor(cx, scope, clazz, sealed, mapInheritance);
 		if (ctor == null) {
 			return null;
 		}
@@ -1218,10 +1219,9 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 		return name;
 	}
 
-	static <T extends Scriptable> BaseFunction buildClassCtor(Scriptable scope, Class<T> clazz, boolean sealed, boolean mapInheritance) throws IllegalAccessException, InstantiationException, InvocationTargetException {
+	static <T extends Scriptable> BaseFunction buildClassCtor(Context cx, Scriptable scope, Class<T> clazz, boolean sealed, boolean mapInheritance) throws IllegalAccessException, InstantiationException, InvocationTargetException {
 		Method[] methods = FunctionObject.getMethodList(clazz);
-		for (int i = 0; i < methods.length; i++) {
-			Method method = methods[i];
+		for (Method method : methods) {
 			if (!method.getName().equals("init")) {
 				continue;
 			}
@@ -1244,14 +1244,14 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 
 		Constructor<?>[] ctors = clazz.getConstructors();
 		Constructor<?> protoCtor = null;
-		for (int i = 0; i < ctors.length; i++) {
-			if (ctors[i].getParameterTypes().length == 0) {
-				protoCtor = ctors[i];
+		for (Constructor<?> constructor : ctors) {
+			if (constructor.getParameterTypes().length == 0) {
+				protoCtor = constructor;
 				break;
 			}
 		}
 		if (protoCtor == null) {
-			throw Context.reportRuntimeError1("msg.zero.arg.ctor", clazz.getName());
+			throw Context.reportRuntimeError1(cx, "msg.zero.arg.ctor", clazz.getName());
 		}
 
 		Scriptable proto = (Scriptable) protoCtor.newInstance(ScriptRuntime.emptyArgs);
@@ -1298,7 +1298,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 			ctorMember = findAnnotatedMember(ctors, JSConstructor.class);
 		}
 		if (ctorMember == null) {
-			ctorMember = FunctionObject.findSingleMethod(methods, ctorName);
+			ctorMember = FunctionObject.findSingleMethod(cx, methods, ctorName);
 		}
 		if (ctorMember == null) {
 			if (ctors.length == 1) {
@@ -1311,13 +1311,13 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 				}
 			}
 			if (ctorMember == null) {
-				throw Context.reportRuntimeError1("msg.ctor.multiple.parms", clazz.getName());
+				throw Context.reportRuntimeError1(cx, "msg.ctor.multiple.parms", clazz.getName());
 			}
 		}
 
-		FunctionObject ctor = new FunctionObject(className, ctorMember, scope);
+		FunctionObject ctor = new FunctionObject(cx, className, ctorMember, scope);
 		if (ctor.isVarArgsMethod()) {
-			throw Context.reportRuntimeError1("msg.varargs.ctor", ctorMember.getName());
+			throw Context.reportRuntimeError1(cx, "msg.varargs.ctor", ctorMember.getName());
 		}
 		ctor.initAsConstructor(scope, proto);
 
@@ -1373,14 +1373,14 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 			HashSet<String> names = isStatic ? staticNames : instanceNames;
 			String propName = getPropertyName(name, prefix, annotation);
 			if (names.contains(propName)) {
-				throw Context.reportRuntimeError2("duplicate.defineClass.name", name, propName);
+				throw Context.reportRuntimeError2(cx, "duplicate.defineClass.name", name, propName);
 			}
 			names.add(propName);
 			name = propName;
 
 			if (annotation instanceof JSGetter || prefix == getterPrefix) {
 				if (!(proto instanceof ScriptableObject)) {
-					throw Context.reportRuntimeError2("msg.extend.scriptable", proto.getClass().toString(), name);
+					throw Context.reportRuntimeError2(cx, "msg.extend.scriptable", proto.getClass().toString(), name);
 				}
 				Method setter = findSetterMethod(methods, name, setterPrefix);
 				int attr = ScriptableObject.PERMANENT | ScriptableObject.DONTENUM | (setter != null ? 0 : ScriptableObject.READONLY);
@@ -1389,12 +1389,12 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 			}
 
 			if (isStatic && !Modifier.isStatic(method.getModifiers())) {
-				throw Context.reportRuntimeError("jsStaticFunction must be used with static method.");
+				throw Context.reportRuntimeError(cx, "jsStaticFunction must be used with static method.");
 			}
 
-			FunctionObject f = new FunctionObject(name, method, proto);
+			FunctionObject f = new FunctionObject(cx, name, method, proto);
 			if (f.isVarArgsConstructor()) {
-				throw Context.reportRuntimeError1("msg.varargs.fun", ctorMember.getName());
+				throw Context.reportRuntimeError1(cx, "msg.varargs.fun", ctorMember.getName());
 			}
 			defineProperty(isStatic ? ctor : proto, name, f, DONTENUM);
 			if (sealed) {
@@ -1568,7 +1568,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * @param attributes   the attributes of the JavaScript property
 	 * @see Scriptable#put(String, Scriptable, Object)
 	 */
-	public void defineProperty(String propertyName, Class<?> clazz, int attributes) {
+	public void defineProperty(Context cx, String propertyName, Class<?> clazz, int attributes) {
 		int length = propertyName.length();
 		if (length == 0) {
 			throw new IllegalArgumentException();
@@ -1584,8 +1584,8 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 		String setterName = new String(buf);
 
 		Method[] methods = FunctionObject.getMethodList(clazz);
-		Method getter = FunctionObject.findSingleMethod(methods, getterName);
-		Method setter = FunctionObject.findSingleMethod(methods, setterName);
+		Method getter = FunctionObject.findSingleMethod(cx, methods, getterName);
+		Method setter = FunctionObject.findSingleMethod(cx, methods, setterName);
 		if (setter == null) {
 			attributes |= ScriptableObject.READONLY;
 		}
@@ -1634,6 +1634,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * @param attributes   the attributes of the JavaScript property
 	 */
 	public void defineProperty(String propertyName, Object delegateTo, Method getter, Method setter, int attributes) {
+		Context cx = Context.getCurrentContext();
 		MemberBox getterBox = null;
 		if (getter != null) {
 			getterBox = new MemberBox(getter);
@@ -1667,14 +1668,14 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 				errorId = "msg.bad.getter.parms";
 			}
 			if (errorId != null) {
-				throw Context.reportRuntimeError1(errorId, getter.toString());
+				throw Context.reportRuntimeError1(cx, errorId, getter.toString());
 			}
 		}
 
 		MemberBox setterBox = null;
 		if (setter != null) {
 			if (setter.getReturnType() != Void.TYPE) {
-				throw Context.reportRuntimeError1("msg.setter.return", setter.toString());
+				throw Context.reportRuntimeError1(cx, "msg.setter.return", setter.toString());
 			}
 
 			setterBox = new MemberBox(setter);
@@ -1708,7 +1709,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 				errorId = "msg.setter.parms";
 			}
 			if (errorId != null) {
-				throw Context.reportRuntimeError1(errorId, setter.toString());
+				throw Context.reportRuntimeError1(cx, errorId, setter.toString());
 			}
 		}
 
@@ -1993,15 +1994,14 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * @param attributes the attributes of the new properties
 	 * @see FunctionObject
 	 */
-	public void defineFunctionProperties(String[] names, Class<?> clazz, int attributes) {
+	public void defineFunctionProperties(Context cx, String[] names, Class<?> clazz, int attributes) {
 		Method[] methods = FunctionObject.getMethodList(clazz);
-		for (int i = 0; i < names.length; i++) {
-			String name = names[i];
-			Method m = FunctionObject.findSingleMethod(methods, name);
+		for (String name : names) {
+			Method m = FunctionObject.findSingleMethod(cx, methods, name);
 			if (m == null) {
-				throw Context.reportRuntimeError2("msg.method.not.found", name, clazz.getName());
+				throw Context.reportRuntimeError2(cx, "msg.method.not.found", name, clazz.getName());
 			}
-			FunctionObject f = new FunctionObject(name, m, this);
+			FunctionObject f = new FunctionObject(cx, name, m, this);
 			defineProperty(name, f, attributes);
 		}
 	}
@@ -2140,7 +2140,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 		}
 
 		String str = (key != null) ? key.toString() : Integer.toString(index);
-		throw Context.reportRuntimeError1("msg.modify.sealed", str);
+		throw Context.reportRuntimeError1(Context.getCurrentContext(), "msg.modify.sealed", str);
 	}
 
 	/**
@@ -2712,7 +2712,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 			slot = slotMap.get(name, index, SlotAccess.MODIFY_CONST);
 			int attr = slot.getAttributes();
 			if ((attr & READONLY) == 0) {
-				throw Context.reportRuntimeError1("msg.var.redecl", name);
+				throw Context.reportRuntimeError1(Context.getCurrentContext(), "msg.var.redecl", name);
 			}
 			if ((attr & UNINITIALIZED_CONST) != 0) {
 				slot.value = value;
@@ -2730,7 +2730,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 		Slot slot = slotMap.get(name, index, accessType);
 		if (slot == null) {
 			String str = (name != null ? name : Integer.toString(index));
-			throw Context.reportRuntimeError1("msg.prop.not.found", str);
+			throw Context.reportRuntimeError1(Context.getCurrentContext(), "msg.prop.not.found", str);
 		}
 		return slot;
 	}
@@ -2738,7 +2738,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	private Slot findAttributeSlot(Symbol key, SlotAccess accessType) {
 		Slot slot = slotMap.get(key, 0, accessType);
 		if (slot == null) {
-			throw Context.reportRuntimeError1("msg.prop.not.found", key);
+			throw Context.reportRuntimeError1(Context.getCurrentContext(), "msg.prop.not.found", key);
 		}
 		return slot;
 	}

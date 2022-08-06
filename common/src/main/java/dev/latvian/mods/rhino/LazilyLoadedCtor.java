@@ -84,7 +84,8 @@ public final class LazilyLoadedCtor implements Serializable {
 		Class<? extends Scriptable> cl = cast(Kit.classOrNull(className));
 		if (cl != null) {
 			try {
-				Object value = ScriptableObject.buildClassCtor(scope, cl, sealed, false);
+				Context cx = Context.getCurrentContext();
+				Object value = ScriptableObject.buildClassCtor(cx, scope, cl, sealed, false);
 				if (value != null) {
 					return value;
 				}

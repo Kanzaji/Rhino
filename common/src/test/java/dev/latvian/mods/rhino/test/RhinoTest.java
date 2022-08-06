@@ -27,7 +27,7 @@ public class RhinoTest {
 		context = Context.enterWithNewFactory();
 		// context.setClassShutter((fullClassName, type) -> type != ClassShutter.TYPE_CLASS_IN_PACKAGE || isClassAllowed(fullClassName));
 
-		var typeWrappers = context.getTypeWrappers();
+		var typeWrappers = context.getFactory().getTypeWrappers();
 		typeWrappers.register(CompoundTag.class, NBTUtils::isTagCompound, NBTUtils::toTagCompound);
 		typeWrappers.register(CollectionTag.class, NBTUtils::isTagCollection, NBTUtils::toTagCollection);
 		typeWrappers.register(ListTag.class, NBTUtils::isTagCollection, NBTUtils::toTagList);

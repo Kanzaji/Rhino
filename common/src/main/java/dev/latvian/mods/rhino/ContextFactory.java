@@ -8,6 +8,7 @@
 
 package dev.latvian.mods.rhino;
 
+import dev.latvian.mods.rhino.classdata.ClassDataCache;
 import dev.latvian.mods.rhino.util.CustomJavaToJsWrapperProvider;
 import dev.latvian.mods.rhino.util.CustomJavaToJsWrapperProviderHolder;
 import dev.latvian.mods.rhino.util.DefaultRemapper;
@@ -120,8 +121,9 @@ public class ContextFactory {
 	private final Object listenersLock = new Object();
 	private volatile Object listeners;
 	private boolean disabledListening;
-	TypeWrappers typeWrappers;
-	Remapper remapper = DefaultRemapper.INSTANCE;
+	private TypeWrappers typeWrappers;
+	private Remapper remapper = DefaultRemapper.INSTANCE;
+	private ClassDataCache classDataCache;
 	final List<CustomJavaToJsWrapperProviderHolder<?>> customScriptableWrappers = new ArrayList<>();
 	final Map<Class<?>, CustomJavaToJsWrapperProvider> customScriptableWrapperCache = new HashMap<>();
 	private final Map<String, Object> extraProperties = new HashMap<>();
@@ -406,5 +408,33 @@ public class ContextFactory {
 	@Nullable
 	public Object getExtraProperty(String key) {
 		return extraProperties.get(key);
+	}
+
+	public TypeWrappers getTypeWrappers() {
+		if (typeWrappers == null) {
+			typeWrappers = new TypeWrappers();
+		}
+
+		return typeWrappers;
+	}
+
+	public boolean hasTypeWrappers() {
+		return typeWrappers != null;
+	}
+
+	public void setRemapper(Remapper r) {
+		remapper = r;
+	}
+
+	public Remapper getRemapper() {
+		return remapper;
+	}
+
+	public ClassDataCache getClassDataCache() {
+		if (classDataCache == null) {
+			classDataCache = new ClassDataCache(this);
+		}
+
+		return classDataCache;
 	}
 }

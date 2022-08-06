@@ -14,8 +14,8 @@ public class ClassDataTests {
 	@Test
 	@DisplayName("Class Data")
 	public void classData() {
-		Context cx = Context.enter();
-		var cache = new ClassDataCache(cx);
+		Context cx = Context.enterWithNewFactory();
+		var cache = new ClassDataCache(cx.getFactory());
 		var data = cache.of(Player.class);
 		var member = data.getMember("x");
 		System.out.println(member);

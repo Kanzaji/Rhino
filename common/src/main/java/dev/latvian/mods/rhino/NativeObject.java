@@ -280,7 +280,7 @@ public class NativeObject extends IdScriptableObject implements Map, DataObject 
 					throw ScriptRuntime.notFunctionError(badArg);
 				}
 				if (!(thisObj instanceof ScriptableObject so)) {
-					throw Context.reportRuntimeError2("msg.extend.scriptable", thisObj == null ? "null" : thisObj.getClass().getName(), String.valueOf(args[0]));
+					throw Context.reportRuntimeError2(cx, "msg.extend.scriptable", thisObj == null ? "null" : thisObj.getClass().getName(), String.valueOf(args[0]));
 				}
 				ScriptRuntime.StringIdOrIndex s = ScriptRuntime.toStringIdOrIndex(cx, args[0]);
 				int index = s.stringId != null ? 0 : s.index;

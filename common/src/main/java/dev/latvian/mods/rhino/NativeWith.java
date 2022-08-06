@@ -182,7 +182,7 @@ public class NativeWith implements Scriptable, SymbolScriptable, IdFunctionCall,
 	public Object execIdCall(IdFunctionObject f, Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
 		if (f.hasTag(FTAG)) {
 			if (f.methodId() == Id_constructor) {
-				throw Context.reportRuntimeError1("msg.cant.call.indirect", "With");
+				throw Context.reportRuntimeError1(cx, "msg.cant.call.indirect", "With");
 			}
 		}
 		throw f.unknown();

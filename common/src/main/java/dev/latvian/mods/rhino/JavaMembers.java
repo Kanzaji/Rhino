@@ -37,7 +37,7 @@ class JavaMembers {
 			Context cx = ContextFactory.getGlobal().enterContext();
 			ClassShutter shutter = cx.getClassShutter();
 			if (shutter != null && !shutter.visibleToScripts(cl.getName(), ClassShutter.TYPE_MEMBER)) {
-				throw Context.reportRuntimeError1("msg.access.prohibited", cl.getName());
+				throw Context.reportRuntimeError1(Context.getCurrentContext(), "msg.access.prohibited", cl.getName());
 			}
 			this.members = new HashMap<>();
 			this.staticMembers = new HashMap<>();
@@ -137,7 +137,7 @@ class JavaMembers {
 		} else {
 			if (!(member instanceof Field field)) {
 				String str = (member == null) ? "msg.java.internal.private" : "msg.java.method.assign";
-				throw Context.reportRuntimeError1(str, name);
+				throw Context.reportRuntimeError1(cx, str, name);
 			}
 			int fieldModifiers = field.getModifiers();
 
@@ -152,7 +152,7 @@ class JavaMembers {
 			} catch (IllegalAccessException accessEx) {
 				throw Context.throwAsScriptRuntimeEx(accessEx);
 			} catch (IllegalArgumentException argEx) {
-				throw Context.reportRuntimeError3("msg.java.internal.field.type", value.getClass().getName(), field, javaObject.getClass().getName());
+				throw Context.reportRuntimeError3(cx, "msg.java.internal.field.type", value.getClass().getName(), field, javaObject.getClass().getName());
 			}
 		}
 	}
@@ -331,7 +331,7 @@ class JavaMembers {
 				}
 				return;
 			} catch (SecurityException e) {
-				Context.reportWarning("Could not discover accessible methods of class " + clazz.getName() + " due to lack of privileges, " + "attemping superclasses/interfaces.");
+				Context.reportWarning(Context.getCurrentContext(), "Could not discover accessible methods of class " + clazz.getName() + " due to lack of privileges, " + "attemping superclasses/interfaces.");
 				// Fall through and attempt to discover superclass/interface
 				// methods
 			}
@@ -388,7 +388,7 @@ class JavaMembers {
 			int mods = method.getModifiers();
 			boolean isStatic = Modifier.isStatic(mods);
 			Map<String, Object> ht = isStatic ? staticMembers : members;
-			String name = cx.getRemapper().getMappedMethod(cl, method);
+			String name = cx.getFactory().getRemapper().getMappedMethod(cl, method);
 
 			Object value = ht.get(name);
 			if (value == null) {
@@ -444,7 +444,7 @@ class JavaMembers {
 
 		// Reflect fields.
 		for (Field field : getAccessibleFields(includeProtected, includePrivate)) {
-			String name = cx.getRemapper().getMappedField(cl, field);
+			String name = cx.getFactory().getRemapper().getMappedField(cl, field);
 
 			int mods = field.getModifiers();
 			try {
@@ -482,7 +482,7 @@ class JavaMembers {
 				}
 			} catch (SecurityException e) {
 				// skip this field
-				Context.reportWarning("Could not access field " + name + " of class " + cl.getName() + " due to lack of privileges.");
+				Context.reportWarning(cx, "Could not access field " + name + " of class " + cl.getName() + " due to lack of privileges.");
 			}
 		}
 
@@ -607,7 +607,7 @@ class JavaMembers {
 			}
 		} catch (SecurityException e) {
 			// Fall through to !includePrivate case
-			Context.reportWarning("Could not access constructor " + " of class " + cl.getName() + " due to lack of privileges.");
+			Context.reportWarning(Context.getCurrentContext(), "Could not access constructor " + " of class " + cl.getName() + " due to lack of privileges.");
 		}
 
 		return constructorsList;
@@ -787,7 +787,7 @@ class JavaMembers {
 	}
 
 	RuntimeException reportMemberNotFound(String memberName) {
-		return Context.reportRuntimeError2("msg.java.member.not.found", cl.getName(), memberName);
+		return Context.reportRuntimeError2(Context.getCurrentContext(), "msg.java.member.not.found", cl.getName(), memberName);
 	}
 
 	private final Class<?> cl;

@@ -1068,7 +1068,7 @@ public class NativeArray extends IdScriptableObject implements List, DataObject 
 		long llength = getLengthProperty(cx, o, false);
 		int length = (int) llength;
 		if (llength != length) {
-			throw Context.reportRuntimeError1("msg.arraylength.too.big", String.valueOf(llength));
+			throw Context.reportRuntimeError1(cx, "msg.arraylength.too.big", String.valueOf(llength));
 		}
 		// if no args, use "," as separator
 		String separator = (args.length < 1 || args[0] == Undefined.instance) ? "," : ScriptRuntime.toString(args[0]);
@@ -1178,7 +1178,7 @@ public class NativeArray extends IdScriptableObject implements List, DataObject 
 		long llength = getLengthProperty(cx, o, false);
 		final int length = (int) llength;
 		if (llength != length) {
-			throw Context.reportRuntimeError1("msg.arraylength.too.big", String.valueOf(llength));
+			throw Context.reportRuntimeError1(cx, "msg.arraylength.too.big", String.valueOf(llength));
 		}
 		// copy the JS array into a working array, so it can be
 		// sorted cheaply.

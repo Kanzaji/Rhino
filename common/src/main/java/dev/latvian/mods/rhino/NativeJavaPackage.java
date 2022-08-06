@@ -56,7 +56,7 @@ public class NativeJavaPackage extends ScriptableObject {
 
 	@Override
 	public void put(int index, Scriptable start, Object value) {
-		throw Context.reportRuntimeError0("msg.pkg.int");
+		throw Context.reportRuntimeError0(Context.getCurrentContext(), "msg.pkg.int");
 	}
 
 	@Override

@@ -43,7 +43,7 @@ public class InterfaceAdapter {
 				// the same function to be invoked anyway).
 				int length = methods.length;
 				if (length == 0) {
-					throw Context.reportRuntimeError1("msg.no.empty.interface.conversion", cl.getName());
+					throw Context.reportRuntimeError1(cx, "msg.no.empty.interface.conversion", cl.getName());
 				}
 				if (length > 1) {
 					String methodName = null;
@@ -54,7 +54,7 @@ public class InterfaceAdapter {
 							if (methodName == null) {
 								methodName = method.getName();
 							} else if (!methodName.equals(method.getName())) {
-								throw Context.reportRuntimeError1("msg.no.function.interface.conversion", cl.getName());
+								throw Context.reportRuntimeError1(cx, "msg.no.function.interface.conversion", cl.getName());
 							}
 						}
 					}
@@ -102,7 +102,7 @@ public class InterfaceAdapter {
 				// We really should throw an error here, but for the sake of
 				// compatibility with JavaAdapter we silently ignore undefined
 				// methods.
-				Context.reportWarning(ScriptRuntime.getMessage1("msg.undefined.function.interface", methodName));
+				Context.reportWarning(cx, ScriptRuntime.getMessage1("msg.undefined.function.interface", methodName));
 				Class<?> resultType = method.getReturnType();
 				if (resultType == Void.TYPE) {
 					return null;
@@ -110,7 +110,7 @@ public class InterfaceAdapter {
 				return Context.jsToJava(cx, null, resultType);
 			}
 			if (!(value instanceof Callable)) {
-				throw Context.reportRuntimeError1("msg.not.function.interface", methodName);
+				throw Context.reportRuntimeError1(cx, "msg.not.function.interface", methodName);
 			}
 			function = (Callable) value;
 		}

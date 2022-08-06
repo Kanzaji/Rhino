@@ -494,14 +494,14 @@ public class Parser {
 	 * result in a call to the {@link ErrorReporter} from
 	 * {@link CompilerEnvirons}.)
 	 */
-	public AstRoot parse(String sourceString, String sourceURI, int lineno) {
+	public AstRoot parse(Context cx, String sourceString, String sourceURI, int lineno) {
 		if (parseFinished) {
 			throw new IllegalStateException("parser reused");
 		}
 		this.sourceURI = sourceURI;
 		this.ts = new TokenStream(this, sourceString, lineno);
 		try {
-			return parse();
+			return parse(cx);
 		} catch (IOException iox) {
 			// Should never happen
 			throw new IllegalStateException();
@@ -510,7 +510,7 @@ public class Parser {
 		}
 	}
 
-	private AstRoot parse() throws IOException {
+	private AstRoot parse(Context cx) throws IOException {
 		int pos = 0;
 		AstRoot root = new AstRoot(pos);
 		currentScope = currentScriptOrFn = root;
@@ -562,7 +562,7 @@ public class Parser {
 			}
 		} catch (StackOverflowError ex) {
 			String msg = lookupMessage("msg.too.deep.parser.recursion");
-			throw Context.reportRuntimeError(msg, sourceURI, ts.lineno, null, 0);
+			throw Context.reportRuntimeError(cx, msg, sourceURI, ts.lineno, null, 0);
 		} finally {
 			inUseStrictDirective = savedStrictMode;
 		}

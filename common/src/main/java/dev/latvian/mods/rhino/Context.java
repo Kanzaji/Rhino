@@ -10,14 +10,11 @@ package dev.latvian.mods.rhino;
 
 import dev.latvian.mods.rhino.ast.AstRoot;
 import dev.latvian.mods.rhino.ast.ScriptNode;
-import dev.latvian.mods.rhino.classdata.ClassDataCache;
 import dev.latvian.mods.rhino.classfile.ClassFileWriter.ClassFileFormatException;
 import dev.latvian.mods.rhino.regexp.RegExp;
 import dev.latvian.mods.rhino.util.CustomJavaToJsWrapper;
 import dev.latvian.mods.rhino.util.CustomJavaToJsWrapperProvider;
 import dev.latvian.mods.rhino.util.CustomJavaToJsWrapperProviderHolder;
-import dev.latvian.mods.rhino.util.Remapper;
-import dev.latvian.mods.rhino.util.wrap.TypeWrappers;
 import org.jetbrains.annotations.Nullable;
 
 import java.beans.PropertyChangeEvent;
@@ -602,10 +599,9 @@ public class Context {
 	 * @param lineOffset the offset into lineSource where problem was detected
 	 * @see ErrorReporter
 	 */
-	public static void reportWarning(String message, String sourceName, int lineno, String lineSource, int lineOffset) {
-		Context cx = Context.getContext();
+	public static void reportWarning(Context cx, String message, String sourceName, int lineno, String lineSource, int lineOffset) {
 		if (cx.hasFeature(FEATURE_WARNING_AS_ERROR)) {
-			reportError(message, sourceName, lineno, lineSource, lineOffset);
+			reportError(cx, message, sourceName, lineno, lineSource, lineOffset);
 		} else {
 			cx.getErrorReporter().warning(message, sourceName, lineno, lineSource, lineOffset);
 		}
@@ -617,13 +613,13 @@ public class Context {
 	 * @param message the warning message to report
 	 * @see ErrorReporter
 	 */
-	public static void reportWarning(String message) {
+	public static void reportWarning(Context cx, String message) {
 		int[] linep = {0};
 		String filename = getSourcePositionFromStack(linep);
-		Context.reportWarning(message, filename, linep[0], null, 0);
+		Context.reportWarning(cx, message, filename, linep[0], null, 0);
 	}
 
-	public static void reportWarning(String message, Throwable t) {
+	public static void reportWarning(Context cx, String message, Throwable t) {
 		int[] linep = {0};
 		String filename = getSourcePositionFromStack(linep);
 		Writer sw = new StringWriter();
@@ -631,7 +627,7 @@ public class Context {
 		pw.println(message);
 		t.printStackTrace(pw);
 		pw.flush();
-		Context.reportWarning(sw.toString(), filename, linep[0], null, 0);
+		Context.reportWarning(cx, sw.toString(), filename, linep[0], null, 0);
 	}
 
 	/**
@@ -644,8 +640,7 @@ public class Context {
 	 * @param lineOffset the offset into lineSource where problem was detected
 	 * @see ErrorReporter
 	 */
-	public static void reportError(String message, String sourceName, int lineno, String lineSource, int lineOffset) {
-		Context cx = getCurrentContext();
+	public static void reportError(Context cx, String message, String sourceName, int lineno, String lineSource, int lineOffset) {
 		if (cx != null) {
 			cx.getErrorReporter().error(message, sourceName, lineno, lineSource, lineOffset);
 		} else {
@@ -659,10 +654,10 @@ public class Context {
 	 * @param message the error message to report
 	 * @see ErrorReporter
 	 */
-	public static void reportError(String message) {
+	public static void reportError(Context cx, String message) {
 		int[] linep = {0};
 		String filename = getSourcePositionFromStack(linep);
-		Context.reportError(message, filename, linep[0], null, 0);
+		Context.reportError(cx, message, filename, linep[0], null, 0);
 	}
 
 	/**
@@ -677,37 +672,36 @@ public class Context {
 	 * execution of the script
 	 * @see ErrorReporter
 	 */
-	public static EvaluatorException reportRuntimeError(String message, String sourceName, int lineno, String lineSource, int lineOffset) {
-		Context cx = getCurrentContext();
+	public static EvaluatorException reportRuntimeError(Context cx, String message, String sourceName, int lineno, String lineSource, int lineOffset) {
 		if (cx != null) {
 			return cx.getErrorReporter().runtimeError(message, sourceName, lineno, lineSource, lineOffset);
 		}
 		throw new EvaluatorException(message, sourceName, lineno, lineSource, lineOffset);
 	}
 
-	public static EvaluatorException reportRuntimeError0(String messageId) {
+	public static EvaluatorException reportRuntimeError0(Context cx, String messageId) {
 		String msg = ScriptRuntime.getMessage0(messageId);
-		return reportRuntimeError(msg);
+		return reportRuntimeError(cx, msg);
 	}
 
-	public static EvaluatorException reportRuntimeError1(String messageId, Object arg1) {
+	public static EvaluatorException reportRuntimeError1(Context cx, String messageId, Object arg1) {
 		String msg = ScriptRuntime.getMessage1(messageId, arg1);
-		return reportRuntimeError(msg);
+		return reportRuntimeError(cx, msg);
 	}
 
-	public static EvaluatorException reportRuntimeError2(String messageId, Object arg1, Object arg2) {
+	public static EvaluatorException reportRuntimeError2(Context cx, String messageId, Object arg1, Object arg2) {
 		String msg = ScriptRuntime.getMessage2(messageId, arg1, arg2);
-		return reportRuntimeError(msg);
+		return reportRuntimeError(cx, msg);
 	}
 
-	public static EvaluatorException reportRuntimeError3(String messageId, Object arg1, Object arg2, Object arg3) {
+	public static EvaluatorException reportRuntimeError3(Context cx, String messageId, Object arg1, Object arg2, Object arg3) {
 		String msg = ScriptRuntime.getMessage3(messageId, arg1, arg2, arg3);
-		return reportRuntimeError(msg);
+		return reportRuntimeError(cx, msg);
 	}
 
-	public static EvaluatorException reportRuntimeError4(String messageId, Object arg1, Object arg2, Object arg3, Object arg4) {
+	public static EvaluatorException reportRuntimeError4(Context cx, String messageId, Object arg1, Object arg2, Object arg3, Object arg4) {
 		String msg = ScriptRuntime.getMessage4(messageId, arg1, arg2, arg3, arg4);
-		return reportRuntimeError(msg);
+		return reportRuntimeError(cx, msg);
 	}
 
 	/**
@@ -716,10 +710,10 @@ public class Context {
 	 * @param message the error message to report
 	 * @see ErrorReporter
 	 */
-	public static EvaluatorException reportRuntimeError(String message) {
+	public static EvaluatorException reportRuntimeError(Context cx, String message) {
 		int[] linep = {0};
 		String filename = getSourcePositionFromStack(linep);
-		return Context.reportRuntimeError(message, filename, linep[0], null, 0);
+		return Context.reportRuntimeError(cx, message, filename, linep[0], null, 0);
 	}
 
 	/**
@@ -1048,13 +1042,13 @@ public class Context {
 	 * @return whether the source is ready for compilation
 	 * @since 1.4 Release 2
 	 */
-	public final boolean stringIsCompilableUnit(String source) {
+	public final boolean stringIsCompilableUnit(Context cx, String source) {
 		boolean errorseen = false;
 		CompilerEnvirons compilerEnv = new CompilerEnvirons();
 		compilerEnv.initFromContext(this);
 		Parser p = new Parser(compilerEnv, DefaultErrorReporter.instance);
 		try {
-			p.parse(source, null, 1);
+			p.parse(cx, source, null, 1);
 		} catch (EvaluatorException ee) {
 			errorseen = true;
 		}
@@ -1087,7 +1081,7 @@ public class Context {
 			lineno = 0;
 		}
 
-		return (Script) compileImpl(null, Kit.readReader(in), sourceName, lineno, securityDomain, false, null, null);
+		return (Script) compileImpl(this, null, Kit.readReader(in), sourceName, lineno, securityDomain, false, null, null);
 	}
 
 	/**
@@ -1116,7 +1110,7 @@ public class Context {
 
 	final Script compileString(String source, Evaluator compiler, ErrorReporter compilationErrorReporter, String sourceName, int lineno, Object securityDomain) {
 		try {
-			return (Script) compileImpl(null, source, sourceName, lineno, securityDomain, false, compiler, compilationErrorReporter);
+			return (Script) compileImpl(this, null, source, sourceName, lineno, securityDomain, false, compiler, compilationErrorReporter);
 		} catch (IOException ioe) {
 			// Should not happen when dealing with source as string
 			throw new RuntimeException(ioe);
@@ -1146,7 +1140,7 @@ public class Context {
 
 	final Function compileFunction(Scriptable scope, String source, Evaluator compiler, ErrorReporter compilationErrorReporter, String sourceName, int lineno, Object securityDomain) {
 		try {
-			return (Function) compileImpl(scope, source, sourceName, lineno, securityDomain, true, compiler, compilationErrorReporter);
+			return (Function) compileImpl(this, scope, source, sourceName, lineno, securityDomain, true, compiler, compilationErrorReporter);
 		} catch (IOException ioe) {
 			// Should never happen because we just made the reader
 			// from a String
@@ -1401,7 +1395,7 @@ public class Context {
 			return value;
 		}
 
-		return NativeJavaObject.coerceTypeImpl(cx, cx.hasTypeWrappers() ? cx.getTypeWrappers() : null, desiredType, value);
+		return NativeJavaObject.coerceTypeImpl(cx, cx.getFactory().hasTypeWrappers() ? cx.getFactory().getTypeWrappers() : null, desiredType, value);
 	}
 
 	/**
@@ -1797,7 +1791,7 @@ public class Context {
 		return cx;
 	}
 
-	private Object compileImpl(Scriptable scope, String sourceString, String sourceName, int lineno, Object securityDomain, boolean returnFunction, Evaluator compiler, ErrorReporter compilationErrorReporter) throws IOException {
+	private Object compileImpl(Context cx, Scriptable scope, String sourceString, String sourceName, int lineno, Object securityDomain, boolean returnFunction, Evaluator compiler, ErrorReporter compilationErrorReporter) throws IOException {
 		if (sourceName == null) {
 			sourceName = "unnamed script";
 		}
@@ -1816,7 +1810,7 @@ public class Context {
 			compilationErrorReporter = compilerEnv.getErrorReporter();
 		}
 
-		ScriptNode tree = parse(sourceString, sourceName, lineno, compilerEnv, compilationErrorReporter, returnFunction);
+		ScriptNode tree = parse(cx, sourceString, sourceName, lineno, compilerEnv, compilationErrorReporter, returnFunction);
 
 		Object bytecode;
 		try {
@@ -1829,7 +1823,7 @@ public class Context {
 			// we hit some class file limit, fall back to interpreter or report
 
 			// we have to recreate the tree because the compile call might have changed the tree already
-			tree = parse(sourceString, sourceName, lineno, compilerEnv, compilationErrorReporter, returnFunction);
+			tree = parse(cx, sourceString, sourceName, lineno, compilerEnv, compilationErrorReporter, returnFunction);
 
 			compiler = createInterpreter();
 			bytecode = compiler.compile(compilerEnv, tree, returnFunction);
@@ -1845,7 +1839,7 @@ public class Context {
 		return result;
 	}
 
-	private ScriptNode parse(String sourceString, String sourceName, int lineno, CompilerEnvirons compilerEnv, ErrorReporter compilationErrorReporter, boolean returnFunction) throws IOException {
+	private ScriptNode parse(Context cx, String sourceString, String sourceName, int lineno, CompilerEnvirons compilerEnv, ErrorReporter compilationErrorReporter, boolean returnFunction) throws IOException {
 		Parser p = new Parser(compilerEnv, compilationErrorReporter);
 		if (returnFunction) {
 			p.calledByCompileFunction = true;
@@ -1854,7 +1848,7 @@ public class Context {
 			p.setDefaultUseStrictDirective(true);
 		}
 
-		AstRoot ast = p.parse(sourceString, sourceName, lineno);
+		AstRoot ast = p.parse(cx, sourceString, sourceName, lineno);
 		if (returnFunction) {
 			// parser no longer adds function to script node
 			if (!(ast.getFirstChild() != null && ast.getFirstChild().getType() == Token.FUNCTION)) {
@@ -1915,34 +1909,6 @@ public class Context {
 
 	public final boolean isStrictMode() {
 		return isTopLevelStrict || (currentActivationCall != null && currentActivationCall.isStrict);
-	}
-
-	public TypeWrappers getTypeWrappers() {
-		if (factory.typeWrappers == null) {
-			factory.typeWrappers = new TypeWrappers();
-		}
-
-		return factory.typeWrappers;
-	}
-
-	public boolean hasTypeWrappers() {
-		return factory.typeWrappers != null;
-	}
-
-	public void setRemapper(Remapper remapper) {
-		factory.remapper = remapper;
-	}
-
-	public Remapper getRemapper() {
-		return factory.remapper;
-	}
-
-	public ClassDataCache getClassDataCache() {
-		if (classDataCache == null) {
-			classDataCache = new ClassDataCache(this);
-		}
-
-		return classDataCache;
 	}
 
 	@Nullable
@@ -2029,5 +1995,4 @@ public class Context {
 	public boolean generateObserverCount = false;
 
 	boolean isTopLevelStrict;
-	private ClassDataCache classDataCache;
 }
