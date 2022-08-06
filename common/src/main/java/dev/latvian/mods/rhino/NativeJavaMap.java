@@ -18,15 +18,15 @@ public class NativeJavaMap extends NativeJavaObject {
 	private final Class<?> mapValueType;
 	private final ValueUnwrapper valueUnwrapper;
 
-	public NativeJavaMap(Scriptable scope, Object jo, Map map, Class<?> mapValueType, ValueUnwrapper valueUnwrapper) {
-		super(scope, jo, jo.getClass());
+	public NativeJavaMap(Context cx, Scriptable scope, Object jo, Map map, Class<?> mapValueType, ValueUnwrapper valueUnwrapper) {
+		super(cx, scope, jo, jo.getClass());
 		this.map = map;
 		this.mapValueType = mapValueType;
 		this.valueUnwrapper = valueUnwrapper;
 	}
 
-	public NativeJavaMap(Scriptable scope, Object jo, Map map) {
-		this(scope, jo, map, Object.class, ValueUnwrapper.DEFAULT);
+	public NativeJavaMap(Context cx, Scriptable scope, Object jo, Map map) {
+		this(cx, scope, jo, map, Object.class, ValueUnwrapper.DEFAULT);
 	}
 
 	@Override
@@ -35,49 +35,49 @@ public class NativeJavaMap extends NativeJavaObject {
 	}
 
 	@Override
-	public boolean has(String name, Scriptable start) {
+	public boolean has(Context cx, String name, Scriptable start) {
 		if (map.containsKey(name)) {
 			return true;
 		}
-		return super.has(name, start);
+		return super.has(cx, name, start);
 	}
 
 	@Override
-	public boolean has(int index, Scriptable start) {
+	public boolean has(Context cx, int index, Scriptable start) {
 		if (map.containsKey(index)) {
 			return true;
 		}
-		return super.has(index, start);
+		return super.has(cx, index, start);
 	}
 
 	@Override
-	public Object get(String name, Scriptable start) {
+	public Object get(Context cx, String name, Scriptable start) {
 		if (map.containsKey(name)) {
 			return valueUnwrapper.unwrap(this, map.get(name));
 		}
-		return super.get(name, start);
+		return super.get(cx, name, start);
 	}
 
 	@Override
-	public Object get(int index, Scriptable start) {
+	public Object get(Context cx, int index, Scriptable start) {
 		if (map.containsKey(index)) {
 			return valueUnwrapper.unwrap(this, map.get(index));
 		}
-		return super.get(index, start);
+		return super.get(cx, index, start);
 	}
 
 	@Override
-	public void put(String name, Scriptable start, Object value) {
-		map.put(name, Context.jsToJava(value, mapValueType));
+	public void put(Context cx, String name, Scriptable start, Object value) {
+		map.put(name, Context.jsToJava(cx, value, mapValueType));
 	}
 
 	@Override
-	public void put(int index, Scriptable start, Object value) {
-		map.put(index, Context.jsToJava(value, mapValueType));
+	public void put(Context cx, int index, Scriptable start, Object value) {
+		map.put(index, Context.jsToJava(cx, value, mapValueType));
 	}
 
 	@Override
-	public Object[] getIds() {
+	public Object[] getIds(Context cx) {
 		List<Object> ids = new ArrayList<>(map.size());
 		for (Object key : map.keySet()) {
 			if (key instanceof Integer) {
@@ -90,18 +90,18 @@ public class NativeJavaMap extends NativeJavaObject {
 	}
 
 	@Override
-	public void delete(String name) {
+	public void delete(Context cx, String name) {
 		Deletable.deleteObject(map.remove(name));
 	}
 
 	@Override
-	public void delete(int index) {
+	public void delete(Context cx, int index) {
 		Deletable.deleteObject(map.remove(index));
 	}
 
 	@Override
-	protected void initMembers() {
-		super.initMembers();
+	protected void initMembers(Context cx) {
+		super.initMembers(cx);
 		addCustomFunction("hasOwnProperty", this::hasOwnProperty, String.class);
 	}
 

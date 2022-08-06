@@ -6,8 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.Serial;
-import java.io.Serializable;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -18,15 +16,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Igor Bukanov
  * @since Rhino 1.5 Release 5
  */
-public class ClassCache implements Serializable {
-	@Serial
-	private static final long serialVersionUID = -8866246036237312215L;
+public class ClassCache {
 	private static final Object AKEY = "ClassCache";
 	private volatile boolean cachingIsEnabled = true;
 	private transient Map<Class<?>, JavaMembers> classTable;
-	private transient Map<JavaAdapter.JavaAdapterSignature, Class<?>> classAdapterCache;
 	private transient Map<Class<?>, Object> interfaceAdapterCache;
-	private int generatedClassSerial;
 	private Scriptable associatedScope;
 
 	/**
@@ -41,8 +35,8 @@ public class ClassCache implements Serializable {
 	 * ClassCache if no ClassCache object was found.
 	 * @see #associate(ScriptableObject topScope)
 	 */
-	public static ClassCache get(Scriptable scope) {
-		ClassCache cache = (ClassCache) ScriptableObject.getTopScopeValue(scope, AKEY);
+	public static ClassCache get(Context cx, Scriptable scope) {
+		ClassCache cache = (ClassCache) ScriptableObject.getTopScopeValue(cx, scope, AKEY);
 		if (cache == null) {
 			throw new RuntimeException("Can't find top level scope for " + "ClassCache.get");
 		}
@@ -57,7 +51,7 @@ public class ClassCache implements Serializable {
 	 * @return true if no previous ClassCache objects were embedded into
 	 * the scope and this ClassCache were successfully associated
 	 * or false otherwise.
-	 * @see #get(Scriptable scope)
+	 * @see #get(Context, Scriptable scope)
 	 */
 	public boolean associate(ScriptableObject topScope) {
 		if (topScope.getParentScope() != null) {
@@ -76,7 +70,6 @@ public class ClassCache implements Serializable {
 	 */
 	public synchronized void clearCaches() {
 		classTable = null;
-		classAdapterCache = null;
 		interfaceAdapterCache = null;
 	}
 
@@ -125,21 +118,6 @@ public class ClassCache implements Serializable {
 			classTable = new ConcurrentHashMap<>(16, 0.75f, 1);
 		}
 		return classTable;
-	}
-
-	Map<JavaAdapter.JavaAdapterSignature, Class<?>> getInterfaceAdapterCacheMap() {
-		if (classAdapterCache == null) {
-			classAdapterCache = new ConcurrentHashMap<>(16, 0.75f, 1);
-		}
-		return classAdapterCache;
-	}
-
-	/**
-	 * Internal engine method to return serial number for generated classes
-	 * to ensure name uniqueness.
-	 */
-	public final synchronized int newClassSerialNumber() {
-		return ++generatedClassSerial;
 	}
 
 	Object getInterfaceAdapter(Class<?> cl) {

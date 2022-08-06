@@ -18,8 +18,8 @@ public class NativeCollectionIterator extends ES6Iterator {
 		KEYS, VALUES, BOTH
 	}
 
-	static void init(ScriptableObject scope, String tag, boolean sealed) {
-		init(scope, sealed, new NativeCollectionIterator(tag), tag);
+	static void init(Context cx, ScriptableObject scope, String tag, boolean sealed) {
+		init(cx, scope, sealed, new NativeCollectionIterator(tag), tag);
 	}
 
 	public NativeCollectionIterator(String tag) {
@@ -28,8 +28,8 @@ public class NativeCollectionIterator extends ES6Iterator {
 		this.type = Type.BOTH;
 	}
 
-	public NativeCollectionIterator(Scriptable scope, String className, Type type, Iterator<Hashtable.Entry> iterator) {
-		super(scope, className);
+	public NativeCollectionIterator(Context cx, Scriptable scope, String className, Type type, Iterator<Hashtable.Entry> iterator) {
+		super(cx, scope, className);
 		this.className = className;
 		this.iterator = iterator;
 		this.type = type;

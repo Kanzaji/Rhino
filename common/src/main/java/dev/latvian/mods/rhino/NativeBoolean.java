@@ -6,8 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.Serial;
-
 /**
  * This class implements the Boolean native object.
  * See ECMA 15.6.
@@ -15,14 +13,11 @@ import java.io.Serial;
  * @author Norris Boyd
  */
 final class NativeBoolean extends IdScriptableObject {
-	@Serial
-	private static final long serialVersionUID = -3716996899943880933L;
-
 	private static final Object BOOLEAN_TAG = "Boolean";
 
-	static void init(Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope, boolean sealed) {
 		NativeBoolean obj = new NativeBoolean(false);
-		obj.exportAsJSClass(MAX_PROTOTYPE_ID, scope, sealed);
+		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, sealed);
 	}
 
 	NativeBoolean(boolean b) {
@@ -35,22 +30,22 @@ final class NativeBoolean extends IdScriptableObject {
 	}
 
 	@Override
-	public Object getDefaultValue(Class<?> typeHint) {
+	public Object getDefaultValue(Context cx, Class<?> typeHint) {
 		// This is actually non-ECMA, but will be proposed
 		// as a change in round 2.
 		if (typeHint == ScriptRuntime.BooleanClass) {
 			return ScriptRuntime.wrapBoolean(booleanValue);
 		}
-		return super.getDefaultValue(typeHint);
+		return super.getDefaultValue(cx, typeHint);
 	}
 
 	@Override
-	protected void initPrototypeId(int id) {
+	protected void initPrototypeId(Context cx, int id) {
 		switch (id) {
-			case Id_constructor -> initPrototypeMethod(BOOLEAN_TAG, id, "constructor", 1);
-			case Id_toString -> initPrototypeMethod(BOOLEAN_TAG, id, "toString", 0);
-			case Id_toSource -> initPrototypeMethod(BOOLEAN_TAG, id, "toSource", 0);
-			case Id_valueOf -> initPrototypeMethod(BOOLEAN_TAG, id, "valueOf", 0);
+			case Id_constructor -> initPrototypeMethod(cx, BOOLEAN_TAG, id, "constructor", 1);
+			case Id_toString -> initPrototypeMethod(cx, BOOLEAN_TAG, id, "toString", 0);
+			case Id_toSource -> initPrototypeMethod(cx, BOOLEAN_TAG, id, "toSource", 0);
+			case Id_valueOf -> initPrototypeMethod(cx, BOOLEAN_TAG, id, "valueOf", 0);
 			default -> throw new IllegalArgumentException(String.valueOf(id));
 		}
 	}

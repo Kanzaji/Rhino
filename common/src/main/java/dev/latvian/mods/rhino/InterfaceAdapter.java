@@ -30,7 +30,7 @@ public class InterfaceAdapter {
 		}
 
 		Scriptable topScope = ScriptRuntime.getTopCallScope(cx);
-		ClassCache cache = ClassCache.get(topScope);
+		ClassCache cache = ClassCache.get(cx, topScope);
 		InterfaceAdapter adapter;
 		adapter = (InterfaceAdapter) cache.getInterfaceAdapter(cl);
 		ContextFactory cf = cx.getFactory();
@@ -97,7 +97,7 @@ public class InterfaceAdapter {
 		} else {
 			Scriptable s = (Scriptable) target;
 			String methodName = method.getName();
-			Object value = ScriptableObject.getProperty(s, methodName);
+			Object value = ScriptableObject.getProperty(cx, s, methodName);
 			if (value == Scriptable.NOT_FOUND) {
 				// We really should throw an error here, but for the sake of
 				// compatibility with JavaAdapter we silently ignore undefined
@@ -116,7 +116,7 @@ public class InterfaceAdapter {
 		}
 		WrapFactory wf = cx.getWrapFactory();
 		if (args == null) {
-			args = ScriptRuntime.emptyArgs;
+			args = ScriptRuntime.EMPTY_ARGS;
 		} else {
 			for (int i = 0, N = args.length; i != N; ++i) {
 				Object arg = args[i];

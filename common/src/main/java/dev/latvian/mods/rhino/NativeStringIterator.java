@@ -13,8 +13,8 @@ public final class NativeStringIterator extends ES6Iterator {
 	private static final long serialVersionUID = 1L;
 	private static final String ITERATOR_TAG = "StringIterator";
 
-	static void init(ScriptableObject scope, boolean sealed) {
-		init(scope, sealed, new NativeStringIterator(), ITERATOR_TAG);
+	static void init(Context cx, ScriptableObject scope, boolean sealed) {
+		init(cx, scope, sealed, new NativeStringIterator(), ITERATOR_TAG);
 	}
 
 	/**
@@ -24,8 +24,8 @@ public final class NativeStringIterator extends ES6Iterator {
 		super();
 	}
 
-	NativeStringIterator(Scriptable scope, Object stringLike) {
-		super(scope, ITERATOR_TAG);
+	NativeStringIterator(Context cx, Scriptable scope, Object stringLike) {
+		super(cx, scope, ITERATOR_TAG);
 		this.index = 0;
 		this.string = ScriptRuntime.toString(stringLike);
 	}

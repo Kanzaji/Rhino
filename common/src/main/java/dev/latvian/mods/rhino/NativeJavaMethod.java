@@ -17,7 +17,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *
  * @author Mike Shaver
  * @see NativeJavaArray
- * @see NativeJavaPackage
  * @see NativeJavaClass
  */
 
@@ -136,7 +135,7 @@ public class NativeJavaMethod extends BaseFunction {
 
 			// Handle special situation where a single variable parameter
 			// is given and it is a Java or ECMA array or is null.
-			if (args.length == argTypes.length && (args[args.length - 1] == null || args[args.length - 1] instanceof NativeArray || args[args.length - 1] instanceof NativeJavaArray)) {
+			if (args.length == argTypes.length && (args[args.length - 1] == null || args[args.length - 1] instanceof NativeJavaList)) {
 				// convert the ECMA array into a native array
 				varArgs = Context.jsToJava(cx, args[args.length - 1], argTypes[argTypes.length - 1]);
 			} else {
@@ -196,7 +195,7 @@ public class NativeJavaMethod extends BaseFunction {
 						break;
 					}
 				}
-				o = o.getPrototype();
+				o = o.getPrototype(cx);
 			}
 		}
 		if (debug) {
@@ -345,7 +344,7 @@ public class NativeJavaMethod extends BaseFunction {
 							++worseCount;
 						} else {
 							if (preference != PREFERENCE_EQUAL) {
-								Kit.codeBug();
+								throw Kit.codeBug();
 							}
 							// This should not happen in theory
 							// but on some JVMs, Class.getMethods will return all

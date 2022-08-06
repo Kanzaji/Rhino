@@ -20,9 +20,6 @@ import java.util.WeakHashMap;
  * WeakHashMap as the basis of this implementation and preserve the same semantics.
  */
 public class NativeWeakMap extends IdScriptableObject {
-	@Serial
-	private static final long serialVersionUID = 8670434366883930453L;
-
 	private static final Object MAP_TAG = "WeakMap";
 
 	private boolean instanceOfWeakMap = false;
@@ -31,9 +28,9 @@ public class NativeWeakMap extends IdScriptableObject {
 
 	private static final Object NULL_VALUE = new Object();
 
-	static void init(Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope, boolean sealed) {
 		NativeWeakMap m = new NativeWeakMap();
-		m.exportAsJSClass(MAX_PROTOTYPE_ID, scope, sealed);
+		m.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, sealed);
 	}
 
 	@Override
@@ -130,7 +127,7 @@ public class NativeWeakMap extends IdScriptableObject {
 	}
 
 	@Override
-	protected void initPrototypeId(int id) {
+	protected void initPrototypeId(Context cx, int id) {
 		if (id == SymbolId_toStringTag) {
 			initPrototypeValue(SymbolId_toStringTag, SymbolKey.TO_STRING_TAG, getClassName(), DONTENUM | READONLY);
 			return;
@@ -161,7 +158,7 @@ public class NativeWeakMap extends IdScriptableObject {
 			}
 			default -> throw new IllegalArgumentException(String.valueOf(id));
 		}
-		initPrototypeMethod(MAP_TAG, id, s, fnName, arity);
+		initPrototypeMethod(cx, MAP_TAG, id, s, fnName, arity);
 	}
 
 	@Override

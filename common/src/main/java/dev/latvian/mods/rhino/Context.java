@@ -25,6 +25,8 @@ import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -229,7 +231,7 @@ public class Context {
 	/**
 	 * Convenient value to use as zero-length array of objects.
 	 */
-	public static final Object[] emptyArgs = ScriptRuntime.emptyArgs;
+	public static final Object[] emptyArgs = ScriptRuntime.EMPTY_ARGS;
 
 	/**
 	 * Creates a new context. Provided as a preferred super constructor for
@@ -327,35 +329,12 @@ public class Context {
 			throw new IllegalStateException("Calling Context.exit without previous Context.enter");
 		}
 		if (cx.enterCount < 1) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		if (--cx.enterCount == 0) {
 			VMBridge.setContext(helper, null);
 			cx.factory.onContextReleased(cx);
 		}
-	}
-
-	/**
-	 * Call {@link
-	 * Callable#call(Context cx, Scriptable scope, Scriptable thisObj,
-	 * Object[] args)}
-	 * using the Context instance associated with the current thread.
-	 * If no Context is associated with the thread, then
-	 * {@link ContextFactory#makeContext()} will be called to construct
-	 * new Context instance. The instance will be temporary associated
-	 * with the thread during call to {@link ContextAction#run(Context)}.
-	 * <p>
-	 * It is allowed but not advisable to use null for <code>factory</code>
-	 * argument in which case the global static singleton ContextFactory
-	 * instance will be used to create new context instances.
-	 *
-	 * @see ContextFactory#call(ContextAction)
-	 */
-	public static Object call(ContextFactory factory, final Callable callable, final Scriptable scope, final Scriptable thisObj, final Object[] args) {
-		if (factory == null) {
-			factory = ContextFactory.getGlobal();
-		}
-		return call(factory, cx -> callable.call(cx, scope, thisObj, args));
 	}
 
 	/**
@@ -938,95 +917,6 @@ public class Context {
 	}
 
 	/**
-	 * Execute script that may pause execution by capturing a continuation.
-	 * Caller must be prepared to catch a ContinuationPending exception
-	 * and resume execution by calling
-	 * {@link #resumeContinuation(Object, Scriptable, Object)}.
-	 *
-	 * @param script The script to execute. Script must have been compiled
-	 *               with interpreted mode (optimization level -1)
-	 * @param scope  The scope to execute the script against
-	 * @throws ContinuationPending if the script calls a function that results
-	 *                             in a call to {@link #captureContinuation()}
-	 * @since 1.7 Release 2
-	 */
-	public Object executeScriptWithContinuations(Script script, Scriptable scope) throws ContinuationPending {
-		if (!(script instanceof InterpretedFunction) || !((InterpretedFunction) script).isScript()) {
-			// Can only be applied to scripts
-			throw new IllegalArgumentException("Script argument was not" + " a script or was not created by interpreted mode ");
-		}
-		return callFunctionWithContinuations((InterpretedFunction) script, scope, ScriptRuntime.emptyArgs);
-	}
-
-	/**
-	 * Call function that may pause execution by capturing a continuation.
-	 * Caller must be prepared to catch a ContinuationPending exception
-	 * and resume execution by calling
-	 * {@link #resumeContinuation(Object, Scriptable, Object)}.
-	 *
-	 * @param function The function to call. The function must have been
-	 *                 compiled with interpreted mode (optimization level -1)
-	 * @param scope    The scope to execute the script against
-	 * @param args     The arguments for the function
-	 * @throws ContinuationPending if the script calls a function that results
-	 *                             in a call to {@link #captureContinuation()}
-	 * @since 1.7 Release 2
-	 */
-	public Object callFunctionWithContinuations(Callable function, Scriptable scope, Object[] args) throws ContinuationPending {
-		if (!(function instanceof InterpretedFunction)) {
-			// Can only be applied to scripts
-			throw new IllegalArgumentException("Function argument was not" + " created by interpreted mode ");
-		}
-		if (ScriptRuntime.hasTopCall(this)) {
-			throw new IllegalStateException("Cannot have any pending top " + "calls when executing a script with continuations");
-		}
-		// Annotate so we can check later to ensure no java code in
-		// intervening frames
-		isContinuationsTopCall = true;
-		return ScriptRuntime.doTopCall(function, this, scope, scope, args, isTopLevelStrict);
-	}
-
-	/**
-	 * Capture a continuation from the current execution. The execution must
-	 * have been started via a call to
-	 * {@link #executeScriptWithContinuations(Script, Scriptable)} or
-	 * {@link #callFunctionWithContinuations(Callable, Scriptable, Object[])}.
-	 * This implies that the code calling
-	 * this method must have been called as a function from the
-	 * JavaScript script. Also, there cannot be any non-JavaScript code
-	 * between the JavaScript frames (e.g., a call to eval()). The
-	 * ContinuationPending exception returned must be thrown.
-	 *
-	 * @return A ContinuationPending exception that must be thrown
-	 * @since 1.7 Release 2
-	 */
-	public ContinuationPending captureContinuation() {
-		return new ContinuationPending(Interpreter.captureContinuation(this));
-	}
-
-	/**
-	 * Restarts execution of the JavaScript suspended at the call
-	 * to {@link #captureContinuation()}. Execution of the code will resume
-	 * with the functionResult as the result of the call that captured the
-	 * continuation.
-	 * Execution of the script will either conclude normally and the
-	 * result returned, another continuation will be captured and
-	 * thrown, or the script will terminate abnormally and throw an exception.
-	 *
-	 * @param continuation   The value returned by
-	 *                       {@link ContinuationPending#getContinuation()}
-	 * @param functionResult This value will appear to the code being resumed
-	 *                       as the result of the function that captured the continuation
-	 * @throws ContinuationPending if another continuation is captured before
-	 *                             the code terminates
-	 * @since 1.7 Release 2
-	 */
-	public Object resumeContinuation(Object continuation, Scriptable scope, Object functionResult) throws ContinuationPending {
-		Object[] args = {functionResult};
-		return Interpreter.restartContinuation((NativeContinuation) continuation, this, scope, args);
-	}
-
-	/**
 	 * Check whether a string is ready to be compiled.
 	 * <p>
 	 * stringIsCompilableUnit is intended to support interactive compilation of
@@ -1159,7 +1049,7 @@ public class Context {
 	 */
 	public Scriptable newObject(Scriptable scope) {
 		NativeObject result = new NativeObject();
-		ScriptRuntime.setBuiltinProtoAndParent(result, scope, TopLevel.Builtins.Object);
+		ScriptRuntime.setBuiltinProtoAndParent(this, result, scope, TopLevel.Builtins.Object);
 		return result;
 	}
 
@@ -1174,7 +1064,7 @@ public class Context {
 	 * @return the new object
 	 */
 	public Scriptable newObject(Scriptable scope, String constructorName) {
-		return newObject(scope, constructorName, ScriptRuntime.emptyArgs);
+		return newObject(scope, constructorName, ScriptRuntime.EMPTY_ARGS);
 	}
 
 	/**
@@ -1209,9 +1099,10 @@ public class Context {
 	 *               additional properties added dynamically).
 	 * @return the new array object
 	 */
-	public Scriptable newArray(Scriptable scope, int length) {
-		NativeArray result = new NativeArray(length);
-		ScriptRuntime.setBuiltinProtoAndParent(result, scope, TopLevel.Builtins.Array);
+	public NativeJavaList newArray(Scriptable scope, int length) {
+		var list = new ArrayList<>(length);
+		var result = new NativeJavaList(this, scope, list, list);
+		ScriptRuntime.setBuiltinProtoAndParent(this, result, scope, TopLevel.Builtins.Array);
 		return result;
 	}
 
@@ -1229,8 +1120,10 @@ public class Context {
 		if (elements.getClass().getComponentType() != ScriptRuntime.ObjectClass) {
 			throw new IllegalArgumentException();
 		}
-		NativeArray result = new NativeArray(elements);
-		ScriptRuntime.setBuiltinProtoAndParent(result, scope, TopLevel.Builtins.Array);
+
+		var list = new ArrayList<>(Arrays.asList(elements));
+		var result = new NativeJavaList(this, scope, list, list);
+		ScriptRuntime.setBuiltinProtoAndParent(this, result, scope, TopLevel.Builtins.Array);
 		return result;
 	}
 
@@ -1356,26 +1249,6 @@ public class Context {
 			Context cx = Context.getContext();
 			return cx.getWrapFactory().wrap(cx, scope, value, null);
 		}
-	}
-
-	/**
-	 * Convert a JavaScript value into the desired type.
-	 * Uses the semantics defined with LiveConnect3 and throws an
-	 * Illegal argument exception if the conversion cannot be performed.
-	 *
-	 * @param value       the JavaScript value to convert
-	 * @param desiredType the Java type to convert to. Primitive Java
-	 *                    types are represented using the TYPE fields in the corresponding
-	 *                    wrapper class in java.lang.
-	 * @return the converted value
-	 * @throws EvaluatorException if the conversion cannot be performed
-	 */
-	public static Object jsToJava(Object value, Class<?> desiredType) throws EvaluatorException {
-		if (desiredType == null) {
-			return value;
-		}
-
-		return jsToJava(getCurrentContext(), value, desiredType);
 	}
 
 	/**
@@ -1801,7 +1674,7 @@ public class Context {
 
 		// scope should be given if and only if compiling function
 		if ((scope == null) == returnFunction) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 
 		CompilerEnvirons compilerEnv = new CompilerEnvirons();

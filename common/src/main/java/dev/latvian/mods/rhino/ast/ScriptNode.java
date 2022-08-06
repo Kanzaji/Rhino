@@ -75,7 +75,7 @@ public class ScriptNode extends Scope {
 	 */
 	public void setBaseLineno(int lineno) {
 		if (lineno < 0 || this.lineno >= 0) {
-			codeBug();
+			throw codeBug();
 		}
 		this.lineno = lineno;
 	}
@@ -87,7 +87,7 @@ public class ScriptNode extends Scope {
 	public void setEndLineno(int lineno) {
 		// One time action
 		if (lineno < 0 || endLineno >= 0) {
-			codeBug();
+			throw codeBug();
 		}
 		endLineno = lineno;
 	}
@@ -112,7 +112,7 @@ public class ScriptNode extends Scope {
 	 */
 	public int addFunction(FunctionNode fnNode) {
 		if (fnNode == null) {
-			codeBug();
+			throw codeBug();
 		}
 		if (functions == null) {
 			functions = new ArrayList<>();
@@ -138,7 +138,7 @@ public class ScriptNode extends Scope {
 	 */
 	public void addRegExp(RegExpLiteral re) {
 		if (re == null) {
-			codeBug();
+			throw codeBug();
 		}
 		if (regexps == null) {
 			regexps = new ArrayList<>();
@@ -160,7 +160,7 @@ public class ScriptNode extends Scope {
 	 */
 	public void addTemplateLiteral(TemplateLiteral templateLiteral) {
 		if (templateLiteral == null) {
-			codeBug();
+			throw codeBug();
 		}
 		if (templateLiterals == null) {
 			templateLiterals = new ArrayList<>();
@@ -171,7 +171,7 @@ public class ScriptNode extends Scope {
 
 	public int getIndexForNameNode(Node nameNode) {
 		if (variableNames == null) {
-			codeBug();
+			throw codeBug();
 		}
 		Scope node = nameNode.getScope();
 		AstSymbol symbol = null;
@@ -183,7 +183,7 @@ public class ScriptNode extends Scope {
 
 	public String getParamOrVarName(int index) {
 		if (variableNames == null) {
-			codeBug();
+			throw codeBug();
 		}
 		return variableNames[index];
 	}
@@ -194,28 +194,28 @@ public class ScriptNode extends Scope {
 
 	public int getParamAndVarCount() {
 		if (variableNames == null) {
-			codeBug();
+			throw codeBug();
 		}
 		return symbols.size();
 	}
 
 	public String[] getParamAndVarNames() {
 		if (variableNames == null) {
-			codeBug();
+			throw codeBug();
 		}
 		return variableNames;
 	}
 
 	public boolean[] getParamAndVarConst() {
 		if (variableNames == null) {
-			codeBug();
+			throw codeBug();
 		}
 		return isConsts;
 	}
 
 	void addSymbol(AstSymbol symbol) {
 		if (variableNames != null) {
-			codeBug();
+			throw codeBug();
 		}
 		if (symbol.getDeclType() == Token.LP) {
 			paramCount++;

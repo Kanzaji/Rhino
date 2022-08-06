@@ -596,7 +596,7 @@ public final class IRFactory extends Parser {
 		Node object = new Node(Token.OBJECTLIT);
 		Object[] properties;
 		if (elems.isEmpty()) {
-			properties = ScriptRuntime.emptyArgs;
+			properties = ScriptRuntime.EMPTY_ARGS;
 		} else {
 			int size = elems.size(), i = 0;
 			properties = new Object[size];
@@ -703,7 +703,7 @@ public final class IRFactory extends Parser {
 
 	private Node transformScript(ScriptNode node) {
 		if (currentScope != null) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		currentScope = node;
 		Node body = new Node(Token.BLOCK);

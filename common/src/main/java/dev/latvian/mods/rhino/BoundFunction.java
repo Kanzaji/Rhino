@@ -6,8 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.Serial;
-
 /**
  * The class for results of the Function.bind operation
  * EcmaScript 5 spec, 15.3.4.5
@@ -15,9 +13,6 @@ import java.io.Serial;
  * @author Raphael Speyer
  */
 public class BoundFunction extends BaseFunction {
-
-	@Serial
-	private static final long serialVersionUID = 2118137342826470729L;
 
 	private final Callable targetFunction;
 	private final Scriptable boundThis;
@@ -34,14 +29,14 @@ public class BoundFunction extends BaseFunction {
 			length = 0;
 		}
 
-		ScriptRuntime.setFunctionProtoAndParent(this, scope);
+		ScriptRuntime.setFunctionProtoAndParent(cx, this, scope);
 
 		Function thrower = ScriptRuntime.typeErrorThrower(cx);
 		NativeObject throwing = new NativeObject();
-		throwing.put("get", throwing, thrower);
-		throwing.put("set", throwing, thrower);
-		throwing.put("enumerable", throwing, Boolean.FALSE);
-		throwing.put("configurable", throwing, Boolean.FALSE);
+		throwing.put(cx, "get", throwing, thrower);
+		throwing.put(cx, "set", throwing, thrower);
+		throwing.put(cx, "enumerable", throwing, Boolean.FALSE);
+		throwing.put(cx, "configurable", throwing, Boolean.FALSE);
 		throwing.preventExtensions();
 
 		this.defineOwnProperty(cx, "caller", throwing, false);
@@ -63,9 +58,9 @@ public class BoundFunction extends BaseFunction {
 	}
 
 	@Override
-	public boolean hasInstance(Scriptable instance) {
+	public boolean hasInstance(Context cx, Scriptable instance) {
 		if (targetFunction instanceof Function) {
-			return ((Function) targetFunction).hasInstance(instance);
+			return ((Function) targetFunction).hasInstance(cx, instance);
 		}
 		throw ScriptRuntime.typeError0("msg.not.ctor");
 	}
@@ -82,7 +77,7 @@ public class BoundFunction extends BaseFunction {
 		return args;
 	}
 
-	static boolean equalObjectGraphs(BoundFunction f1, BoundFunction f2, EqualObjectGraphs eq) {
-		return eq.equalGraphs(f1.boundThis, f2.boundThis) && eq.equalGraphs(f1.targetFunction, f2.targetFunction) && eq.equalGraphs(f1.boundArgs, f2.boundArgs);
+	static boolean equalObjectGraphs(Context cx, BoundFunction f1, BoundFunction f2, EqualObjectGraphs eq) {
+		return eq.equalGraphs(cx, f1.boundThis, f2.boundThis) && eq.equalGraphs(cx, f1.targetFunction, f2.targetFunction) && eq.equalGraphs(cx, f1.boundArgs, f2.boundArgs);
 	}
 }

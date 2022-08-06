@@ -6,8 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.Serial;
-
 /**
  * This class implements the activation object.
  * <p>
@@ -17,26 +15,23 @@ import java.io.Serial;
  * @see Arguments
  */
 public final class NativeCall extends IdScriptableObject {
-	@Serial
-	private static final long serialVersionUID = -7471457301304454454L;
-
 	private static final Object CALL_TAG = "Call";
 
-	static void init(Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope, boolean sealed) {
 		NativeCall obj = new NativeCall();
-		obj.exportAsJSClass(MAX_PROTOTYPE_ID, scope, sealed);
+		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, sealed);
 	}
 
 	NativeCall() {
 	}
 
-	NativeCall(NativeFunction function, Scriptable scope, Object[] args, boolean isArrow, boolean isStrict) {
+	NativeCall(Context cx, NativeFunction function, Scriptable scope, Object[] args, boolean isArrow, boolean isStrict) {
 		this.function = function;
 
 		setParentScope(scope);
 		// leave prototype null
 
-		this.originalArgs = (args == null) ? ScriptRuntime.emptyArgs : args;
+		this.originalArgs = (args == null) ? ScriptRuntime.EMPTY_ARGS : args;
 		this.isStrict = isStrict;
 
 		// initialize values of arguments
@@ -46,25 +41,25 @@ public final class NativeCall extends IdScriptableObject {
 			for (int i = 0; i < paramCount; ++i) {
 				String name = function.getParamOrVarName(i);
 				Object val = i < args.length ? args[i] : Undefined.instance;
-				defineProperty(name, val, PERMANENT);
+				defineProperty(cx, name, val, PERMANENT);
 			}
 		}
 
 		// initialize "arguments" property but only if it was not overridden by
 		// the parameter with the same name
-		if (!super.has("arguments", this) && !isArrow) {
-			arguments = new Arguments(this);
-			defineProperty("arguments", arguments, PERMANENT);
+		if (!super.has(cx, "arguments", this) && !isArrow) {
+			arguments = new Arguments(cx, this);
+			defineProperty(cx, "arguments", arguments, PERMANENT);
 		}
 
 		if (paramAndVarCount != 0) {
 			for (int i = paramCount; i < paramAndVarCount; ++i) {
 				String name = function.getParamOrVarName(i);
-				if (!super.has(name, this)) {
+				if (!super.has(cx, name, this)) {
 					if (function.getParamOrVarConst(i)) {
-						defineProperty(name, Undefined.instance, CONST);
+						defineProperty(cx, name, Undefined.instance, CONST);
 					} else if (!(function instanceof InterpretedFunction) || ((InterpretedFunction) function).hasFunctionNamed(name)) {
-						defineProperty(name, Undefined.instance, PERMANENT);
+						defineProperty(cx, name, Undefined.instance, PERMANENT);
 					}
 				}
 			}
@@ -82,7 +77,7 @@ public final class NativeCall extends IdScriptableObject {
 	}
 
 	@Override
-	protected void initPrototypeId(int id) {
+	protected void initPrototypeId(Context cx, int id) {
 		String s;
 		int arity;
 		if (id == Id_constructor) {
@@ -91,7 +86,7 @@ public final class NativeCall extends IdScriptableObject {
 		} else {
 			throw new IllegalArgumentException(String.valueOf(id));
 		}
-		initPrototypeMethod(CALL_TAG, id, s, arity);
+		initPrototypeMethod(cx, CALL_TAG, id, s, arity);
 	}
 
 	@Override
@@ -106,15 +101,15 @@ public final class NativeCall extends IdScriptableObject {
 			}
 			ScriptRuntime.checkDeprecated(cx, "Call");
 			NativeCall result = new NativeCall();
-			result.setPrototype(getObjectPrototype(scope));
+			result.setPrototype(cx, getObjectPrototype(cx, scope));
 			return result;
 		}
 		throw new IllegalArgumentException(String.valueOf(id));
 	}
 
-	public void defineAttributesForArguments() {
+	public void defineAttributesForArguments(Context cx) {
 		if (arguments != null) {
-			arguments.defineAttributesForStrictMode();
+			arguments.defineAttributesForStrictMode(cx);
 		}
 	}
 

@@ -31,7 +31,7 @@ public class RegExp {
 	}
 
 	public Scriptable wrapRegExp(Context cx, Scriptable scope, Object compiled) {
-		return new NativeRegExp(scope, (RECompiled) compiled);
+		return new NativeRegExp(cx, scope, (RECompiled) compiled);
 	}
 
 	public Object action(Context cx, Scriptable scope, Scriptable thisObj, Object[] args, int actionType) {
@@ -117,7 +117,7 @@ public class RegExp {
 		Scriptable topScope = ScriptableObject.getTopLevelScope(scope);
 		if (args.length == 0 || args[0] == Undefined.instance) {
 			RECompiled compiled = NativeRegExp.compileRE(cx, "", "", false);
-			re = new NativeRegExp(topScope, compiled);
+			re = new NativeRegExp(cx, topScope, compiled);
 		} else if (args[0] instanceof NativeRegExp) {
 			re = (NativeRegExp) args[0];
 		} else {
@@ -130,7 +130,7 @@ public class RegExp {
 				opt = null;
 			}
 			RECompiled compiled = NativeRegExp.compileRE(cx, src, opt, forceFlat);
-			re = new NativeRegExp(topScope, compiled);
+			re = new NativeRegExp(cx, topScope, compiled);
 		}
 		return re;
 	}
@@ -158,10 +158,10 @@ public class RegExp {
 					break;
 				}
 				if (data.mode == RA_MATCH) {
-					match_glob(data, cx, scope, count, reImpl);
+					match_glob(cx, data, scope, count, reImpl);
 				} else {
 					if (data.mode != RA_REPLACE) {
-						Kit.codeBug();
+						throw Kit.codeBug();
 					}
 					SubString lastMatch = reImpl.lastMatch;
 					int leftIndex = data.leftIndex;
@@ -261,13 +261,13 @@ public class RegExp {
 	/*
 	 * Analog of match_glob() in jsstr.c
 	 */
-	private static void match_glob(GlobData mdata, Context cx, Scriptable scope, int count, RegExp reImpl) {
+	private static void match_glob(Context cx, GlobData mdata, Scriptable scope, int count, RegExp reImpl) {
 		if (mdata.arrayobj == null) {
 			mdata.arrayobj = cx.newArray(scope, 0);
 		}
 		SubString matchsub = reImpl.lastMatch;
 		String matchstr = matchsub.toString();
-		mdata.arrayobj.put(count, mdata.arrayobj, matchstr);
+		mdata.arrayobj.put(cx, count, mdata.arrayobj, matchstr);
 	}
 
 	/*
@@ -298,7 +298,7 @@ public class RegExp {
 			// regexp that are used later by the engine.
 			// TODO: redesign is necessary
 			if (reImpl != ScriptRuntime.getRegExpProxy(cx)) {
-				Kit.codeBug();
+				throw Kit.codeBug();
 			}
 			RegExp re2 = new RegExp();
 			re2.multiline = reImpl.multiline;
@@ -353,7 +353,7 @@ public class RegExp {
 		int num, tmp;
 
 		if (da.charAt(dp) != '$') {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 
 		/* Allow a real backslash (literal "\\") to escape "$1" etc. */
@@ -460,7 +460,7 @@ public class RegExp {
 
 		// return an array consisting of the target if no separator given
 		if (args.length < 1 || args[0] == Undefined.instance) {
-			result.put(0, result, target);
+			result.put(cx, 0, result, target);
 			return result;
 		}
 
@@ -500,7 +500,7 @@ public class RegExp {
 				substr = target.substring(ip[0], match);
 			}
 
-			result.put(len, result, substr);
+			result.put(cx, len, result, substr);
 			len++;
 			/*
 			 * Imitate perl's feature of including parenthesized substrings
@@ -513,7 +513,7 @@ public class RegExp {
 					if (limited && len >= limit) {
 						break;
 					}
-					result.put(len, result, parens[0][num]);
+					result.put(cx, len, result, parens[0][num]);
 					len++;
 				}
 				matched[0] = false;

@@ -461,7 +461,7 @@ public class Node implements Iterable<Node> {
 	public int getExistingIntProp(int propType) {
 		PropListItem item = lookupProperty(propType);
 		if (item == null) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		return item.intValue;
 	}
@@ -516,7 +516,7 @@ public class Node implements Iterable<Node> {
 	 */
 	public final void setString(String s) {
 		if (s == null) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		((Name) this).setIdentifier(s);
 	}
@@ -541,14 +541,14 @@ public class Node implements Iterable<Node> {
 
 	public final int labelId() {
 		if ((type != Token.TARGET) && (type != Token.YIELD) && (type != Token.YIELD_STAR)) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		return getIntProp(LABEL_ID_PROP, -1);
 	}
 
 	public void labelId(int labelId) {
 		if ((type != Token.TARGET) && (type != Token.YIELD) && (type != Token.YIELD_STAR)) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		putIntProp(LABEL_ID_PROP, labelId);
 	}
@@ -899,7 +899,7 @@ public class Node implements Iterable<Node> {
 
 			case Token.HOOK:
 				if (first == null || first.next == null || first.next.next == null) {
-					Kit.codeBug();
+					throw Kit.codeBug();
 				}
 				return first.next.hasSideEffects() && first.next.next.hasSideEffects();
 
@@ -907,7 +907,7 @@ public class Node implements Iterable<Node> {
 			case Token.OR:
 			case Token.NULLISH_COALESCING:
 				if (first == null || last == null) {
-					Kit.codeBug();
+					throw Kit.codeBug();
 				}
 				return first.hasSideEffects() || last.hasSideEffects();
 
@@ -998,7 +998,7 @@ public class Node implements Iterable<Node> {
 		if (type == Token.FINALLY) {
 			resetTargets_r();
 		} else {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 	}
 

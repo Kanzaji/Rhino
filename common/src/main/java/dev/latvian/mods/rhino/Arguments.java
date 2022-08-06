@@ -6,8 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.Serial;
-
 /**
  * This class implements the "arguments" object.
  * <p>
@@ -17,17 +15,14 @@ import java.io.Serial;
  * @see NativeCall
  */
 final class Arguments extends IdScriptableObject {
-	@Serial
-	private static final long serialVersionUID = 4275508002492040609L;
-
 	private static final String FTAG = "Arguments";
 
-	public Arguments(NativeCall activation) {
+	public Arguments(Context cx, NativeCall activation) {
 		this.activation = activation;
 
 		Scriptable parent = activation.getParentScope();
 		setParentScope(parent);
-		setPrototype(getObjectPrototype(parent));
+		setPrototype(cx, getObjectPrototype(cx, parent));
 
 		args = activation.originalArgs;
 		lengthObj = args.length;
@@ -35,7 +30,7 @@ final class Arguments extends IdScriptableObject {
 		calleeObj = activation.function;
 		callerObj = NOT_FOUND;
 
-		defineProperty(SymbolKey.ITERATOR, iteratorMethod, DONTENUM);
+		defineProperty(cx, SymbolKey.ITERATOR, iteratorMethod, DONTENUM);
 	}
 
 	@Override
@@ -52,19 +47,19 @@ final class Arguments extends IdScriptableObject {
 
 	// the following helper methods assume that 0 < index < args.length
 
-	private void putIntoActivation(int index, Object value) {
+	private void putIntoActivation(Context cx, int index, Object value) {
 		String argName = activation.function.getParamOrVarName(index);
-		activation.put(argName, activation, value);
+		activation.put(cx, argName, activation, value);
 	}
 
-	private Object getFromActivation(int index) {
+	private Object getFromActivation(Context cx, int index) {
 		String argName = activation.function.getParamOrVarName(index);
-		return activation.get(argName, activation);
+		return activation.get(cx, argName, activation);
 	}
 
-	private void replaceArg(int index, Object value) {
-		if (sharedWithActivation(index)) {
-			putIntoActivation(index, value);
+	private void replaceArg(Context cx, int index, Object value) {
+		if (sharedWithActivation(cx, index)) {
+			putIntoActivation(cx, index, value);
 		}
 		synchronized (this) {
 			if (args == activation.originalArgs) {
@@ -88,27 +83,26 @@ final class Arguments extends IdScriptableObject {
 	// end helpers
 
 	@Override
-	public boolean has(int index, Scriptable start) {
+	public boolean has(Context cx, int index, Scriptable start) {
 		if (arg(index) != NOT_FOUND) {
 			return true;
 		}
-		return super.has(index, start);
+		return super.has(cx, index, start);
 	}
 
 	@Override
-	public Object get(int index, Scriptable start) {
+	public Object get(Context cx, int index, Scriptable start) {
 		final Object value = arg(index);
 		if (value == NOT_FOUND) {
-			return super.get(index, start);
+			return super.get(cx, index, start);
 		}
-		if (sharedWithActivation(index)) {
-			return getFromActivation(index);
+		if (sharedWithActivation(cx, index)) {
+			return getFromActivation(cx, index);
 		}
 		return value;
 	}
 
-	private boolean sharedWithActivation(int index) {
-		Context cx = Context.getContext();
+	private boolean sharedWithActivation(Context cx, int index) {
 		if (cx.isStrictMode()) {
 			return false;
 		}
@@ -131,25 +125,25 @@ final class Arguments extends IdScriptableObject {
 	}
 
 	@Override
-	public void put(int index, Scriptable start, Object value) {
+	public void put(Context cx, int index, Scriptable start, Object value) {
 		if (arg(index) == NOT_FOUND) {
-			super.put(index, start, value);
+			super.put(cx, index, start, value);
 		} else {
-			replaceArg(index, value);
+			replaceArg(cx, index, value);
 		}
 	}
 
 	@Override
-	public void put(String name, Scriptable start, Object value) {
-		super.put(name, start, value);
+	public void put(Context cx, String name, Scriptable start, Object value) {
+		super.put(cx, name, start, value);
 	}
 
 	@Override
-	public void delete(int index) {
+	public void delete(Context cx, int index) {
 		if (0 <= index && index < args.length) {
 			removeArg(index);
 		}
-		super.delete(index);
+		super.delete(cx, index);
 	}
 
 	// #string_id_map#
@@ -208,7 +202,7 @@ final class Arguments extends IdScriptableObject {
 	}
 
 	@Override
-	protected Object getInstanceIdValue(int id) {
+	protected Object getInstanceIdValue(Context cx, int id) {
 		switch (id) {
 			case Id_callee:
 				return calleeObj;
@@ -221,22 +215,22 @@ final class Arguments extends IdScriptableObject {
 				} else if (value == null) {
 					NativeCall caller = activation.parentActivationCall;
 					if (caller != null) {
-						value = caller.get("arguments", caller);
+						value = caller.get(cx, "arguments", caller);
 					}
 				}
 				return value;
 			}
 		}
-		return super.getInstanceIdValue(id);
+		return super.getInstanceIdValue(cx, id);
 	}
 
 	@Override
-	protected void setInstanceIdValue(int id, Object value) {
+	protected void setInstanceIdValue(Context cx, int id, Object value) {
 		switch (id) {
 			case Id_callee -> calleeObj = value;
 			case Id_length -> lengthObj = value;
 			case Id_caller -> callerObj = (value != null) ? value : UniqueTag.NULL_VALUE;
-			default -> super.setInstanceIdValue(id, value);
+			default -> super.setInstanceIdValue(cx, id, value);
 		}
 
 	}
@@ -252,8 +246,8 @@ final class Arguments extends IdScriptableObject {
 	}
 
 	@Override
-	Object[] getIds(boolean getNonEnumerable, boolean getSymbols) {
-		Object[] ids = super.getIds(getNonEnumerable, getSymbols);
+	Object[] getIds(Context cx, boolean getNonEnumerable, boolean getSymbols) {
+		Object[] ids = super.getIds(cx, getNonEnumerable, getSymbols);
 		if (args.length != 0) {
 			boolean[] present = new boolean[args.length];
 			int extraCount = args.length;
@@ -271,7 +265,7 @@ final class Arguments extends IdScriptableObject {
 			}
 			if (!getNonEnumerable) { // avoid adding args which were redefined to non-enumerable
 				for (int i = 0; i < present.length; i++) {
-					if (!present[i] && super.has(i, this)) {
+					if (!present[i] && super.has(cx, i, this)) {
 						present[i] = true;
 						extraCount--;
 					}
@@ -289,7 +283,7 @@ final class Arguments extends IdScriptableObject {
 					}
 				}
 				if (offset != extraCount) {
-					Kit.codeBug();
+					throw Kit.codeBug();
 				}
 			}
 		}
@@ -311,19 +305,19 @@ final class Arguments extends IdScriptableObject {
 		if (value == NOT_FOUND) {
 			return super.getOwnPropertyDescriptor(cx, id);
 		}
-		if (sharedWithActivation(index)) {
-			value = getFromActivation(index);
+		if (sharedWithActivation(cx, index)) {
+			value = getFromActivation(cx, index);
 		}
-		if (super.has(index, this)) { // the descriptor has been redefined
+		if (super.has(cx, index, this)) { // the descriptor has been redefined
 			ScriptableObject desc = super.getOwnPropertyDescriptor(cx, id);
-			desc.put("value", desc, value);
+			desc.put(cx, "value", desc, value);
 			return desc;
 		}
 		Scriptable scope = getParentScope();
 		if (scope == null) {
 			scope = this;
 		}
-		return buildDataDescriptor(scope, value, EMPTY);
+		return buildDataDescriptor(cx, scope, value, EMPTY);
 	}
 
 	@Override
@@ -344,19 +338,19 @@ final class Arguments extends IdScriptableObject {
 			return;
 		}
 
-		if (isAccessorDescriptor(desc)) {
+		if (isAccessorDescriptor(cx, desc)) {
 			removeArg(index);
 			return;
 		}
 
-		Object newValue = getProperty(desc, "value");
+		Object newValue = getProperty(cx, desc, "value");
 		if (newValue == NOT_FOUND) {
 			return;
 		}
 
-		replaceArg(index, newValue);
+		replaceArg(cx, index, newValue);
 
-		if (isFalse(getProperty(desc, "writable"))) {
+		if (isFalse(getProperty(cx, desc, "writable"))) {
 			removeArg(index);
 		}
 	}
@@ -367,38 +361,32 @@ final class Arguments extends IdScriptableObject {
 	//      [[Set]]: %ThrowTypeError%, [[Enumerable]]: false, [[Configurable]]: false}).
 	//   9. Perform DefinePropertyOrThrow(obj, "callee", PropertyDescriptor {[[Get]]: %ThrowTypeError%,
 	//      [[Set]]: %ThrowTypeError%, [[Enumerable]]: false, [[Configurable]]: false}).
-	void defineAttributesForStrictMode() {
-		Context cx = Context.getContext();
+	void defineAttributesForStrictMode(Context cx) {
 		if (!cx.isStrictMode()) {
 			return;
 		}
-		setGetterOrSetter("caller", 0, new ThrowTypeError("caller"), true);
-		setGetterOrSetter("caller", 0, new ThrowTypeError("caller"), false);
-		setGetterOrSetter("callee", 0, new ThrowTypeError("callee"), true);
-		setGetterOrSetter("callee", 0, new ThrowTypeError("callee"), false);
-		setAttributes("caller", DONTENUM | PERMANENT);
-		setAttributes("callee", DONTENUM | PERMANENT);
+		setGetterOrSetter(cx, "caller", 0, new ThrowTypeError("caller"), true);
+		setGetterOrSetter(cx, "caller", 0, new ThrowTypeError("caller"), false);
+		setGetterOrSetter(cx, "callee", 0, new ThrowTypeError("callee"), true);
+		setGetterOrSetter(cx, "callee", 0, new ThrowTypeError("callee"), false);
+		setAttributes(cx, "caller", DONTENUM | PERMANENT);
+		setAttributes(cx, "callee", DONTENUM | PERMANENT);
 		callerObj = null;
 		calleeObj = null;
 	}
 
 	private static final BaseFunction iteratorMethod = new BaseFunction() {
-		@Serial
-		private static final long serialVersionUID = 4239122318596177391L;
-
 		@Override
 		public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
 			// TODO : call %ArrayProto_values%
 			// 9.4.4.6 CreateUnmappedArgumentsObject(argumentsList)
 			//  1. Perform DefinePropertyOrThrow(obj, @@iterator, PropertyDescriptor {[[Value]]:%ArrayProto_values%,
 			//     [[Writable]]: true, [[Enumerable]]: false, [[Configurable]]: true}).
-			return new NativeArrayIterator(scope, thisObj, NativeArrayIterator.ArrayIteratorType.VALUES);
+			return new NativeArrayIterator(cx, scope, thisObj, NativeArrayIterator.ArrayIteratorType.VALUES);
 		}
 	};
 
 	private static class ThrowTypeError extends BaseFunction {
-		@Serial
-		private static final long serialVersionUID = -744615873947395749L;
 		private final String propertyName;
 
 		ThrowTypeError(String propertyName) {

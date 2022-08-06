@@ -825,8 +825,8 @@ public class Parser {
 
 		if (memberExprNode != null) {
 			// TODO(stevey): fix missing functionality
-			Kit.codeBug();
-			fnNode.setMemberExprNode(memberExprNode);  // rewrite later
+			throw Kit.codeBug();
+			// fnNode.setMemberExprNode(memberExprNode);  // rewrite later
             /* old code:
             if (memberExprNode != null) {
                 pn = nf.createAssignment(Token.ASSIGN, memberExprNode, pn);

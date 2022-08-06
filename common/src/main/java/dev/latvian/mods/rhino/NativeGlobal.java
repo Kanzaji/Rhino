@@ -47,14 +47,14 @@ public class NativeGlobal implements Serializable, IdFunctionCall {
 			}
 			IdFunctionObject f = new IdFunctionObject(obj, FTAG, id, name, arity, scope);
 			if (sealed) {
-				f.sealObject();
+				f.sealObject(cx);
 			}
-			f.exportAsScopeProperty();
+			f.exportAsScopeProperty(cx);
 		}
 
-		ScriptableObject.defineProperty(scope, "NaN", ScriptRuntime.NaNobj, ScriptableObject.READONLY | ScriptableObject.DONTENUM | ScriptableObject.PERMANENT);
-		ScriptableObject.defineProperty(scope, "Infinity", ScriptRuntime.wrapNumber(Double.POSITIVE_INFINITY), ScriptableObject.READONLY | ScriptableObject.DONTENUM | ScriptableObject.PERMANENT);
-		ScriptableObject.defineProperty(scope, "undefined", Undefined.instance, ScriptableObject.READONLY | ScriptableObject.DONTENUM | ScriptableObject.PERMANENT);
+		ScriptableObject.defineProperty(cx, scope, "NaN", ScriptRuntime.NaNobj, ScriptableObject.READONLY | ScriptableObject.DONTENUM | ScriptableObject.PERMANENT);
+		ScriptableObject.defineProperty(cx, scope, "Infinity", ScriptRuntime.wrapNumber(Double.POSITIVE_INFINITY), ScriptableObject.READONLY | ScriptableObject.DONTENUM | ScriptableObject.PERMANENT);
+		ScriptableObject.defineProperty(cx, scope, "undefined", Undefined.instance, ScriptableObject.READONLY | ScriptableObject.DONTENUM | ScriptableObject.PERMANENT);
 
         /*
             Each error constructor gets its own Error object as a prototype,
@@ -66,18 +66,18 @@ public class NativeGlobal implements Serializable, IdFunctionCall {
 				continue;
 			}
 			String name = error.name();
-			ScriptableObject errorProto = (ScriptableObject) ScriptRuntime.newBuiltinObject(cx, scope, TopLevel.Builtins.Error, ScriptRuntime.emptyArgs);
-			errorProto.put("name", errorProto, name);
-			errorProto.put("message", errorProto, "");
+			ScriptableObject errorProto = (ScriptableObject) ScriptRuntime.newBuiltinObject(cx, scope, TopLevel.Builtins.Error, ScriptRuntime.EMPTY_ARGS);
+			errorProto.put(cx, "name", errorProto, name);
+			errorProto.put(cx, "message", errorProto, "");
 			IdFunctionObject ctor = new IdFunctionObject(obj, FTAG, Id_new_CommonError, name, 1, scope);
 			ctor.markAsConstructor(errorProto);
-			errorProto.put("constructor", errorProto, ctor);
-			errorProto.setAttributes("constructor", ScriptableObject.DONTENUM);
+			errorProto.put(cx, "constructor", errorProto, ctor);
+			errorProto.setAttributes(cx, "constructor", ScriptableObject.DONTENUM);
 			if (sealed) {
-				errorProto.sealObject();
-				ctor.sealObject();
+				errorProto.sealObject(cx);
+				ctor.sealObject(cx);
 			}
-			ctor.exportAsScopeProperty();
+			ctor.exportAsScopeProperty(cx);
 		}
 	}
 
@@ -497,7 +497,7 @@ public class NativeGlobal implements Serializable, IdFunctionCall {
 
 	private static char toHexChar(int i) {
 		if (i >> 4 != 0) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		return (char) ((i < 10) ? i + '0' : i - 10 + 'A');
 	}

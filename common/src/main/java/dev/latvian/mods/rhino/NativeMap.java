@@ -6,12 +6,9 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.Serial;
 import java.util.Iterator;
 
 public class NativeMap extends IdScriptableObject {
-	@Serial
-	private static final long serialVersionUID = 1171922614280016891L;
 	private static final Object MAP_TAG = "Map";
 	static final String ITERATOR_TAG = "Map Iterator";
 
@@ -23,16 +20,16 @@ public class NativeMap extends IdScriptableObject {
 
 	static void init(Context cx, Scriptable scope, boolean sealed) {
 		NativeMap obj = new NativeMap();
-		obj.exportAsJSClass(MAX_PROTOTYPE_ID, scope, false);
+		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, false);
 
 		ScriptableObject desc = (ScriptableObject) cx.newObject(scope);
-		desc.put("enumerable", desc, Boolean.FALSE);
-		desc.put("configurable", desc, Boolean.TRUE);
-		desc.put("get", desc, obj.get(NativeSet.GETSIZE, obj));
+		desc.put(cx, "enumerable", desc, Boolean.FALSE);
+		desc.put(cx, "configurable", desc, Boolean.TRUE);
+		desc.put(cx, "get", desc, obj.get(cx, NativeSet.GETSIZE, obj));
 		obj.defineOwnProperty(cx, "size", desc);
 
 		if (sealed) {
-			obj.sealObject();
+			obj.sealObject(cx);
 		}
 	}
 
@@ -69,11 +66,11 @@ public class NativeMap extends IdScriptableObject {
 			case Id_clear:
 				return realThis(thisObj, f).js_clear();
 			case Id_keys:
-				return realThis(thisObj, f).js_iterator(scope, NativeCollectionIterator.Type.KEYS);
+				return realThis(thisObj, f).js_iterator(cx, scope, NativeCollectionIterator.Type.KEYS);
 			case Id_values:
-				return realThis(thisObj, f).js_iterator(scope, NativeCollectionIterator.Type.VALUES);
+				return realThis(thisObj, f).js_iterator(cx, scope, NativeCollectionIterator.Type.VALUES);
 			case Id_entries:
-				return realThis(thisObj, f).js_iterator(scope, NativeCollectionIterator.Type.BOTH);
+				return realThis(thisObj, f).js_iterator(cx, scope, NativeCollectionIterator.Type.BOTH);
 			case Id_forEach:
 				return realThis(thisObj, f).js_forEach(cx, scope, args.length > 0 ? args[0] : Undefined.instance, args.length > 1 ? args[1] : Undefined.instance);
 			case SymbolId_getSize:
@@ -119,8 +116,8 @@ public class NativeMap extends IdScriptableObject {
 		return entries.size();
 	}
 
-	private Object js_iterator(Scriptable scope, NativeCollectionIterator.Type type) {
-		return new NativeCollectionIterator(scope, ITERATOR_TAG, type, entries.iterator());
+	private Object js_iterator(Context cx, Scriptable scope, NativeCollectionIterator.Type type) {
+		return new NativeCollectionIterator(cx, scope, ITERATOR_TAG, type, entries.iterator());
 	}
 
 	private Object js_clear() {
@@ -177,7 +174,7 @@ public class NativeMap extends IdScriptableObject {
 		// been replaced. Since we're not fully constructed yet, create a dummy instance
 		// so that we can get our own prototype.
 		ScriptableObject dummy = ensureScriptableObject(cx.newObject(scope, map.getClassName()));
-		final Callable set = ScriptRuntime.getPropFunctionAndThis(dummy.getPrototype(), "set", cx, scope);
+		final Callable set = ScriptRuntime.getPropFunctionAndThis(dummy.getPrototype(cx), "set", cx, scope);
 		ScriptRuntime.lastStoredScriptable(cx);
 
 		// Finally, run through all the iterated values and add them!
@@ -187,11 +184,11 @@ public class NativeMap extends IdScriptableObject {
 				if (sVal instanceof Symbol) {
 					throw ScriptRuntime.typeError1("msg.arg.not.object", ScriptRuntime.typeof(sVal));
 				}
-				Object finalKey = sVal.get(0, sVal);
+				Object finalKey = sVal.get(cx, 0, sVal);
 				if (finalKey == NOT_FOUND) {
 					finalKey = Undefined.instance;
 				}
-				Object finalVal = sVal.get(1, sVal);
+				Object finalVal = sVal.get(cx, 1, sVal);
 				if (finalVal == NOT_FOUND) {
 					finalVal = Undefined.instance;
 				}
@@ -217,10 +214,10 @@ public class NativeMap extends IdScriptableObject {
 	}
 
 	@Override
-	protected void initPrototypeId(int id) {
+	protected void initPrototypeId(Context cx, int id) {
 		switch (id) {
 			case SymbolId_getSize -> {
-				initPrototypeMethod(MAP_TAG, id, NativeSet.GETSIZE, "get size", 0);
+				initPrototypeMethod(cx, MAP_TAG, id, NativeSet.GETSIZE, "get size", 0);
 				return;
 			}
 			case SymbolId_toStringTag -> {
@@ -275,7 +272,7 @@ public class NativeMap extends IdScriptableObject {
 			}
 			default -> throw new IllegalArgumentException(String.valueOf(id));
 		}
-		initPrototypeMethod(MAP_TAG, id, s, fnName, arity);
+		initPrototypeMethod(cx, MAP_TAG, id, s, fnName, arity);
 	}
 
 	@Override

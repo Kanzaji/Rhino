@@ -10,7 +10,6 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serial;
-import java.io.Serializable;
 
 /**
  * Map to associate non-negative integers to objects or integers.
@@ -21,10 +20,7 @@ import java.io.Serializable;
  * @author Igor Bukanov
  */
 @SuppressWarnings("unused")
-public class UintMap implements Serializable {
-	@Serial
-	private static final long serialVersionUID = 4242698212885848444L;
-
+public class UintMap {
 	// Map implementation via hashtable,
 	// follows "The Art of Computer Programming" by Donald E. Knuth
 
@@ -34,7 +30,7 @@ public class UintMap implements Serializable {
 
 	public UintMap(int initialCapacity) {
 		if (initialCapacity < 0) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		// Table grow when number of stored keys >= 3/4 of max capacity
 		int minimalCapacity = initialCapacity * 4 / 3;
@@ -43,7 +39,7 @@ public class UintMap implements Serializable {
 		}
 		power = i;
 		if (check && power < 2) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 	}
 
@@ -57,7 +53,7 @@ public class UintMap implements Serializable {
 
 	public boolean has(int key) {
 		if (key < 0) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		return 0 <= findIndex(key);
 	}
@@ -69,7 +65,7 @@ public class UintMap implements Serializable {
 	 */
 	public Object getObject(int key) {
 		if (key < 0) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		if (values != null) {
 			int index = findIndex(key);
@@ -87,7 +83,7 @@ public class UintMap implements Serializable {
 	 */
 	public int getInt(int key, int defaultValue) {
 		if (key < 0) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		int index = findIndex(key);
 		if (0 <= index) {
@@ -108,7 +104,7 @@ public class UintMap implements Serializable {
 	 */
 	public int getExistingInt(int key) {
 		if (key < 0) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		int index = findIndex(key);
 		if (0 <= index) {
@@ -118,8 +114,7 @@ public class UintMap implements Serializable {
 			return 0;
 		}
 		// Key must exist
-		Kit.codeBug();
-		return 0;
+		throw Kit.codeBug();
 	}
 
 	/**
@@ -128,7 +123,7 @@ public class UintMap implements Serializable {
 	 */
 	public void put(int key, Object value) {
 		if (key < 0) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		int index = ensureIndex(key, false);
 		if (values == null) {
@@ -143,7 +138,7 @@ public class UintMap implements Serializable {
 	 */
 	public void put(int key, int value) {
 		if (key < 0) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		int index = ensureIndex(key, true);
 		if (ivaluesShift == 0) {
@@ -161,7 +156,7 @@ public class UintMap implements Serializable {
 
 	public void remove(int key) {
 		if (key < 0) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		int index = findIndex(key);
 		if (0 <= index) {
@@ -236,7 +231,7 @@ public class UintMap implements Serializable {
 				do {
 					if (check) {
 						if (n >= occupiedCount) {
-							Kit.codeBug();
+							throw Kit.codeBug();
 						}
 						++n;
 					}
@@ -255,10 +250,10 @@ public class UintMap implements Serializable {
 	// and enough free space
 	private int insertNewKey(int key) {
 		if (check && occupiedCount != keyCount) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		if (check && keyCount == 1 << power) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		int[] keys = this.keys;
 		int fraction = key * A;
@@ -269,11 +264,11 @@ public class UintMap implements Serializable {
 			int firstIndex = index;
 			do {
 				if (check && keys[index] == DELETED) {
-					Kit.codeBug();
+					throw Kit.codeBug();
 				}
 				index = (index + step) & mask;
 				if (check && firstIndex == index) {
-					Kit.codeBug();
+					throw Kit.codeBug();
 				}
 			} while (keys[index] != EMPTY);
 		}
@@ -352,7 +347,7 @@ public class UintMap implements Serializable {
 				do {
 					if (check) {
 						if (n >= occupiedCount) {
-							Kit.codeBug();
+							throw Kit.codeBug();
 						}
 						++n;
 					}
@@ -369,7 +364,7 @@ public class UintMap implements Serializable {
 		}
 		// Inserting of new key
 		if (check && keys != null && keys[index] != EMPTY) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		if (firstDeleted >= 0) {
 			index = firstDeleted;

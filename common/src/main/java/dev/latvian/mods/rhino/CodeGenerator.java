@@ -133,7 +133,7 @@ class CodeGenerator extends Icode {
 				String str = (String) iter.getKey();
 				int index = iter.getValue();
 				if (itsData.itsStringTable[index] != null) {
-					Kit.codeBug();
+					throw Kit.codeBug();
 				}
 				itsData.itsStringTable[index] = str;
 			}
@@ -755,7 +755,7 @@ class CodeGenerator extends Icode {
 			}
 			case Token.GETVAR -> {
 				if (itsData.itsNeedsActivation) {
-					Kit.codeBug();
+					throw Kit.codeBug();
 				}
 				int index = scriptOrFn.getIndexForNameNode(node);
 				addVarOp(Token.GETVAR, index);
@@ -763,7 +763,7 @@ class CodeGenerator extends Icode {
 			}
 			case Token.SETVAR -> {
 				if (itsData.itsNeedsActivation) {
-					Kit.codeBug();
+					throw Kit.codeBug();
 				}
 				int index = scriptOrFn.getIndexForNameNode(child);
 				child = child.getNext();
@@ -772,7 +772,7 @@ class CodeGenerator extends Icode {
 			}
 			case Token.SETCONSTVAR -> {
 				if (itsData.itsNeedsActivation) {
-					Kit.codeBug();
+					throw Kit.codeBug();
 				}
 				int index = scriptOrFn.getIndexForNameNode(child);
 				child = child.getNext();
@@ -825,7 +825,7 @@ class CodeGenerator extends Icode {
 			default -> throw badTree(node);
 		}
 		if (savedStackDepth + 1 != stackDepth) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 	}
 
@@ -871,7 +871,7 @@ class CodeGenerator extends Icode {
 		switch (childType) {
 			case Token.GETVAR -> {
 				if (itsData.itsNeedsActivation) {
-					Kit.codeBug();
+					throw Kit.codeBug();
 				}
 				int i = scriptOrFn.getIndexForNameNode(child);
 				addVarOp(Icode_VAR_INC_DEC, i);
@@ -1009,7 +1009,7 @@ class CodeGenerator extends Icode {
 		int label = getTargetLabel(target);
 		if (labelTable[label] != -1) {
 			// Can mark label only once
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		labelTable[label] = iCodeTop;
 	}
@@ -1017,7 +1017,7 @@ class CodeGenerator extends Icode {
 	private void addGoto(Node target, int gotoOp) {
 		int label = getTargetLabel(target);
 		if (!(label < labelTableTop)) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		int targetPC = labelTable[label];
 
@@ -1238,7 +1238,7 @@ class CodeGenerator extends Icode {
 
 	private void addIndexPrefix(int index) {
 		if (index < 0) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		if (index < 6) {
 			addIcode(Icode_REG_IND_C0 - index);
@@ -1259,7 +1259,7 @@ class CodeGenerator extends Icode {
 		int[] table = itsData.itsExceptionTable;
 		if (table == null) {
 			if (top != 0) {
-				Kit.codeBug();
+				throw Kit.codeBug();
 			}
 			table = new int[Interpreter.EXCEPTION_SLOT_SIZE * 2];
 			itsData.itsExceptionTable = table;
@@ -1318,7 +1318,7 @@ class CodeGenerator extends Icode {
 	private void releaseLocal(int localSlot) {
 		--localTop;
 		if (localSlot != localTop) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 	}
 }

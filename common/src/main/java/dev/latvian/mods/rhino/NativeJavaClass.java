@@ -6,7 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.Serial;
 import java.lang.reflect.Array;
 import java.lang.reflect.Modifier;
 import java.util.Map;
@@ -22,34 +21,29 @@ import java.util.Map;
  * Packages/java tree.
  *
  * @author Mike Shaver
- * @see NativeJavaArray
  * @see NativeJavaObject
- * @see NativeJavaPackage
  */
 
 public class NativeJavaClass extends NativeJavaObject implements Function {
-	@Serial
-	private static final long serialVersionUID = -6460763940409461664L;
-
 	// Special property for getting the underlying Java class object.
 	static final String javaClassPropertyName = "__javaObject__";
 
 	public NativeJavaClass() {
 	}
 
-	public NativeJavaClass(Scriptable scope, Class<?> cl) {
-		this(scope, cl, false);
+	public NativeJavaClass(Context cx, Scriptable scope, Class<?> cl) {
+		this(cx, scope, cl, false);
 	}
 
-	public NativeJavaClass(Scriptable scope, Class<?> cl, boolean isAdapter) {
-		super(scope, cl, null, isAdapter);
+	public NativeJavaClass(Context cx, Scriptable scope, Class<?> cl, boolean isAdapter) {
+		super(cx, scope, cl, null, isAdapter);
 	}
 
 	@Override
-	protected void initMembers() {
+	protected void initMembers(Context cx) {
 		Class<?> cl = (Class<?>) javaObject;
-		members = JavaMembers.lookupClass(ClassCache.get(parent), cl, cl, isAdapter);
-		staticFieldAndMethods = members.getFieldAndMethodsObjects(this, cl, true);
+		members = JavaMembers.lookupClass(ClassCache.get(cx, parent), cl, cl, isAdapter);
+		staticFieldAndMethods = members.getFieldAndMethodsObjects(cx, this, cl, true);
 	}
 
 	@Override
@@ -58,12 +52,12 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 	}
 
 	@Override
-	public boolean has(String name, Scriptable start) {
+	public boolean has(Context cx, String name, Scriptable start) {
 		return members.has(name, true) || javaClassPropertyName.equals(name);
 	}
 
 	@Override
-	public Object get(String name, Scriptable start) {
+	public Object get(Context cx, String name, Scriptable start) {
 		// When used as a constructor, ScriptRuntime.newObject() asks
 		// for our prototype to create an object of the correct type.
 		// We don't really care what the object is, since we're returning
@@ -80,10 +74,9 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 		}
 
 		if (members.has(name, true)) {
-			return members.get(this, name, javaObject, true);
+			return members.get(cx, this, name, javaObject, true);
 		}
 
-		Context cx = Context.getContext();
 		Scriptable scope = ScriptableObject.getTopLevelScope(start);
 		WrapFactory wrapFactory = cx.getWrapFactory();
 
@@ -104,12 +97,12 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 	}
 
 	@Override
-	public void put(String name, Scriptable start, Object value) {
+	public void put(Context cx, String name, Scriptable start, Object value) {
 		members.put(this, name, javaObject, value, true);
 	}
 
 	@Override
-	public Object[] getIds() {
+	public Object[] getIds(Context cx) {
 		return members.getIds(true);
 	}
 
@@ -118,7 +111,7 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 	}
 
 	@Override
-	public Object getDefaultValue(Class<?> hint) {
+	public Object getDefaultValue(Context cx, Class<?> hint) {
 		if (hint == null || hint == ScriptRuntime.StringClass) {
 			return this.toString();
 		}
@@ -145,7 +138,7 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 						return p;
 					}
 				}
-				p = p.getPrototype();
+				p = p.getPrototype(cx);
 			} while (p != null);
 		}
 		return construct(cx, scope, args);
@@ -180,7 +173,7 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 			}
 			// use JavaAdapter to construct a new class on the fly that
 			// implements/extends this interface/abstract class.
-			Object v = topLevel.get("JavaAdapter", topLevel);
+			Object v = topLevel.get(cx, "JavaAdapter", topLevel);
 			if (v != NOT_FOUND) {
 				Function f = (Function) v;
 				// Args are (interface, js object)
@@ -220,7 +213,7 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 
 			// Handle special situation where a single variable parameter
 			// is given and it is a Java or ECMA array.
-			if (args.length == argTypes.length && (args[args.length - 1] == null || args[args.length - 1] instanceof NativeArray || args[args.length - 1] instanceof NativeJavaArray)) {
+			if (args.length == argTypes.length && (args[args.length - 1] == null || args[args.length - 1] instanceof NativeJavaList)) {
 				// convert the ECMA array into a native array
 				varArgs = Context.jsToJava(cx, args[args.length - 1], argTypes[argTypes.length - 1]);
 			} else {
@@ -268,7 +261,7 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 	 * static methods exposed by a JavaNativeClass.
 	 */
 	@Override
-	public boolean hasInstance(Scriptable value) {
+	public boolean hasInstance(Context cx, Scriptable value) {
 
 		if (value instanceof Wrapper && !(value instanceof NativeJavaClass)) {
 			Object instance = ((Wrapper) value).unwrap();

@@ -33,7 +33,7 @@ class TokenStream {
 		this.parser = parser;
 		this.lineno = lineno;
 		if (sourceString == null) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		this.sourceString = sourceString;
 		this.sourceEnd = sourceString.length();
@@ -747,7 +747,7 @@ class TokenStream {
 			addToString('=');
 		} else {
 			if (startToken != Token.DIV) {
-				Kit.codeBug();
+				throw Kit.codeBug();
 			}
 			if (peekChar() == '*') {
 				tokenEnd = cursor - 1;
@@ -1042,7 +1042,7 @@ class TokenStream {
 	private void ungetChar(int c) {
 		// can not unread past across line boundary
 		if (ungetCursor != 0 && ungetBuffer[ungetCursor - 1] == '\n') {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		ungetBuffer[ungetCursor++] = c;
 		cursor--;

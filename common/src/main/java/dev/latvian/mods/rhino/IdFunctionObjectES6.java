@@ -1,11 +1,6 @@
 package dev.latvian.mods.rhino;
 
-import java.io.Serial;
-
 public class IdFunctionObjectES6 extends IdFunctionObject {
-
-	@Serial
-	private static final long serialVersionUID = -8023088662589035261L;
 
 	public IdFunctionObjectES6(IdFunctionCall idcall, Object tag, int id, String name, int arity, Scriptable scope) {
 		super(idcall, tag, id, name, arity, scope);
@@ -27,17 +22,17 @@ public class IdFunctionObjectES6 extends IdFunctionObject {
 	}
 
 	@Override
-	protected Object getInstanceIdValue(int id) {
+	protected Object getInstanceIdValue(Context cx, int id) {
 		if (id == Id_length && !myLength) {
 			return NOT_FOUND;
 		} else if (id == Id_name && !myName) {
 			return NOT_FOUND;
 		}
-		return super.getInstanceIdValue(id);
+		return super.getInstanceIdValue(cx, id);
 	}
 
 	@Override
-	protected void setInstanceIdValue(int id, Object value) {
+	protected void setInstanceIdValue(Context cx, int id, Object value) {
 		if (id == Id_length && value == NOT_FOUND) {
 			this.myLength = false;
 			return;
@@ -45,6 +40,6 @@ public class IdFunctionObjectES6 extends IdFunctionObject {
 			this.myName = false;
 			return;
 		}
-		super.setInstanceIdValue(id, value);
+		super.setInstanceIdValue(cx, id, value);
 	}
 }

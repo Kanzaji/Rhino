@@ -6,7 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.Serial;
 import java.io.Serializable;
 
 /**
@@ -14,10 +13,6 @@ import java.io.Serializable;
  * target objects based on some property/index.
  */
 public abstract class Ref implements Serializable {
-
-	@Serial
-	private static final long serialVersionUID = 4044540354730911424L;
-
 	public boolean has(Context cx) {
 		return true;
 	}

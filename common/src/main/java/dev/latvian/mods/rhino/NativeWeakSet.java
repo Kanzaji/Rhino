@@ -6,9 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.Serial;
 import java.util.WeakHashMap;
 
 /**
@@ -19,18 +16,15 @@ import java.util.WeakHashMap;
  * that we put in the WeakHashMap here is not one that contains the key.
  */
 public class NativeWeakSet extends IdScriptableObject {
-	@Serial
-	private static final long serialVersionUID = 2065753364224029534L;
-
 	private static final Object MAP_TAG = "WeakSet";
 
 	private boolean instanceOfWeakSet = false;
 
-	private transient WeakHashMap<Scriptable, Boolean> map = new WeakHashMap<>();
+	private final transient WeakHashMap<Scriptable, Boolean> map = new WeakHashMap<>();
 
-	static void init(Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope, boolean sealed) {
 		NativeWeakSet m = new NativeWeakSet();
-		m.exportAsJSClass(MAX_PROTOTYPE_ID, scope, sealed);
+		m.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, sealed);
 	}
 
 	@Override
@@ -111,7 +105,7 @@ public class NativeWeakSet extends IdScriptableObject {
 	}
 
 	@Override
-	protected void initPrototypeId(int id) {
+	protected void initPrototypeId(Context cx, int id) {
 		if (id == SymbolId_toStringTag) {
 			initPrototypeValue(SymbolId_toStringTag, SymbolKey.TO_STRING_TAG, getClassName(), DONTENUM | READONLY);
 			return;
@@ -138,7 +132,7 @@ public class NativeWeakSet extends IdScriptableObject {
 			}
 			default -> throw new IllegalArgumentException(String.valueOf(id));
 		}
-		initPrototypeMethod(MAP_TAG, id, s, fnName, arity);
+		initPrototypeMethod(cx, MAP_TAG, id, s, fnName, arity);
 	}
 
 	@Override
@@ -168,12 +162,4 @@ public class NativeWeakSet extends IdScriptableObject {
 	private static final int Id_has = 4;
 	private static final int SymbolId_toStringTag = 5;
 	private static final int MAX_PROTOTYPE_ID = SymbolId_toStringTag;
-
-	// #/string_id_map#
-
-	@Serial
-	private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException {
-		stream.defaultReadObject();
-		map = new WeakHashMap<>();
-	}
 }

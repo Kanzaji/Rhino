@@ -16,9 +16,6 @@ import java.lang.reflect.Method;
  * ECMA 15.11
  */
 final class NativeError extends IdScriptableObject {
-	@Serial
-	private static final long serialVersionUID = -5338413581437645187L;
-
 	private static final Object ERROR_TAG = "Error";
 
 	private static final Method ERROR_DELEGATE_GET_STACK;
@@ -27,8 +24,8 @@ final class NativeError extends IdScriptableObject {
 	static {
 		try {
 			// Pre-cache methods to be called via reflection
-			ERROR_DELEGATE_GET_STACK = NativeError.class.getMethod("getStackDelegated", Scriptable.class);
-			ERROR_DELEGATE_SET_STACK = NativeError.class.getMethod("setStackDelegated", Scriptable.class, Object.class);
+			ERROR_DELEGATE_GET_STACK = NativeError.class.getMethod("getStackDelegated", Context.class, Scriptable.class);
+			ERROR_DELEGATE_SET_STACK = NativeError.class.getMethod("setStackDelegated", Context.class, Scriptable.class, Object.class);
 		} catch (NoSuchMethodException nsm) {
 			throw new RuntimeException(nsm);
 		}
@@ -44,35 +41,35 @@ final class NativeError extends IdScriptableObject {
 
 	private RhinoException stackProvider;
 
-	static void init(Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope, boolean sealed) {
 		NativeError obj = new NativeError();
-		putProperty(obj, "name", "Error");
-		putProperty(obj, "message", "");
-		putProperty(obj, "fileName", "");
-		putProperty(obj, "lineNumber", 0);
-		obj.setAttributes("name", DONTENUM);
-		obj.setAttributes("message", DONTENUM);
-		obj.exportAsJSClass(MAX_PROTOTYPE_ID, scope, sealed);
-		NativeCallSite.init(obj, sealed);
+		putProperty(cx, obj, "name", "Error");
+		putProperty(cx, obj, "message", "");
+		putProperty(cx, obj, "fileName", "");
+		putProperty(cx, obj, "lineNumber", 0);
+		obj.setAttributes(cx, "name", DONTENUM);
+		obj.setAttributes(cx, "message", DONTENUM);
+		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, sealed);
+		NativeCallSite.init(cx, obj, sealed);
 	}
 
 	static NativeError make(Context cx, Scriptable scope, IdFunctionObject ctorObj, Object[] args) {
-		Scriptable proto = (Scriptable) (ctorObj.get("prototype", ctorObj));
+		Scriptable proto = (Scriptable) (ctorObj.get(cx, "prototype", ctorObj));
 
 		NativeError obj = new NativeError();
-		obj.setPrototype(proto);
+		obj.setPrototype(cx, proto);
 		obj.setParentScope(scope);
 
 		int arglen = args.length;
 		if (arglen >= 1) {
 			if (args[0] != Undefined.instance) {
-				putProperty(obj, "message", ScriptRuntime.toString(args[0]));
+				putProperty(cx, obj, "message", ScriptRuntime.toString(args[0]));
 			}
 			if (arglen >= 2) {
-				putProperty(obj, "fileName", args[1]);
+				putProperty(cx, obj, "fileName", args[1]);
 				if (arglen >= 3) {
 					int line = ScriptRuntime.toInt32(args[2]);
-					putProperty(obj, "lineNumber", line);
+					putProperty(cx, obj, "lineNumber", line);
 				}
 			}
 		}
@@ -80,8 +77,8 @@ final class NativeError extends IdScriptableObject {
 	}
 
 	@Override
-	protected void fillConstructorProperties(IdFunctionObject ctor) {
-		addIdFunctionProperty(ctor, ERROR_TAG, ConstructorId_captureStackTrace, "captureStackTrace", 2);
+	protected void fillConstructorProperties(Context cx, IdFunctionObject ctor) {
+		addIdFunctionProperty(cx, ctor, ERROR_TAG, ConstructorId_captureStackTrace, "captureStackTrace", 2);
 
 		// This is running on the global "Error" object. Associate an object there that can store
 		// default stack trace, etc.
@@ -93,7 +90,7 @@ final class NativeError extends IdScriptableObject {
 		ctor.defineProperty("stackTraceLimit", protoProps, ProtoProps.GET_STACK_LIMIT, ProtoProps.SET_STACK_LIMIT, 0);
 		ctor.defineProperty("prepareStackTrace", protoProps, ProtoProps.GET_PREPARE_STACK, ProtoProps.SET_PREPARE_STACK, 0);
 
-		super.fillConstructorProperties(ctor);
+		super.fillConstructorProperties(cx, ctor);
 	}
 
 	@Override
@@ -104,12 +101,12 @@ final class NativeError extends IdScriptableObject {
 	@Override
 	public String toString() {
 		// According to spec, Error.prototype.toString() may return undefined.
-		Object toString = js_toString(this);
+		Object toString = js_toString(Context.getCurrentContext(), this);
 		return toString instanceof String ? (String) toString : super.toString();
 	}
 
 	@Override
-	protected void initPrototypeId(int id) {
+	protected void initPrototypeId(Context cx, int id) {
 		String s;
 		int arity;
 		switch (id) {
@@ -127,7 +124,7 @@ final class NativeError extends IdScriptableObject {
 			}
 			default -> throw new IllegalArgumentException(String.valueOf(id));
 		}
-		initPrototypeMethod(ERROR_TAG, id, s, arity);
+		initPrototypeMethod(cx, ERROR_TAG, id, s, arity);
 	}
 
 	@Override
@@ -141,7 +138,7 @@ final class NativeError extends IdScriptableObject {
 				return make(cx, scope, f, args);
 
 			case Id_toString:
-				return js_toString(thisObj);
+				return js_toString(cx, thisObj);
 
 			case Id_toSource:
 				return "not_supported";
@@ -164,7 +161,7 @@ final class NativeError extends IdScriptableObject {
 		}
 	}
 
-	public Object getStackDelegated(Scriptable target) {
+	public Object getStackDelegated(Context cx, Scriptable target) {
 		if (stackProvider == null) {
 			return NOT_FOUND;
 		}
@@ -172,7 +169,7 @@ final class NativeError extends IdScriptableObject {
 		// Get the object where prototype stuff is stored.
 		int limit = DEFAULT_STACK_LIMIT;
 		Function prepare = null;
-		NativeError cons = (NativeError) getPrototype();
+		NativeError cons = (NativeError) getPrototype(cx);
 		ProtoProps pp = (ProtoProps) cons.getAssociatedValue(ProtoProps.KEY);
 
 		if (pp != null) {
@@ -194,14 +191,14 @@ final class NativeError extends IdScriptableObject {
 
 		// We store the stack as local property both to cache it
 		// and to make the property writable
-		setStackDelegated(target, value);
+		setStackDelegated(cx, target, value);
 		return value;
 	}
 
-	public void setStackDelegated(Scriptable target, Object value) {
-		target.delete("stack");
+	public void setStackDelegated(Context cx, Scriptable target, Object value) {
+		target.delete(cx, "stack");
 		stackProvider = null;
-		target.put("stack", target, value);
+		target.put(cx, "stack", target, value);
 	}
 
 	private Object callPrepareStack(Function prepare, ScriptStackElement[] stack) {
@@ -219,14 +216,14 @@ final class NativeError extends IdScriptableObject {
 		return prepare.call(cx, prepare, this, new Object[]{this, eltArray});
 	}
 
-	private static Object js_toString(Scriptable thisObj) {
-		Object name = getProperty(thisObj, "name");
+	private static Object js_toString(Context cx, Scriptable thisObj) {
+		Object name = getProperty(cx, thisObj, "name");
 		if (name == NOT_FOUND || name == Undefined.instance) {
 			name = "Error";
 		} else {
 			name = ScriptRuntime.toString(name);
 		}
-		Object msg = getProperty(thisObj, "message");
+		Object msg = getProperty(cx, thisObj, "message");
 		if (msg == NOT_FOUND || msg == Undefined.instance) {
 			msg = "";
 		} else {
@@ -255,7 +252,7 @@ final class NativeError extends IdScriptableObject {
 
 		// Figure out if they passed a function used to hide part of the stack
 		if (func != null) {
-			Object funcName = func.get("name", func);
+			Object funcName = func.get(cx, "name", func);
 			if ((funcName != null) && !Undefined.instance.equals(funcName)) {
 				err.associateValue(STACK_HIDE_KEY, Context.toString(funcName));
 			}

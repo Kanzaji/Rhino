@@ -148,7 +148,7 @@ public class Scope extends Jump {
 		Map<String, AstSymbol> src = source.ensureSymbolTable();
 		Map<String, AstSymbol> dst = dest.ensureSymbolTable();
 		if (!Collections.disjoint(src.keySet(), dst.keySet())) {
-			codeBug();
+			throw codeBug();
 		}
 		for (Map.Entry<String, AstSymbol> entry : src.entrySet()) {
 			AstSymbol sym = entry.getValue();

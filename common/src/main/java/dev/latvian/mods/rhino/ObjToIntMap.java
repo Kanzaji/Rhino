@@ -54,7 +54,7 @@ public class ObjToIntMap implements Serializable {
 
 		public void next() {
 			if (remaining == -1) {
-				Kit.codeBug();
+				throw Kit.codeBug();
 			}
 			if (remaining == 0) {
 				remaining = -1;
@@ -99,7 +99,7 @@ public class ObjToIntMap implements Serializable {
 
 	public ObjToIntMap(int keyCountHint) {
 		if (keyCountHint < 0) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		// Table grow when number of stored keys >= 3/4 of max capacity
 		int minimalCapacity = keyCountHint * 4 / 3;
@@ -108,7 +108,7 @@ public class ObjToIntMap implements Serializable {
 		}
 		power = i;
 		if (check && power < 2) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 	}
 
@@ -158,8 +158,7 @@ public class ObjToIntMap implements Serializable {
 			return values[index];
 		}
 		// Key must exist
-		Kit.codeBug();
-		return 0;
+		throw Kit.codeBug();
 	}
 
 	public void put(Object key, int value) {
@@ -267,7 +266,7 @@ public class ObjToIntMap implements Serializable {
 				for (; ; ) {
 					if (check) {
 						if (n >= occupiedCount) {
-							Kit.codeBug();
+							throw Kit.codeBug();
 						}
 						++n;
 					}
@@ -289,10 +288,10 @@ public class ObjToIntMap implements Serializable {
 	// and enough free space
 	private int insertNewKey(Object key, int hash) {
 		if (check && occupiedCount != keyCount) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		if (check && keyCount == 1 << power) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		int fraction = hash * A;
 		int index = fraction >>> (32 - power);
@@ -303,11 +302,11 @@ public class ObjToIntMap implements Serializable {
 			int firstIndex = index;
 			do {
 				if (check && keys[index] == DELETED) {
-					Kit.codeBug();
+					throw Kit.codeBug();
 				}
 				index = (index + step) & mask;
 				if (check && firstIndex == index) {
-					Kit.codeBug();
+					throw Kit.codeBug();
 				}
 			} while (keys[index] != null);
 		}
@@ -322,10 +321,10 @@ public class ObjToIntMap implements Serializable {
 	private void rehashTable() {
 		if (keys == null) {
 			if (check && keyCount != 0) {
-				Kit.codeBug();
+				throw Kit.codeBug();
 			}
 			if (check && occupiedCount != 0) {
-				Kit.codeBug();
+				throw Kit.codeBug();
 			}
 			int N = 1 << power;
 			keys = new Object[N];
@@ -382,7 +381,7 @@ public class ObjToIntMap implements Serializable {
 				for (; ; ) {
 					if (check) {
 						if (n >= occupiedCount) {
-							Kit.codeBug();
+							throw Kit.codeBug();
 						}
 						++n;
 					}
@@ -402,7 +401,7 @@ public class ObjToIntMap implements Serializable {
 		}
 		// Inserting of new key
 		if (check && keys != null && keys[index] != null) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		if (firstDeleted >= 0) {
 			index = firstDeleted;

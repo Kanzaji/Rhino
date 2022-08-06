@@ -58,7 +58,7 @@ class JavaMembers {
 		return findExplicitFunction(name, isStatic) != null;
 	}
 
-	public Object get(Scriptable scope, String name, Object javaObject, boolean isStatic) {
+	public Object get(Context cx, Scriptable scope, String name, Object javaObject, boolean isStatic) {
 		Map<String, Object> ht = isStatic ? staticMembers : members;
 		Object member = ht.get(name);
 		if (!isStatic && member == null) {
@@ -66,7 +66,7 @@ class JavaMembers {
 			member = staticMembers.get(name);
 		}
 		if (member == null) {
-			member = this.getExplicitFunction(scope, name, javaObject, isStatic);
+			member = this.getExplicitFunction(cx, scope, name, javaObject, isStatic);
 			if (member == null) {
 				return Scriptable.NOT_FOUND;
 			}
@@ -74,7 +74,6 @@ class JavaMembers {
 		if (member instanceof Scriptable) {
 			return member;
 		}
-		Context cx = Context.getContext();
 		Object rval;
 		Class<?> type;
 		try {
@@ -159,7 +158,7 @@ class JavaMembers {
 
 	public Object[] getIds(boolean isStatic) {
 		Map<String, Object> map = isStatic ? staticMembers : members;
-		return map.keySet().toArray(ScriptRuntime.emptyArgs);
+		return map.keySet().toArray(ScriptRuntime.EMPTY_ARGS);
 	}
 
 	public static String javaSignature(Class<?> type) {
@@ -242,17 +241,17 @@ class JavaMembers {
 		return null;
 	}
 
-	private Object getExplicitFunction(Scriptable scope, String name, Object javaObject, boolean isStatic) {
+	private Object getExplicitFunction(Context cx, Scriptable scope, String name, Object javaObject, boolean isStatic) {
 		Map<String, Object> ht = isStatic ? staticMembers : members;
 		Object member = null;
 		MemberBox methodOrCtor = findExplicitFunction(name, isStatic);
 
 		if (methodOrCtor != null) {
-			Scriptable prototype = ScriptableObject.getFunctionPrototype(scope);
+			Scriptable prototype = ScriptableObject.getFunctionPrototype(cx, scope);
 
 			if (methodOrCtor.isCtor()) {
 				NativeJavaConstructor fun = new NativeJavaConstructor(methodOrCtor);
-				fun.setPrototype(prototype);
+				fun.setPrototype(cx, prototype);
 				member = fun;
 				ht.put(name, fun);
 			} else {
@@ -261,7 +260,7 @@ class JavaMembers {
 
 				if (member instanceof NativeJavaMethod && ((NativeJavaMethod) member).methods.length > 1) {
 					NativeJavaMethod fun = new NativeJavaMethod(methodOrCtor, name);
-					fun.setPrototype(prototype);
+					fun.setPrototype(cx, prototype);
 					ht.put(name, fun);
 					member = fun;
 				}
@@ -399,7 +398,7 @@ class JavaMembers {
 					overloadedMethods = (ObjArray) value;
 				} else {
 					if (!(value instanceof Method)) {
-						Kit.codeBug();
+						throw Kit.codeBug();
 					}
 					// value should be instance of Method as at this stage
 					// staticMembers and members can only contain methods
@@ -426,7 +425,7 @@ class JavaMembers {
 					ObjArray overloadedMethods = (ObjArray) value;
 					int N = overloadedMethods.size();
 					if (N < 2) {
-						Kit.codeBug();
+						throw Kit.codeBug();
 					}
 					methodBoxes = new MemberBox[N];
 					for (int i = 0; i != N; ++i) {
@@ -436,7 +435,7 @@ class JavaMembers {
 				}
 				NativeJavaMethod fun = new NativeJavaMethod(methodBoxes);
 				if (scope != null) {
-					ScriptRuntime.setFunctionProtoAndParent(fun, scope);
+					ScriptRuntime.setFunctionProtoAndParent(cx, fun, scope);
 				}
 				ht.put(entry.getKey(), fun);
 			}
@@ -454,7 +453,7 @@ class JavaMembers {
 				if (member == null) {
 					ht.put(name, field);
 				} else if (member instanceof NativeJavaMethod method) {
-					FieldAndMethods fam = new FieldAndMethods(scope, method.methods, field);
+					FieldAndMethods fam = new FieldAndMethods(cx, scope, method.methods, field);
 					Map<String, FieldAndMethods> fmht = isStatic ? staticFieldAndMethods : fieldAndMethods;
 					if (fmht == null) {
 						fmht = new HashMap<>();
@@ -478,7 +477,7 @@ class JavaMembers {
 					}
 				} else {
 					// "unknown member type"
-					Kit.codeBug();
+					throw Kit.codeBug();
 				}
 			} catch (SecurityException e) {
 				// skip this field
@@ -692,7 +691,7 @@ class JavaMembers {
 							}
 						} else {
 							if (pass != 2) {
-								Kit.codeBug();
+								throw Kit.codeBug();
 							}
 							if (params[0].isAssignableFrom(type)) {
 								return method;
@@ -719,7 +718,7 @@ class JavaMembers {
 		return null;
 	}
 
-	public Map<String, FieldAndMethods> getFieldAndMethodsObjects(Scriptable scope, Object javaObject, boolean isStatic) {
+	public Map<String, FieldAndMethods> getFieldAndMethodsObjects(Context cx, Scriptable scope, Object javaObject, boolean isStatic) {
 		Map<String, FieldAndMethods> ht = isStatic ? staticFieldAndMethods : fieldAndMethods;
 		if (ht == null) {
 			return null;
@@ -727,7 +726,7 @@ class JavaMembers {
 		int len = ht.size();
 		Map<String, FieldAndMethods> result = new HashMap<>(len);
 		for (FieldAndMethods fam : ht.values()) {
-			FieldAndMethods famNew = new FieldAndMethods(scope, fam.methods, fam.field);
+			FieldAndMethods famNew = new FieldAndMethods(cx, scope, fam.methods, fam.field);
 			famNew.javaObject = javaObject;
 			result.put(fam.field.getName(), famNew);
 		}

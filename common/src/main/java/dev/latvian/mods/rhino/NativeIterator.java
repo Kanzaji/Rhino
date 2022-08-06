@@ -23,19 +23,19 @@ public final class NativeIterator extends IdScriptableObject {
 	static void init(Context cx, ScriptableObject scope, boolean sealed) {
 		// Iterator
 		NativeIterator iterator = new NativeIterator();
-		iterator.exportAsJSClass(MAX_PROTOTYPE_ID, scope, sealed);
+		iterator.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, sealed);
 
 		// Generator
-		ES6Generator.init(scope, sealed);
+		ES6Generator.init(cx, scope, sealed);
 
 		// StopIteration
 		NativeObject obj = new StopIteration();
-		obj.setPrototype(getObjectPrototype(scope));
+		obj.setPrototype(cx, getObjectPrototype(cx, scope));
 		obj.setParentScope(scope);
 		if (sealed) {
-			obj.sealObject();
+			obj.sealObject(cx);
 		}
-		defineProperty(scope, STOP_ITERATION, obj, DONTENUM);
+		defineProperty(cx, scope, STOP_ITERATION, obj, DONTENUM);
 		// Use "associateValue" so that generators can continue to
 		// throw StopIteration even if the property of the global
 		// scope is replaced or deleted.
@@ -61,9 +61,9 @@ public final class NativeIterator extends IdScriptableObject {
 	 * @param scope a scope whose parent chain reaches a top-level scope
 	 * @return the StopIteration object
 	 */
-	public static Object getStopIterationObject(Scriptable scope) {
+	public static Object getStopIterationObject(Context cx, Scriptable scope) {
 		Scriptable top = getTopLevelScope(scope);
-		return getTopScopeValue(top, ITERATOR_TAG);
+		return getTopScopeValue(cx, top, ITERATOR_TAG);
 	}
 
 	private static final String STOP_ITERATION = "StopIteration";
@@ -95,7 +95,7 @@ public final class NativeIterator extends IdScriptableObject {
 		 * doesn't have a constructor.
 		 */
 		@Override
-		public boolean hasInstance(Scriptable instance) {
+		public boolean hasInstance(Context cx, Scriptable instance) {
 			return instance instanceof StopIteration;
 		}
 	}
@@ -106,7 +106,7 @@ public final class NativeIterator extends IdScriptableObject {
 	}
 
 	@Override
-	protected void initPrototypeId(int id) {
+	protected void initPrototypeId(Context cx, int id) {
 		String s;
 		int arity;
 		switch (id) {
@@ -124,7 +124,7 @@ public final class NativeIterator extends IdScriptableObject {
 			}
 			default -> throw new IllegalArgumentException(String.valueOf(id));
 		}
-		initPrototypeMethod(ITERATOR_TAG, id, s, arity);
+		initPrototypeMethod(cx, ITERATOR_TAG, id, s, arity);
 	}
 
 	@Override
@@ -145,7 +145,7 @@ public final class NativeIterator extends IdScriptableObject {
 		return switch (id) {
 			case Id_next -> iterator.objectIterator.nextExec(cx, scope);
 			case Id___iterator__ ->
-					/// XXX: what about argument? SpiderMonkey apparently ignores it
+				/// XXX: what about argument? SpiderMonkey apparently ignores it
 					thisObj;
 			default -> throw new IllegalArgumentException(String.valueOf(id));
 		};
@@ -168,7 +168,7 @@ public final class NativeIterator extends IdScriptableObject {
 			Iterator<?> iterator = getJavaIterator(obj);
 			if (iterator != null) {
 				scope = getTopLevelScope(scope);
-				return cx.getWrapFactory().wrap(cx, scope, new WrappedJavaIterator(iterator, scope), WrappedJavaIterator.class);
+				return cx.getWrapFactory().wrap(cx, scope, new WrappedJavaIterator(cx, iterator, scope), WrappedJavaIterator.class);
 			}
 
 			// Otherwise, just call the runtime routine
@@ -180,10 +180,10 @@ public final class NativeIterator extends IdScriptableObject {
 
 		// Otherwise, just set up to iterate over the properties of the object.
 		// Do not call __iterator__ method.
-		IdEnumeration objectIterator = ScriptRuntime.enumInit(obj, cx, scope, keyOnly ? ScriptRuntime.ENUMERATE_KEYS_NO_ITERATOR : ScriptRuntime.ENUMERATE_ARRAY_NO_ITERATOR);
+		IdEnumeration objectIterator = ScriptRuntime.enumInit(cx, obj, scope, keyOnly ? ScriptRuntime.ENUMERATE_KEYS_NO_ITERATOR : ScriptRuntime.ENUMERATE_ARRAY_NO_ITERATOR);
 		objectIterator.enumNumbers = true;
 		NativeIterator result = new NativeIterator(objectIterator);
-		result.setPrototype(getClassPrototype(scope, result.getClassName()));
+		result.setPrototype(cx, getClassPrototype(cx, scope, result.getClassName()));
 		result.setParentScope(scope);
 		return result;
 	}
@@ -209,7 +209,9 @@ public final class NativeIterator extends IdScriptableObject {
 	}
 
 	static public class WrappedJavaIterator {
-		WrappedJavaIterator(Iterator<?> iterator, Scriptable scope) {
+
+		WrappedJavaIterator(Context context, Iterator<?> iterator, Scriptable scope) {
+			this.context = context;
 			this.iterator = iterator;
 			this.scope = scope;
 		}
@@ -217,7 +219,7 @@ public final class NativeIterator extends IdScriptableObject {
 		public Object next() {
 			if (!iterator.hasNext()) {
 				// Out of values. Throw StopIteration.
-				throw new JavaScriptException(NativeIterator.getStopIterationObject(scope), null, 0);
+				throw new JavaScriptException(context, NativeIterator.getStopIterationObject(context, scope), null, 0);
 			}
 			return iterator.next();
 		}
@@ -226,6 +228,7 @@ public final class NativeIterator extends IdScriptableObject {
 			return this;
 		}
 
+		private final Context context;
 		private final Iterator<?> iterator;
 		private final Scriptable scope;
 	}

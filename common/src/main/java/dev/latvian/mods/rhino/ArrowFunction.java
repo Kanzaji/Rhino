@@ -6,17 +6,11 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.Serial;
-
 /**
  * The class for  Arrow Function Definitions
  * EcmaScript 6 Rev 14, March 8, 2013 Draft spec , 13.2
  */
 public class ArrowFunction extends BaseFunction {
-
-	@Serial
-	private static final long serialVersionUID = -7377989503697220633L;
-
 	private final Callable targetFunction;
 	private final Scriptable boundThis;
 
@@ -24,14 +18,14 @@ public class ArrowFunction extends BaseFunction {
 		this.targetFunction = targetFunction;
 		this.boundThis = boundThis;
 
-		ScriptRuntime.setFunctionProtoAndParent(this, scope);
+		ScriptRuntime.setFunctionProtoAndParent(cx, this, scope);
 
 		Function thrower = ScriptRuntime.typeErrorThrower(cx);
 		NativeObject throwing = new NativeObject();
-		throwing.put("get", throwing, thrower);
-		throwing.put("set", throwing, thrower);
-		throwing.put("enumerable", throwing, Boolean.FALSE);
-		throwing.put("configurable", throwing, Boolean.FALSE);
+		throwing.put(cx, "get", throwing, thrower);
+		throwing.put(cx, "set", throwing, thrower);
+		throwing.put(cx, "enumerable", throwing, Boolean.FALSE);
+		throwing.put(cx, "configurable", throwing, Boolean.FALSE);
 		throwing.preventExtensions();
 
 		this.defineOwnProperty(cx, "caller", throwing, false);
@@ -50,9 +44,9 @@ public class ArrowFunction extends BaseFunction {
 	}
 
 	@Override
-	public boolean hasInstance(Scriptable instance) {
+	public boolean hasInstance(Context cx, Scriptable instance) {
 		if (targetFunction instanceof Function) {
-			return ((Function) targetFunction).hasInstance(instance);
+			return ((Function) targetFunction).hasInstance(cx, instance);
 		}
 		throw ScriptRuntime.typeError0("msg.not.ctor");
 	}
@@ -70,8 +64,8 @@ public class ArrowFunction extends BaseFunction {
 		return getLength();
 	}
 
-	static boolean equalObjectGraphs(ArrowFunction f1, ArrowFunction f2, EqualObjectGraphs eq) {
-		return eq.equalGraphs(f1.boundThis, f2.boundThis) && eq.equalGraphs(f1.targetFunction, f2.targetFunction);
+	static boolean equalObjectGraphs(Context cx, ArrowFunction f1, ArrowFunction f2, EqualObjectGraphs eq) {
+		return eq.equalGraphs(cx, f1.boundThis, f2.boundThis) && eq.equalGraphs(cx, f1.targetFunction, f2.targetFunction);
 	}
 
 	@Override

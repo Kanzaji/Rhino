@@ -8,8 +8,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.Serial;
-
 /**
  * Java reflection of JavaScript exceptions.
  * Instances of this class are thrown by the JavaScript 'throw' keyword.
@@ -17,25 +15,22 @@ import java.io.Serial;
  * @author Mike McCabe
  */
 public class JavaScriptException extends RhinoException {
-	@Serial
-	private static final long serialVersionUID = -7666130513694669293L;
-
 	/**
 	 * Create a JavaScript exception wrapping the given JavaScript value
 	 *
 	 * @param value the JavaScript value thrown.
 	 */
-	public JavaScriptException(Object value, String sourceName, int lineNumber) {
+	public JavaScriptException(Context cx, Object value, String sourceName, int lineNumber) {
 		recordErrorOrigin(sourceName, lineNumber, null, 0);
 		this.value = value;
 		// Fill in fileName and lineNumber automatically when not specified
 		// explicitly, see Bugzilla issue #342807
 		if (value instanceof NativeError error && Context.getContext().hasFeature(Context.FEATURE_LOCATION_INFORMATION_IN_ERROR)) {
-			if (!error.has("fileName", error)) {
-				error.put("fileName", error, sourceName);
+			if (!error.has(cx, "fileName", error)) {
+				error.put(cx, "fileName", error, sourceName);
 			}
-			if (!error.has("lineNumber", error)) {
-				error.put("lineNumber", error, lineNumber);
+			if (!error.has(cx, "lineNumber", error)) {
+				error.put(cx, "lineNumber", error, lineNumber);
 			}
 			// set stack property, see bug #549604
 			error.setStackProvider(this);

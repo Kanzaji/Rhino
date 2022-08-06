@@ -145,21 +145,21 @@ public class TopLevel extends IdScriptableObject {
 	 * called by the embedding if a top-level scope is not initialized through
 	 * <code>initStandardObjects()</code>.
 	 */
-	public void cacheBuiltins(Scriptable scope, boolean sealed) {
+	public void cacheBuiltins(Context cx, Scriptable scope, boolean sealed) {
 		ctors = new EnumMap<>(Builtins.class);
 		for (Builtins builtin : Builtins.values()) {
-			Object value = getProperty(this, builtin.name());
+			Object value = getProperty(cx, this, builtin.name());
 			if (value instanceof BaseFunction) {
 				ctors.put(builtin, (BaseFunction) value);
 			} else if (builtin == Builtins.GeneratorFunction) {
 				// Handle weird situation of "GeneratorFunction" being a real constructor
 				// which is never registered in the top-level scope
-				ctors.put(builtin, (BaseFunction) BaseFunction.initAsGeneratorFunction(scope, sealed));
+				ctors.put(builtin, (BaseFunction) BaseFunction.initAsGeneratorFunction(cx, scope, sealed));
 			}
 		}
 		errors = new EnumMap<>(NativeErrors.class);
 		for (NativeErrors error : NativeErrors.values()) {
-			Object value = getProperty(this, error.name());
+			Object value = getProperty(cx, this, error.name());
 			if (value instanceof BaseFunction) {
 				errors.put(error, (BaseFunction) value);
 			}
@@ -233,11 +233,11 @@ public class TopLevel extends IdScriptableObject {
 	 * @param type  the built-in type
 	 * @return the built-in prototype
 	 */
-	public static Scriptable getBuiltinPrototype(Scriptable scope, Builtins type) {
+	public static Scriptable getBuiltinPrototype(Context cx, Scriptable scope, Builtins type) {
 		// must be called with top level scope
 		assert scope.getParentScope() == null;
 		if (scope instanceof TopLevel) {
-			Scriptable result = ((TopLevel) scope).getBuiltinPrototype(type);
+			Scriptable result = ((TopLevel) scope).getBuiltinPrototype(cx, type);
 			if (result != null) {
 				return result;
 			}
@@ -252,7 +252,7 @@ public class TopLevel extends IdScriptableObject {
 		} else {
 			typeName = type.name();
 		}
-		return getClassPrototype(scope, typeName);
+		return getClassPrototype(cx, scope, typeName);
 	}
 
 	/**
@@ -287,9 +287,9 @@ public class TopLevel extends IdScriptableObject {
 	 * @param type the built-in type
 	 * @return the built-in prototype
 	 */
-	public Scriptable getBuiltinPrototype(Builtins type) {
+	public Scriptable getBuiltinPrototype(Context cx, Builtins type) {
 		BaseFunction func = getBuiltinCtor(type);
-		Object proto = func != null ? func.getPrototypeProperty() : null;
+		Object proto = func != null ? func.getPrototypeProperty(cx) : null;
 		return proto instanceof Scriptable ? (Scriptable) proto : null;
 	}
 

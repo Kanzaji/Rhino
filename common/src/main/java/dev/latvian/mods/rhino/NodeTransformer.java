@@ -106,7 +106,7 @@ public class NodeTransformer {
 					loops.push(node);
 					Node leave = node.getNext();
 					if (leave.getType() != Token.LEAVEWITH) {
-						Kit.codeBug();
+						throw Kit.codeBug();
 					}
 					loopEnds.push(leave);
 					break;
@@ -196,7 +196,7 @@ public class NodeTransformer {
 					Jump jump = (Jump) node;
 					Jump jumpStatement = jump.getJumpStatement();
 					if (jumpStatement == null) {
-						Kit.codeBug();
+						throw Kit.codeBug();
 					}
 
 					for (int i = loops.size(); ; ) {
@@ -495,12 +495,12 @@ public class NodeTransformer {
 	private static Node addBeforeCurrent(Node parent, Node previous, Node current, Node toAdd) {
 		if (previous == null) {
 			if (!(current == parent.getFirstChild())) {
-				Kit.codeBug();
+				throw Kit.codeBug();
 			}
 			parent.addChildToFront(toAdd);
 		} else {
 			if (!(current == previous.getNext())) {
-				Kit.codeBug();
+				throw Kit.codeBug();
 			}
 			parent.addChildAfter(toAdd, previous);
 		}
@@ -510,7 +510,7 @@ public class NodeTransformer {
 	private static Node replaceCurrent(Node parent, Node previous, Node current, Node replacement) {
 		if (previous == null) {
 			if (!(current == parent.getFirstChild())) {
-				Kit.codeBug();
+				throw Kit.codeBug();
 			}
 			parent.replaceChild(current, replacement);
 		} else if (previous.next == current) {

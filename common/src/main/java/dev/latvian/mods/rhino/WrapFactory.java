@@ -10,6 +10,7 @@ package dev.latvian.mods.rhino;
 
 import dev.latvian.mods.rhino.util.CustomJavaToJsWrapper;
 import dev.latvian.mods.rhino.util.JavaSetWrapper;
+import dev.latvian.mods.rhino.util.NativeArrayWrapper;
 
 import java.util.List;
 import java.util.Map;
@@ -70,7 +71,7 @@ public class WrapFactory {
 		Class<?> cls = obj.getClass();
 
 		if (cls.isArray()) {
-			return NativeJavaArray.wrap(scope, obj);
+			return new NativeJavaList(cx, scope, obj, new NativeArrayWrapper(obj));
 		}
 
 		return wrapAsJavaObject(cx, scope, obj, staticType);
@@ -90,7 +91,7 @@ public class WrapFactory {
 		}
 		Class<?> cls = obj.getClass();
 		if (cls.isArray()) {
-			return NativeJavaArray.wrap(scope, obj);
+			return new NativeJavaList(cx, scope, obj, new NativeArrayWrapper(obj));
 		}
 		return wrapAsJavaObject(cx, scope, obj, null);
 	}
@@ -126,16 +127,16 @@ public class WrapFactory {
 		}
 
 		if (javaObject instanceof Map map) {
-			return new NativeJavaMap(scope, map, map);
+			return new NativeJavaMap(cx, scope, map, map);
 		} else if (javaObject instanceof List list) {
-			return new NativeJavaList(scope, list, list);
+			return new NativeJavaList(cx, scope, list, list);
 		} else if (javaObject instanceof Set<?> set) {
-			return new NativeJavaList(scope, set, new JavaSetWrapper<>(set));
+			return new NativeJavaList(cx, scope, set, new JavaSetWrapper<>(set));
 		}
 
 		// TODO: Wrap Gson
 
-		return new NativeJavaObject(scope, javaObject, staticType);
+		return new NativeJavaObject(cx, scope, javaObject, staticType);
 	}
 
 	/**
@@ -152,7 +153,7 @@ public class WrapFactory {
 	 * @since 1.7R3
 	 */
 	public Scriptable wrapJavaClass(Context cx, Scriptable scope, Class<?> javaClass) {
-		return new NativeJavaClass(scope, javaClass);
+		return new NativeJavaClass(cx, scope, javaClass);
 	}
 
 	/**

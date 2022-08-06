@@ -57,7 +57,7 @@ public interface ConstProperties {
 	 * @see ScriptableObject#putProperty(Scriptable, String, Object)
 	 * @see Context#toObject(Object, Scriptable)
 	 */
-	void putConst(String name, Scriptable start, Object value);
+	void putConst(Context cx, String name, Scriptable start, Object value);
 
 	/**
 	 * Reserves a definition spot for a const.  This will set up a definition
@@ -67,7 +67,7 @@ public interface ConstProperties {
 	 * @param name  The name of the property.
 	 * @param start The object whose property is being reserved.
 	 */
-	void defineConst(String name, Scriptable start);
+	void defineConst(Context cx, String name, Scriptable start);
 
 	/**
 	 * Returns true if the named property is defined as a const on this object.
@@ -76,5 +76,5 @@ public interface ConstProperties {
 	 * @return true if the named property is defined as a const, false
 	 * otherwise.
 	 */
-	boolean isConst(String name);
+	boolean isConst(Context cx, String name);
 }

@@ -33,7 +33,7 @@ public class ClassMember {
 
 	public Possible<?> get(@Nullable Object obj) throws Exception {
 		if (beanGet != null) {
-			return Possible.of(beanGet.method.invoke(obj, ScriptRuntime.emptyArgs));
+			return Possible.of(beanGet.method.invoke(obj, ScriptRuntime.EMPTY_ARGS));
 		} else if (field != null) {
 			return Possible.NULL;
 		}

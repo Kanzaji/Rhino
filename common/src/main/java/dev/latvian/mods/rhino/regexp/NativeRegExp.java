@@ -20,9 +20,6 @@ import dev.latvian.mods.rhino.SymbolKey;
 import dev.latvian.mods.rhino.TopLevel;
 import dev.latvian.mods.rhino.Undefined;
 
-import java.io.Serial;
-import java.io.Serializable;
-
 /**
  * This class implements the RegExp native object.
  * <p>
@@ -39,9 +36,6 @@ import java.io.Serializable;
 
 
 public class NativeRegExp extends IdScriptableObject implements Function {
-	@Serial
-	private static final long serialVersionUID = 4965263491464903264L;
-
 	private static final Object REGEXP_TAG = new Object();
 
 	public static final int JSREG_GLOB = 0x1;       // 'g' flag: global
@@ -119,29 +113,29 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 		proto.re = compileRE(cx, "", null, false);
 		proto.activatePrototypeMap(MAX_PROTOTYPE_ID);
 		proto.setParentScope(scope);
-		proto.setPrototype(getObjectPrototype(scope));
+		proto.setPrototype(cx, getObjectPrototype(cx, scope));
 
 		NativeRegExpCtor ctor = new NativeRegExpCtor();
 		// Bug #324006: ECMA-262 15.10.6.1 says "The initial value of
 		// RegExp.prototype.constructor is the builtin RegExp constructor."
-		proto.defineProperty("constructor", ctor, ScriptableObject.DONTENUM);
+		proto.defineProperty(cx, "constructor", ctor, ScriptableObject.DONTENUM);
 
-		ScriptRuntime.setFunctionProtoAndParent(ctor, scope);
+		ScriptRuntime.setFunctionProtoAndParent(cx, ctor, scope);
 
 		ctor.setImmunePrototypeProperty(proto);
 
 		if (sealed) {
-			proto.sealObject();
-			ctor.sealObject();
+			proto.sealObject(cx);
+			ctor.sealObject(cx);
 		}
 
-		defineProperty(scope, "RegExp", ctor, ScriptableObject.DONTENUM);
+		defineProperty(cx, scope, "RegExp", ctor, ScriptableObject.DONTENUM);
 	}
 
-	NativeRegExp(Scriptable scope, RECompiled regexpCompiled) {
+	NativeRegExp(Context cx, Scriptable scope, RECompiled regexpCompiled) {
 		this.re = regexpCompiled;
 		setLastIndex(ScriptRuntime.zeroObj);
-		ScriptRuntime.setBuiltinProtoAndParent(this, scope, TopLevel.Builtins.RegExp);
+		ScriptRuntime.setBuiltinProtoAndParent(cx, this, scope, TopLevel.Builtins.RegExp);
 	}
 
 	@Override
@@ -2392,7 +2386,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 			obj = (Scriptable) result;
 
 			String matchstr = str.substring(index, index + matchlen);
-			obj.put(0, obj, matchstr);
+			obj.put(cx, 0, obj, matchstr);
 		}
 
 		if (re.parenCount == 0) {
@@ -2409,11 +2403,11 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 					parsub = new SubString(str, cap_index, cap_length);
 					res.parens[num] = parsub;
 					if (matchType != TEST) {
-						obj.put(num + 1, obj, parsub.toString());
+						obj.put(cx, num + 1, obj, parsub.toString());
 					}
 				} else {
 					if (matchType != TEST) {
-						obj.put(num + 1, obj, Undefined.instance);
+						obj.put(cx, num + 1, obj, Undefined.instance);
 					}
 				}
 			}
@@ -2425,8 +2419,8 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 			 * Define the index and input properties last for better for/in loop
 			 * order (so they come after the elements).
 			 */
-			obj.put("index", obj, start + gData.skipped);
-			obj.put("input", obj, str);
+			obj.put(cx, "index", obj, start + gData.skipped);
+			obj.put(cx, "input", obj, str);
 		}
 
 		if (res.lastMatch == null) {
@@ -2516,14 +2510,14 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 	}
 
 	@Override
-	protected Object getInstanceIdValue(int id) {
+	protected Object getInstanceIdValue(Context cx, int id) {
 		return switch (id) {
 			case Id_lastIndex -> lastIndex;
 			case Id_source -> new String(re.source);
 			case Id_global -> ScriptRuntime.wrapBoolean((re.flags & JSREG_GLOB) != 0);
 			case Id_ignoreCase -> ScriptRuntime.wrapBoolean((re.flags & JSREG_FOLD) != 0);
 			case Id_multiline -> ScriptRuntime.wrapBoolean((re.flags & JSREG_MULTILINE) != 0);
-			default -> super.getInstanceIdValue(id);
+			default -> super.getInstanceIdValue(cx, id);
 		};
 	}
 
@@ -2536,7 +2530,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 
 
 	@Override
-	protected void setInstanceIdValue(int id, Object value) {
+	protected void setInstanceIdValue(Context cx, int id, Object value) {
 		switch (id) {
 			case Id_lastIndex:
 				setLastIndex(value);
@@ -2547,7 +2541,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 			case Id_multiline:
 				return;
 		}
-		super.setInstanceIdValue(id, value);
+		super.setInstanceIdValue(cx, id, value);
 	}
 
 	@Override
@@ -2562,13 +2556,13 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 	}
 
 	@Override
-	protected void initPrototypeId(int id) {
+	protected void initPrototypeId(Context cx, int id) {
 		if (id == SymbolId_match) {
-			initPrototypeMethod(REGEXP_TAG, id, SymbolKey.MATCH, "[Symbol.match]", 1);
+			initPrototypeMethod(cx, REGEXP_TAG, id, SymbolKey.MATCH, "[Symbol.match]", 1);
 			return;
 		}
 		if (id == SymbolId_search) {
-			initPrototypeMethod(REGEXP_TAG, id, SymbolKey.SEARCH, "[Symbol.search]", 1);
+			initPrototypeMethod(cx, REGEXP_TAG, id, SymbolKey.SEARCH, "[Symbol.search]", 1);
 			return;
 		}
 
@@ -2601,7 +2595,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 			}
 			default -> throw new IllegalArgumentException(String.valueOf(id));
 		}
-		initPrototypeMethod(REGEXP_TAG, id, s, arity);
+		initPrototypeMethod(cx, REGEXP_TAG, id, s, arity);
 	}
 
 	@Override
@@ -2634,7 +2628,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 
 			case SymbolId_search:
 				Scriptable scriptable = (Scriptable) realThis(thisObj, f).execSub(cx, scope, args, MATCH);
-				return scriptable.get("index", scriptable);
+				return scriptable.get(cx, "index", scriptable);
 		}
 		throw new IllegalArgumentException(String.valueOf(id));
 	}
@@ -2690,10 +2684,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 
 }       // class NativeRegExp
 
-class RECompiled implements Serializable {
-	@Serial
-	private static final long serialVersionUID = -6144956577595844213L;
-
+class RECompiled {
 	final char[] source;    /* locked source string, sans // */
 	int parenCount;         /* number of parenthesized submatches */
 	int flags;              /* flags  */
@@ -2856,10 +2847,7 @@ class REGlobalData {
  * use of the class converts the source representation into a bitmap.
  *
  */
-final class RECharSet implements Serializable {
-	@Serial
-	private static final long serialVersionUID = 7931787979395898394L;
-
+final class RECharSet {
 	RECharSet(int length, int startIndex, int strlength, boolean sense) {
 		this.length = length;
 		this.startIndex = startIndex;

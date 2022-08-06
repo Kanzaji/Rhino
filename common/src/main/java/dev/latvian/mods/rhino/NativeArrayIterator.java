@@ -6,21 +6,17 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.Serial;
-
 public final class NativeArrayIterator extends ES6Iterator {
 	public enum ArrayIteratorType {
 		ENTRIES, KEYS, VALUES
 	}
 
-	@Serial
-	private static final long serialVersionUID = 1L;
 	private static final String ITERATOR_TAG = "ArrayIterator";
 
 	private ArrayIteratorType type;
 
-	static void init(ScriptableObject scope, boolean sealed) {
-		init(scope, sealed, new NativeArrayIterator(), ITERATOR_TAG);
+	static void init(Context cx, ScriptableObject scope, boolean sealed) {
+		init(cx, scope, sealed, new NativeArrayIterator(), ITERATOR_TAG);
 	}
 
 	/**
@@ -30,8 +26,8 @@ public final class NativeArrayIterator extends ES6Iterator {
 		super();
 	}
 
-	public NativeArrayIterator(Scriptable scope, Scriptable arrayLike, ArrayIteratorType type) {
-		super(scope, ITERATOR_TAG);
+	public NativeArrayIterator(Context cx, Scriptable scope, Scriptable arrayLike, ArrayIteratorType type) {
+		super(cx, scope, ITERATOR_TAG);
 		this.index = 0;
 		this.arrayLike = arrayLike;
 		this.type = type;
@@ -44,7 +40,7 @@ public final class NativeArrayIterator extends ES6Iterator {
 
 	@Override
 	protected boolean isDone(Context cx, Scriptable scope) {
-		return index >= NativeArray.getLengthProperty(cx, arrayLike, false);
+		return index >= ScriptRuntime.getLengthProperty(cx, arrayLike, false);
 	}
 
 	@Override
@@ -53,7 +49,7 @@ public final class NativeArrayIterator extends ES6Iterator {
 			return index++;
 		}
 
-		Object value = arrayLike.get(index, arrayLike);
+		Object value = arrayLike.get(cx, index, arrayLike);
 		if (value == NOT_FOUND) {
 			value = Undefined.instance;
 		}

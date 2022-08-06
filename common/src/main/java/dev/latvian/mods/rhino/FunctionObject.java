@@ -8,18 +8,12 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.Serial;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
 public class FunctionObject extends BaseFunction {
-	@Serial
-	private static final long serialVersionUID = -5332312783643935019L;
-
 	/**
 	 * Create a JavaScript function object from a Java method.
 	 *
@@ -138,7 +132,7 @@ public class FunctionObject extends BaseFunction {
 			}
 		}
 
-		ScriptRuntime.setFunctionProtoAndParent(this, scope);
+		ScriptRuntime.setFunctionProtoAndParent(cx, this, scope);
 	}
 
 	/**
@@ -308,18 +302,18 @@ public class FunctionObject extends BaseFunction {
 	 * @see Scriptable#setPrototype
 	 * @see Scriptable#getClassName
 	 */
-	public void addAsConstructor(Scriptable scope, Scriptable prototype) {
-		initAsConstructor(scope, prototype);
-		defineProperty(scope, prototype.getClassName(), this, DONTENUM);
+	public void addAsConstructor(Context cx, Scriptable scope, Scriptable prototype) {
+		initAsConstructor(cx, scope, prototype);
+		defineProperty(cx, scope, prototype.getClassName(), this, DONTENUM);
 	}
 
-	void initAsConstructor(Scriptable scope, Scriptable prototype) {
-		ScriptRuntime.setFunctionProtoAndParent(this, scope);
+	void initAsConstructor(Context cx, Scriptable scope, Scriptable prototype) {
+		ScriptRuntime.setFunctionProtoAndParent(cx, this, scope);
 		setImmunePrototypeProperty(prototype);
 
 		prototype.setParentScope(this);
 
-		defineProperty(prototype, "constructor", this, DONTENUM | PERMANENT | READONLY);
+		defineProperty(cx, prototype, "constructor", this, DONTENUM | PERMANENT | READONLY);
 		setParentScope(scope);
 	}
 
@@ -396,7 +390,7 @@ public class FunctionObject extends BaseFunction {
 					}
 				}
 			} else if (parmsLength == 0) {
-				invokeArgs = ScriptRuntime.emptyArgs;
+				invokeArgs = ScriptRuntime.EMPTY_ARGS;
 			} else {
 				invokeArgs = new Object[parmsLength];
 				for (int i = 0; i != parmsLength; ++i) {
@@ -447,7 +441,7 @@ public class FunctionObject extends BaseFunction {
 			throw Context.throwAsScriptRuntimeEx(ex);
 		}
 
-		result.setPrototype(getClassPrototype());
+		result.setPrototype(cx, getClassPrototype(cx));
 		result.setParentScope(getParentScope());
 		return result;
 	}
@@ -458,27 +452,6 @@ public class FunctionObject extends BaseFunction {
 
 	boolean isVarArgsConstructor() {
 		return parmsLength == VARARGS_CTOR;
-	}
-
-	@Serial
-	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-		in.defaultReadObject();
-		if (parmsLength > 0) {
-			Class<?>[] types = member.argTypes;
-			typeTags = new byte[parmsLength];
-			for (int i = 0; i != parmsLength; ++i) {
-				typeTags[i] = (byte) getTypeTag(types[i]);
-			}
-		}
-		if (member.isMethod()) {
-			Method method = member.method();
-			Class<?> returnType = method.getReturnType();
-			if (returnType == Void.TYPE) {
-				hasVoidReturn = true;
-			} else {
-				returnTypeTag = getTypeTag(returnType);
-			}
-		}
 	}
 
 	private static final short VARARGS_METHOD = -1;

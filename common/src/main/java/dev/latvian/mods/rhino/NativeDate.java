@@ -6,7 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.Serial;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -22,18 +21,15 @@ import java.util.TimeZone;
  * https://dxr.mozilla.dev/latvian/repackaged/org/mozilla-central/source/js/src/jsdate.cpp
  */
 final class NativeDate extends IdScriptableObject {
-	@Serial
-	private static final long serialVersionUID = -8307438915861678966L;
-
 	private static final Object DATE_TAG = "Date";
 
 	private static final String js_NaN_date_str = "Invalid Date";
 
-	static void init(Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope, boolean sealed) {
 		NativeDate obj = new NativeDate();
 		// Set the value of the prototype Date to NaN ('invalid date');
 		obj.date = ScriptRuntime.NaN;
-		obj.exportAsJSClass(MAX_PROTOTYPE_ID, scope, sealed);
+		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, sealed);
 	}
 
 	private NativeDate() {
@@ -45,11 +41,11 @@ final class NativeDate extends IdScriptableObject {
 	}
 
 	@Override
-	public Object getDefaultValue(Class<?> typeHint) {
+	public Object getDefaultValue(Context cx, Class<?> typeHint) {
 		if (typeHint == null) {
 			typeHint = ScriptRuntime.StringClass;
 		}
-		return super.getDefaultValue(typeHint);
+		return super.getDefaultValue(cx, typeHint);
 	}
 
 	double getJSTimeValue() {
@@ -57,15 +53,15 @@ final class NativeDate extends IdScriptableObject {
 	}
 
 	@Override
-	protected void fillConstructorProperties(IdFunctionObject ctor) {
-		addIdFunctionProperty(ctor, DATE_TAG, ConstructorId_now, "now", 0);
-		addIdFunctionProperty(ctor, DATE_TAG, ConstructorId_parse, "parse", 1);
-		addIdFunctionProperty(ctor, DATE_TAG, ConstructorId_UTC, "UTC", 7);
-		super.fillConstructorProperties(ctor);
+	protected void fillConstructorProperties(Context cx, IdFunctionObject ctor) {
+		addIdFunctionProperty(cx, ctor, DATE_TAG, ConstructorId_now, "now", 0);
+		addIdFunctionProperty(cx, ctor, DATE_TAG, ConstructorId_parse, "parse", 1);
+		addIdFunctionProperty(cx, ctor, DATE_TAG, ConstructorId_UTC, "UTC", 7);
+		super.fillConstructorProperties(cx, ctor);
 	}
 
 	@Override
-	protected void initPrototypeId(int id) {
+	protected void initPrototypeId(Context cx, int id) {
 		String s;
 		int arity;
 		switch (id) {
@@ -259,7 +255,7 @@ final class NativeDate extends IdScriptableObject {
 			}
 			default -> throw new IllegalArgumentException(String.valueOf(id));
 		}
-		initPrototypeMethod(DATE_TAG, id, s, arity);
+		initPrototypeMethod(cx, DATE_TAG, id, s, arity);
 	}
 
 	@Override
@@ -286,28 +282,28 @@ final class NativeDate extends IdScriptableObject {
 				if (thisObj != null) {
 					return date_format(now(), Id_toString);
 				}
-				return jsConstructor(args);
+				return jsConstructor(cx, args);
 			}
 
 			case Id_toJSON: {
 				final String toISOString = "toISOString";
 
 				Scriptable o = ScriptRuntime.toObject(cx, scope, thisObj);
-				Object tv = ScriptRuntime.toPrimitive(o, ScriptRuntime.NumberClass);
+				Object tv = ScriptRuntime.toPrimitive(cx, o, ScriptRuntime.NumberClass);
 				if (tv instanceof Number) {
 					double d = ((Number) tv).doubleValue();
 					if (Double.isNaN(d) || Double.isInfinite(d)) {
 						return null;
 					}
 				}
-				Object toISO = getProperty(o, toISOString);
+				Object toISO = getProperty(cx, o, toISOString);
 				if (toISO == NOT_FOUND) {
 					throw ScriptRuntime.typeError2("msg.function.not.found.in", toISOString, ScriptRuntime.toString(o));
 				}
 				if (!(toISO instanceof Callable)) {
 					throw ScriptRuntime.typeError3("msg.isnt.function.in", toISOString, ScriptRuntime.toString(o), ScriptRuntime.toString(toISO));
 				}
-				Object result = ((Callable) toISO).call(cx, scope, o, ScriptRuntime.emptyArgs);
+				Object result = ((Callable) toISO).call(cx, scope, o, ScriptRuntime.EMPTY_ARGS);
 				if (!ScriptRuntime.isPrimitive(result)) {
 					throw ScriptRuntime.typeError1("msg.toisostring.must.return.primitive", ScriptRuntime.toString(result));
 				}
@@ -1371,7 +1367,7 @@ final class NativeDate extends IdScriptableObject {
 	}
 
 	/* the javascript constructor */
-	private static Object jsConstructor(Object[] args) {
+	private static Object jsConstructor(Context cx, Object[] args) {
 		NativeDate obj = new NativeDate();
 
 		// if called as a constructor with no args,
@@ -1389,7 +1385,7 @@ final class NativeDate extends IdScriptableObject {
 				return obj;
 			}
 			if (arg0 instanceof Scriptable) {
-				arg0 = ((Scriptable) arg0).getDefaultValue(null);
+				arg0 = ((Scriptable) arg0).getDefaultValue(cx, null);
 			}
 			double date;
 			if (arg0 instanceof CharSequence) {
@@ -1482,7 +1478,7 @@ final class NativeDate extends IdScriptableObject {
 
 	private static void append0PaddedUint(StringBuilder sb, int i, int minWidth) {
 		if (i < 0) {
-			Kit.codeBug();
+			throw Kit.codeBug();
 		}
 		int scale = 1;
 		--minWidth;

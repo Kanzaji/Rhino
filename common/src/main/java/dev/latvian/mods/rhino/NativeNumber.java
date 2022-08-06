@@ -6,8 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.Serial;
-
 /**
  * This class implements the Number native object.
  * <p>
@@ -16,11 +14,8 @@ import java.io.Serial;
  * @author Norris Boyd
  */
 final class NativeNumber extends IdScriptableObject {
-	@Serial
-	private static final long serialVersionUID = 3504516769741512101L;
-
 	/**
-	 * @see https://www.ecma-international.org/ecma-262/6.0/#sec-number.max_safe_integer
+	 * @link <a href="https://www.ecma-international.org/ecma-262/6.0/#sec-number.max_safe_integer">see also</a>
 	 */
 	public static final double MAX_SAFE_INTEGER = 9007199254740991.0; // Math.pow(2, 53) - 1
 
@@ -29,9 +24,9 @@ final class NativeNumber extends IdScriptableObject {
 	private static final int MAX_PRECISION = 100;
 	private static final double MIN_SAFE_INTEGER = -MAX_SAFE_INTEGER;
 
-	static void init(Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope, boolean sealed) {
 		NativeNumber obj = new NativeNumber(0.0);
-		obj.exportAsJSClass(MAX_PROTOTYPE_ID, scope, sealed);
+		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, sealed);
 	}
 
 	NativeNumber(double number) {
@@ -44,29 +39,29 @@ final class NativeNumber extends IdScriptableObject {
 	}
 
 	@Override
-	protected void fillConstructorProperties(IdFunctionObject ctor) {
+	protected void fillConstructorProperties(Context cx, IdFunctionObject ctor) {
 		final int attr = DONTENUM | PERMANENT | READONLY;
 
-		ctor.defineProperty("NaN", ScriptRuntime.NaNobj, attr);
-		ctor.defineProperty("POSITIVE_INFINITY", ScriptRuntime.wrapNumber(Double.POSITIVE_INFINITY), attr);
-		ctor.defineProperty("NEGATIVE_INFINITY", ScriptRuntime.wrapNumber(Double.NEGATIVE_INFINITY), attr);
-		ctor.defineProperty("MAX_VALUE", ScriptRuntime.wrapNumber(Double.MAX_VALUE), attr);
-		ctor.defineProperty("MIN_VALUE", ScriptRuntime.wrapNumber(Double.MIN_VALUE), attr);
-		ctor.defineProperty("MAX_SAFE_INTEGER", ScriptRuntime.wrapNumber(MAX_SAFE_INTEGER), attr);
-		ctor.defineProperty("MIN_SAFE_INTEGER", ScriptRuntime.wrapNumber(MIN_SAFE_INTEGER), attr);
+		ctor.defineProperty(cx, "NaN", ScriptRuntime.NaNobj, attr);
+		ctor.defineProperty(cx, "POSITIVE_INFINITY", ScriptRuntime.wrapNumber(Double.POSITIVE_INFINITY), attr);
+		ctor.defineProperty(cx, "NEGATIVE_INFINITY", ScriptRuntime.wrapNumber(Double.NEGATIVE_INFINITY), attr);
+		ctor.defineProperty(cx, "MAX_VALUE", ScriptRuntime.wrapNumber(Double.MAX_VALUE), attr);
+		ctor.defineProperty(cx, "MIN_VALUE", ScriptRuntime.wrapNumber(Double.MIN_VALUE), attr);
+		ctor.defineProperty(cx, "MAX_SAFE_INTEGER", ScriptRuntime.wrapNumber(MAX_SAFE_INTEGER), attr);
+		ctor.defineProperty(cx, "MIN_SAFE_INTEGER", ScriptRuntime.wrapNumber(MIN_SAFE_INTEGER), attr);
 
-		addIdFunctionProperty(ctor, NUMBER_TAG, ConstructorId_isFinite, "isFinite", 1);
-		addIdFunctionProperty(ctor, NUMBER_TAG, ConstructorId_isNaN, "isNaN", 1);
-		addIdFunctionProperty(ctor, NUMBER_TAG, ConstructorId_isInteger, "isInteger", 1);
-		addIdFunctionProperty(ctor, NUMBER_TAG, ConstructorId_isSafeInteger, "isSafeInteger", 1);
-		addIdFunctionProperty(ctor, NUMBER_TAG, ConstructorId_parseFloat, "parseFloat", 1);
-		addIdFunctionProperty(ctor, NUMBER_TAG, ConstructorId_parseInt, "parseInt", 1);
+		addIdFunctionProperty(cx, ctor, NUMBER_TAG, ConstructorId_isFinite, "isFinite", 1);
+		addIdFunctionProperty(cx, ctor, NUMBER_TAG, ConstructorId_isNaN, "isNaN", 1);
+		addIdFunctionProperty(cx, ctor, NUMBER_TAG, ConstructorId_isInteger, "isInteger", 1);
+		addIdFunctionProperty(cx, ctor, NUMBER_TAG, ConstructorId_isSafeInteger, "isSafeInteger", 1);
+		addIdFunctionProperty(cx, ctor, NUMBER_TAG, ConstructorId_parseFloat, "parseFloat", 1);
+		addIdFunctionProperty(cx, ctor, NUMBER_TAG, ConstructorId_parseInt, "parseInt", 1);
 
-		super.fillConstructorProperties(ctor);
+		super.fillConstructorProperties(cx, ctor);
 	}
 
 	@Override
-	protected void initPrototypeId(int id) {
+	protected void initPrototypeId(Context cx, int id) {
 		String s;
 		int arity;
 		switch (id) {
@@ -104,7 +99,7 @@ final class NativeNumber extends IdScriptableObject {
 			}
 			default -> throw new IllegalArgumentException(String.valueOf(id));
 		}
-		initPrototypeMethod(NUMBER_TAG, id, s, arity);
+		initPrototypeMethod(cx, NUMBER_TAG, id, s, arity);
 	}
 
 	@Override

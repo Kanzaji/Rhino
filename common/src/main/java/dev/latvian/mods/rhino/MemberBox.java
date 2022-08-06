@@ -26,9 +26,6 @@ import java.lang.reflect.Modifier;
  */
 
 final class MemberBox implements Serializable {
-	@Serial
-	private static final long serialVersionUID = 6358550398665688245L;
-
 	private transient Member memberObject;
 	transient Class<?>[] argTypes;
 	transient Object delegateTo;
@@ -140,9 +137,6 @@ final class MemberBox implements Serializable {
 			do {
 				e = ((InvocationTargetException) e).getTargetException();
 			} while ((e instanceof InvocationTargetException));
-			if (e instanceof ContinuationPending) {
-				throw (ContinuationPending) e;
-			}
 			throw Context.throwAsScriptRuntimeEx(e);
 		} catch (Exception ex) {
 			throw Context.throwAsScriptRuntimeEx(ex);

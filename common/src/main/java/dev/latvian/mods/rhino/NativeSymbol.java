@@ -30,7 +30,7 @@ public class NativeSymbol extends IdScriptableObject implements Symbol {
 
 	public static void init(Context cx, Scriptable scope, boolean sealed) {
 		NativeSymbol obj = new NativeSymbol("");
-		ScriptableObject ctor = obj.exportAsJSClass(MAX_PROTOTYPE_ID, scope, false);
+		ScriptableObject ctor = obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, false);
 
 		cx.putThreadLocal(CONSTRUCTOR_SLOT, Boolean.TRUE);
 		try {
@@ -53,7 +53,7 @@ public class NativeSymbol extends IdScriptableObject implements Symbol {
 
 		if (sealed) {
 			// Can't seal until we have created all the stuff above!
-			ctor.sealObject();
+			ctor.sealObject(cx);
 		}
 	}
 
@@ -97,15 +97,15 @@ public class NativeSymbol extends IdScriptableObject implements Symbol {
 	}
 
 	@Override
-	protected void fillConstructorProperties(IdFunctionObject ctor) {
-		super.fillConstructorProperties(ctor);
-		addIdFunctionProperty(ctor, CLASS_NAME, ConstructorId_for, "for", 1);
-		addIdFunctionProperty(ctor, CLASS_NAME, ConstructorId_keyFor, "keyFor", 1);
+	protected void fillConstructorProperties(Context cx, IdFunctionObject ctor) {
+		super.fillConstructorProperties(cx, ctor);
+		addIdFunctionProperty(cx, ctor, CLASS_NAME, ConstructorId_for, "for", 1);
+		addIdFunctionProperty(cx, ctor, CLASS_NAME, ConstructorId_keyFor, "keyFor", 1);
 	}
 
 	private static void createStandardSymbol(Context cx, Scriptable scope, ScriptableObject ctor, String name, SymbolKey key) {
 		Scriptable sym = cx.newObject(scope, CLASS_NAME, new Object[]{name, key});
-		ctor.defineProperty(name, sym, DONTENUM | READONLY | PERMANENT);
+		ctor.defineProperty(cx, name, sym, DONTENUM | READONLY | PERMANENT);
 	}
 
 	// #string_id_map#
@@ -161,14 +161,14 @@ public class NativeSymbol extends IdScriptableObject implements Symbol {
 
 
 	@Override
-	protected void initPrototypeId(int id) {
+	protected void initPrototypeId(Context cx, int id) {
 		switch (id) {
-			case Id_constructor -> initPrototypeMethod(CLASS_NAME, id, "constructor", 0);
-			case Id_toString -> initPrototypeMethod(CLASS_NAME, id, "toString", 0);
-			case Id_valueOf -> initPrototypeMethod(CLASS_NAME, id, "valueOf", 0);
+			case Id_constructor -> initPrototypeMethod(cx, CLASS_NAME, id, "constructor", 0);
+			case Id_toString -> initPrototypeMethod(cx, CLASS_NAME, id, "toString", 0);
+			case Id_valueOf -> initPrototypeMethod(cx, CLASS_NAME, id, "valueOf", 0);
 			case SymbolId_toStringTag -> initPrototypeValue(id, SymbolKey.TO_STRING_TAG, CLASS_NAME, DONTENUM | READONLY);
-			case SymbolId_toPrimitive -> initPrototypeMethod(CLASS_NAME, id, SymbolKey.TO_PRIMITIVE, "Symbol.toPrimitive", 1);
-			default -> super.initPrototypeId(id);
+			case SymbolId_toPrimitive -> initPrototypeMethod(cx, CLASS_NAME, id, SymbolKey.TO_PRIMITIVE, "Symbol.toPrimitive", 1);
+			default -> super.initPrototypeId(cx, id);
 		}
 	}
 
@@ -278,27 +278,27 @@ public class NativeSymbol extends IdScriptableObject implements Symbol {
 	}
 
 	@Override
-	public void put(String name, Scriptable start, Object value) {
+	public void put(Context cx, String name, Scriptable start, Object value) {
 		if (!isSymbol()) {
-			super.put(name, start, value);
+			super.put(cx, name, start, value);
 		} else if (isStrictMode()) {
 			throw ScriptRuntime.typeError0("msg.no.assign.symbol.strict");
 		}
 	}
 
 	@Override
-	public void put(int index, Scriptable start, Object value) {
+	public void put(Context cx, int index, Scriptable start, Object value) {
 		if (!isSymbol()) {
-			super.put(index, start, value);
+			super.put(cx, index, start, value);
 		} else if (isStrictMode()) {
 			throw ScriptRuntime.typeError0("msg.no.assign.symbol.strict");
 		}
 	}
 
 	@Override
-	public void put(Symbol key, Scriptable start, Object value) {
+	public void put(Context cx, Symbol key, Scriptable start, Object value) {
 		if (!isSymbol()) {
-			super.put(key, start, value);
+			super.put(cx, key, start, value);
 		} else if (isStrictMode()) {
 			throw ScriptRuntime.typeError0("msg.no.assign.symbol.strict");
 		}

@@ -12,10 +12,6 @@ import dev.latvian.mods.rhino.util.wrap.TypeWrapperFactory;
 import dev.latvian.mods.rhino.util.wrap.TypeWrappers;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serial;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
@@ -30,39 +26,54 @@ import java.util.Map;
  * overloaded) methods.<p>
  *
  * @author Mike Shaver
- * @see NativeJavaArray
- * @see NativeJavaPackage
  * @see NativeJavaClass
  */
 
 public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, Serializable {
-	@Serial
-	private static final long serialVersionUID = -6948590651130498591L;
+	private static final Object COERCED_INTERFACE_KEY = "Coerced Interface";
+
+	/**
+	 * The prototype of this object.
+	 */
+	protected Scriptable prototype;
+
+	/**
+	 * The parent scope of this object.
+	 */
+	protected Scriptable parent;
+
+	protected transient Object javaObject;
+
+	protected transient Class<?> staticType;
+	protected transient JavaMembers members;
+	protected transient Map<String, FieldAndMethods> fieldAndMethods;
+	protected transient Map<String, Object> customMembers;
+	protected transient boolean isAdapter;
 
 	public NativeJavaObject() {
 	}
 
-	public NativeJavaObject(Scriptable scope, Object javaObject, Class<?> staticType) {
-		this(scope, javaObject, staticType, false);
+	public NativeJavaObject(Context cx, Scriptable scope, Object javaObject, Class<?> staticType) {
+		this(cx, scope, javaObject, staticType, false);
 	}
 
-	public NativeJavaObject(Scriptable scope, Object javaObject, Class<?> staticType, boolean isAdapter) {
+	public NativeJavaObject(Context cx, Scriptable scope, Object javaObject, Class<?> staticType, boolean isAdapter) {
 		this.parent = scope;
 		this.javaObject = javaObject;
 		this.staticType = staticType;
 		this.isAdapter = isAdapter;
-		initMembers();
+		initMembers(cx);
 	}
 
-	protected void initMembers() {
+	protected void initMembers(Context cx) {
 		Class<?> dynamicType;
 		if (javaObject != null) {
 			dynamicType = javaObject.getClass();
 		} else {
 			dynamicType = staticType;
 		}
-		members = JavaMembers.lookupClass(ClassCache.get(parent), dynamicType, staticType, isAdapter);
-		fieldAndMethods = members.getFieldAndMethodsObjects(this, javaObject, false);
+		members = JavaMembers.lookupClass(ClassCache.get(cx, parent), dynamicType, staticType, isAdapter);
+		fieldAndMethods = members.getFieldAndMethodsObjects(cx, this, javaObject, false);
 		customMembers = null;
 	}
 
@@ -87,22 +98,22 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 	}
 
 	@Override
-	public boolean has(String name, Scriptable start) {
+	public boolean has(Context cx, String name, Scriptable start) {
 		return members.has(name, false) || customMembers != null && customMembers.containsKey(name);
 	}
 
 	@Override
-	public boolean has(int index, Scriptable start) {
+	public boolean has(Context cx, int index, Scriptable start) {
 		return false;
 	}
 
 	@Override
-	public boolean has(Symbol key, Scriptable start) {
+	public boolean has(Context cx, Symbol key, Scriptable start) {
 		return javaObject instanceof Iterable<?> && SymbolKey.ITERATOR.equals(key);
 	}
 
 	@Override
-	public Object get(String name, Scriptable start) {
+	public Object get(Context cx, String name, Scriptable start) {
 		if (fieldAndMethods != null) {
 			Object result = fieldAndMethods.get(name);
 			if (result != null) {
@@ -121,11 +132,10 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 						return Undefined.instance;
 					}
 
-					Context cx = Context.getContext();
 					Object r1 = cx.getWrapFactory().wrap(cx, this, r, r.getClass());
 
 					if (r1 instanceof Scriptable) {
-						return ((Scriptable) r1).getDefaultValue(null);
+						return ((Scriptable) r1).getDefaultValue(cx, null);
 					}
 
 					return r1;
@@ -137,11 +147,11 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 
 		// TODO: passing 'this' as the scope is bogus since it has
 		//  no parent scope
-		return members.get(this, name, javaObject, false);
+		return members.get(cx, this, name, javaObject, false);
 	}
 
 	@Override
-	public Object get(Symbol key, Scriptable start) {
+	public Object get(Context cx, Symbol key, Scriptable start) {
 		if (javaObject instanceof Iterable<?> && SymbolKey.ITERATOR.equals(key)) {
 			return new JavaIteratorWrapper(((Iterable<?>) javaObject).iterator());
 		}
@@ -151,24 +161,24 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 	}
 
 	@Override
-	public Object get(int index, Scriptable start) {
+	public Object get(Context cx, int index, Scriptable start) {
 		throw members.reportMemberNotFound(Integer.toString(index));
 	}
 
 	@Override
-	public void put(String name, Scriptable start, Object value) {
+	public void put(Context cx, String name, Scriptable start, Object value) {
 		// We could be asked to modify the value of a property in the
 		// prototype. Since we can't add a property to a Java object,
 		// we modify it in the prototype rather than copy it down.
 		if (prototype == null || members.has(name, false)) {
 			members.put(this, name, javaObject, value, false);
 		} else {
-			prototype.put(name, prototype, value);
+			prototype.put(cx, name, prototype, value);
 		}
 	}
 
 	@Override
-	public void put(Symbol symbol, Scriptable start, Object value) {
+	public void put(Context cx, Symbol symbol, Scriptable start, Object value) {
 		// We could be asked to modify the value of a property in the
 		// prototype. Since we can't add a property to a Java object,
 		// we modify it in the prototype rather than copy it down.
@@ -176,23 +186,23 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 		if (prototype == null || members.has(name, false)) {
 			members.put(this, name, javaObject, value, false);
 		} else if (prototype instanceof SymbolScriptable) {
-			((SymbolScriptable) prototype).put(symbol, prototype, value);
+			((SymbolScriptable) prototype).put(cx, symbol, prototype, value);
 		}
 	}
 
 	@Override
-	public void put(int index, Scriptable start, Object value) {
+	public void put(Context cx, int index, Scriptable start, Object value) {
 		throw members.reportMemberNotFound(Integer.toString(index));
 	}
 
 	@Override
-	public boolean hasInstance(Scriptable value) {
+	public boolean hasInstance(Context cx, Scriptable value) {
 		// This is an instance of a Java class, so always return false
 		return false;
 	}
 
 	@Override
-	public void delete(String name) {
+	public void delete(Context cx, String name) {
 		if (fieldAndMethods != null) {
 			Object result = fieldAndMethods.get(name);
 			if (result != null) {
@@ -209,21 +219,21 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 			}
 		}
 
-		Deletable.deleteObject(members.get(this, name, javaObject, false));
+		Deletable.deleteObject(members.get(cx, this, name, javaObject, false));
 	}
 
 	@Override
-	public void delete(Symbol key) {
+	public void delete(Context cx, Symbol key) {
 	}
 
 	@Override
-	public void delete(int index) {
+	public void delete(Context cx, int index) {
 	}
 
 	@Override
-	public Scriptable getPrototype() {
+	public Scriptable getPrototype(Context cx) {
 		if (prototype == null && javaObject instanceof String) {
-			return TopLevel.getBuiltinPrototype(ScriptableObject.getTopLevelScope(parent), TopLevel.Builtins.String);
+			return TopLevel.getBuiltinPrototype(cx, ScriptableObject.getTopLevelScope(parent), TopLevel.Builtins.String);
 		}
 		return prototype;
 	}
@@ -232,7 +242,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 	 * Sets the prototype of the object.
 	 */
 	@Override
-	public void setPrototype(Scriptable m) {
+	public void setPrototype(Context cx, Scriptable m) {
 		prototype = m;
 	}
 
@@ -253,9 +263,9 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 	}
 
 	@Override
-	public Object[] getIds() {
+	public Object[] getIds(Context cx) {
 		if (customMembers != null) {
-			Object[] c = customMembers.keySet().toArray(ScriptRuntime.emptyArgs);
+			Object[] c = customMembers.keySet().toArray(ScriptRuntime.EMPTY_ARGS);
 			Object[] m = members.getIds(false);
 			Object[] result = new Object[c.length + m.length];
 			System.arraycopy(c, 0, result, 0, c.length);
@@ -277,7 +287,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 	}
 
 	@Override
-	public Object getDefaultValue(Class<?> hint) {
+	public Object getDefaultValue(Context cx, Class<?> hint) {
 		Object value;
 		if (hint == null) {
 			if (javaObject instanceof Boolean) {
@@ -298,9 +308,9 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 			} else {
 				throw Context.reportRuntimeError0(Context.getCurrentContext(), "msg.default.value");
 			}
-			Object converterObject = get(converterName, this);
+			Object converterObject = get(cx, converterName, this);
 			if (converterObject instanceof Function f) {
-				value = f.call(Context.getContext(), f.getParentScope(), this, ScriptRuntime.emptyArgs);
+				value = f.call(Context.getContext(), f.getParentScope(), this, ScriptRuntime.EMPTY_ARGS);
 			} else {
 				if (hint == ScriptRuntime.NumberClass && javaObject instanceof Boolean) {
 					boolean b = (Boolean) javaObject;
@@ -446,7 +456,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 					return 1;
 				}
 				if (to.isArray()) {
-					if (fromObj instanceof NativeArray) {
+					if (fromObj instanceof NativeJavaList) {
 						// This is a native array conversion to a java array
 						// Array conversions are all equal, and preferable to object
 						// and string conversion, per LC3.
@@ -516,7 +526,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 		} else if (value instanceof Scriptable) {
 			if (value instanceof NativeJavaClass) {
 				return JSTYPE_JAVA_CLASS;
-			} else if (value instanceof NativeJavaArray) {
+			} else if (value instanceof NativeJavaList) {
 				return JSTYPE_JAVA_ARRAY;
 			} else if (value instanceof Wrapper) {
 				return JSTYPE_JAVA_OBJECT;
@@ -648,7 +658,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 					double time = ((NativeDate) value).getJSTimeValue();
 					// XXX: This will replace NaN by 0
 					return new Date((long) time);
-				} else if (type.isArray() && value instanceof NativeArray array) {
+				} else if (type.isArray() && value instanceof NativeJavaList array) {
 					// Make a new java array, and coerce the JS array components
 					// to the target (component) type.
 					long length = array.getLength();
@@ -656,7 +666,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 					Object Result = Array.newInstance(arrayType, (int) length);
 					for (int i = 0; i < length; ++i) {
 						try {
-							Array.set(Result, i, coerceTypeImpl(cx, typeWrappers, arrayType, array.get(i, array)));
+							Array.set(Result, i, coerceTypeImpl(cx, typeWrappers, arrayType, array.get(cx, i, array)));
 						} catch (EvaluatorException ee) {
 							return reportConversionError(cx, value, type);
 						}
@@ -842,71 +852,4 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 		// value can be null, bug 282447.
 		throw Context.reportRuntimeError2(cx, "msg.conversion.not.allowed", String.valueOf(stringValue), JavaMembers.javaSignature(type));
 	}
-
-	@Serial
-	private void writeObject(ObjectOutputStream out) throws IOException {
-		out.defaultWriteObject();
-
-		out.writeBoolean(isAdapter);
-		if (isAdapter) {
-			try {
-				JavaAdapter.writeAdapterObject(javaObject, out);
-			} catch (Exception ex) {
-				throw new IOException();
-			}
-		} else {
-			out.writeObject(javaObject);
-		}
-
-		if (staticType != null) {
-			out.writeObject(staticType.getName());
-		} else {
-			out.writeObject(null);
-		}
-	}
-
-	@Serial
-	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-		in.defaultReadObject();
-
-		isAdapter = in.readBoolean();
-		if (isAdapter) {
-			try {
-				javaObject = JavaAdapter.readAdapterObject(this, in);
-			} catch (Exception ex) {
-				throw new IOException();
-			}
-		} else {
-			javaObject = in.readObject();
-		}
-
-		String className = (String) in.readObject();
-		if (className != null) {
-			staticType = Class.forName(className);
-		} else {
-			staticType = null;
-		}
-
-		initMembers();
-	}
-
-	/**
-	 * The prototype of this object.
-	 */
-	protected Scriptable prototype;
-
-	/**
-	 * The parent scope of this object.
-	 */
-	protected Scriptable parent;
-
-	protected transient Object javaObject;
-
-	protected transient Class<?> staticType;
-	protected transient JavaMembers members;
-	protected transient Map<String, FieldAndMethods> fieldAndMethods;
-	protected transient Map<String, Object> customMembers;
-	protected transient boolean isAdapter;
-
-	private static final Object COERCED_INTERFACE_KEY = "Coerced Interface";
 }

@@ -24,7 +24,7 @@ public abstract class NativeFunction extends BaseFunction {
 	}
 
 	public final void initScriptFunction(Context cx, Scriptable scope, boolean es6GeneratorFunction) {
-		ScriptRuntime.setFunctionProtoAndParent(this, scope, es6GeneratorFunction);
+		ScriptRuntime.setFunctionProtoAndParent(cx, this, scope, es6GeneratorFunction);
 	}
 
 	@Override

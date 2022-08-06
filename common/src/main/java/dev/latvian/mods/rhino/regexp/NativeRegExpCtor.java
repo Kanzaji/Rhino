@@ -13,8 +13,6 @@ import dev.latvian.mods.rhino.Scriptable;
 import dev.latvian.mods.rhino.TopLevel;
 import dev.latvian.mods.rhino.Undefined;
 
-import java.io.Serial;
-
 /**
  * This class implements the RegExp constructor native object.
  * <p>
@@ -29,9 +27,6 @@ import java.io.Serial;
  * @author Norris Boyd
  */
 class NativeRegExpCtor extends BaseFunction {
-	@Serial
-	private static final long serialVersionUID = -5733330028285400526L;
-
 	NativeRegExpCtor() {
 	}
 
@@ -62,12 +57,11 @@ class NativeRegExpCtor extends BaseFunction {
 	public Scriptable construct(Context cx, Scriptable scope, Object[] args) {
 		NativeRegExp re = new NativeRegExp();
 		re.compile(cx, scope, args);
-		ScriptRuntime.setBuiltinProtoAndParent(re, scope, TopLevel.Builtins.RegExp);
+		ScriptRuntime.setBuiltinProtoAndParent(cx, re, scope, TopLevel.Builtins.RegExp);
 		return re;
 	}
 
-	private static RegExp getImpl() {
-		Context cx = Context.getCurrentContext();
+	private static RegExp getImpl(Context cx) {
 		return ScriptRuntime.getRegExpProxy(cx);
 	}
 
@@ -189,10 +183,10 @@ class NativeRegExpCtor extends BaseFunction {
 	}
 
 	@Override
-	protected Object getInstanceIdValue(int id) {
+	protected Object getInstanceIdValue(Context cx, int id) {
 		int shifted = id - super.getMaxInstanceId();
 		if (1 <= shifted && shifted <= MAX_INSTANCE_ID) {
-			RegExp impl = getImpl();
+			RegExp impl = getImpl(cx);
 			Object stringResult;
 			switch (shifted) {
 				case Id_multiline:
@@ -233,21 +227,21 @@ class NativeRegExpCtor extends BaseFunction {
 			}
 			return (stringResult == null) ? "" : stringResult.toString();
 		}
-		return super.getInstanceIdValue(id);
+		return super.getInstanceIdValue(cx, id);
 	}
 
 	@Override
-	protected void setInstanceIdValue(int id, Object value) {
+	protected void setInstanceIdValue(Context cx, int id, Object value) {
 		int shifted = id - super.getMaxInstanceId();
 		switch (shifted) {
 			case Id_multiline:
 			case Id_STAR:
-				getImpl().multiline = ScriptRuntime.toBoolean(value);
+				getImpl(cx).multiline = ScriptRuntime.toBoolean(value);
 				return;
 
 			case Id_input:
 			case Id_UNDERSCORE:
-				getImpl().input = ScriptRuntime.toString(value);
+				getImpl(cx).input = ScriptRuntime.toString(value);
 				return;
 
 			case Id_lastMatch:
@@ -265,7 +259,7 @@ class NativeRegExpCtor extends BaseFunction {
 					return;
 				}
 		}
-		super.setInstanceIdValue(id, value);
+		super.setInstanceIdValue(cx, id, value);
 	}
 
 	@Override

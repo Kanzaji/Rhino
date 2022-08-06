@@ -23,16 +23,16 @@ public class NativeSet extends IdScriptableObject {
 
 	static void init(Context cx, Scriptable scope, boolean sealed) {
 		NativeSet obj = new NativeSet();
-		obj.exportAsJSClass(MAX_PROTOTYPE_ID, scope, false);
+		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, false);
 
 		ScriptableObject desc = (ScriptableObject) cx.newObject(scope);
-		desc.put("enumerable", desc, Boolean.FALSE);
-		desc.put("configurable", desc, Boolean.TRUE);
-		desc.put("get", desc, obj.get(GETSIZE, obj));
+		desc.put(cx, "enumerable", desc, Boolean.FALSE);
+		desc.put(cx, "configurable", desc, Boolean.TRUE);
+		desc.put(cx, "get", desc, obj.get(cx, GETSIZE, obj));
 		obj.defineOwnProperty(cx, "size", desc);
 
 		if (sealed) {
-			obj.sealObject();
+			obj.sealObject(cx);
 		}
 	}
 
@@ -68,9 +68,9 @@ public class NativeSet extends IdScriptableObject {
 			case Id_clear:
 				return realThis(thisObj, f).js_clear();
 			case Id_values:
-				return realThis(thisObj, f).js_iterator(scope, NativeCollectionIterator.Type.VALUES);
+				return realThis(thisObj, f).js_iterator(cx, scope, NativeCollectionIterator.Type.VALUES);
 			case Id_entries:
-				return realThis(thisObj, f).js_iterator(scope, NativeCollectionIterator.Type.BOTH);
+				return realThis(thisObj, f).js_iterator(cx, scope, NativeCollectionIterator.Type.BOTH);
 			case Id_forEach:
 				return realThis(thisObj, f).js_forEach(cx, scope, args.length > 0 ? args[0] : Undefined.instance, args.length > 1 ? args[1] : Undefined.instance);
 			case SymbolId_getSize:
@@ -107,8 +107,8 @@ public class NativeSet extends IdScriptableObject {
 		return entries.size();
 	}
 
-	private Object js_iterator(Scriptable scope, NativeCollectionIterator.Type type) {
-		return new NativeCollectionIterator(scope, ITERATOR_TAG, type, entries.iterator());
+	private Object js_iterator(Context cx, Scriptable scope, NativeCollectionIterator.Type type) {
+		return new NativeCollectionIterator(cx, scope, ITERATOR_TAG, type, entries.iterator());
 	}
 
 	private Object js_forEach(Context cx, Scriptable scope, Object arg1, Object arg2) {
@@ -155,7 +155,7 @@ public class NativeSet extends IdScriptableObject {
 		// been replaced. Since we're not fully constructed yet, create a dummy instance
 		// so that we can get our own prototype.
 		ScriptableObject dummy = ensureScriptableObject(cx.newObject(scope, set.getClassName()));
-		final Callable add = ScriptRuntime.getPropFunctionAndThis(dummy.getPrototype(), "add", cx, scope);
+		final Callable add = ScriptRuntime.getPropFunctionAndThis(dummy.getPrototype(cx), "add", cx, scope);
 		// Clean up the value left around by the previous function
 		ScriptRuntime.lastStoredScriptable(cx);
 
@@ -185,10 +185,10 @@ public class NativeSet extends IdScriptableObject {
 	}
 
 	@Override
-	protected void initPrototypeId(int id) {
+	protected void initPrototypeId(Context cx, int id) {
 		switch (id) {
 			case SymbolId_getSize -> {
-				initPrototypeMethod(SET_TAG, id, GETSIZE, "get size", 0);
+				initPrototypeMethod(cx, SET_TAG, id, GETSIZE, "get size", 0);
 				return;
 			}
 			case SymbolId_toStringTag -> {
@@ -235,7 +235,7 @@ public class NativeSet extends IdScriptableObject {
 			}
 			default -> throw new IllegalArgumentException(String.valueOf(id));
 		}
-		initPrototypeMethod(SET_TAG, id, s, fnName, arity);
+		initPrototypeMethod(cx, SET_TAG, id, s, fnName, arity);
 	}
 
 	@Override

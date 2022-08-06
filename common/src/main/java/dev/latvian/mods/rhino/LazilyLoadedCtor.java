@@ -6,7 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.Serial;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 
@@ -16,8 +15,6 @@ import java.lang.reflect.InvocationTargetException;
  * <p> This improves startup time and average memory usage.
  */
 public final class LazilyLoadedCtor implements Serializable {
-	@Serial
-	private static final long serialVersionUID = 1L;
 	private static final int STATE_BEFORE_INIT = 0;
 	private static final int STATE_INITIALIZING = 1;
 	private static final int STATE_WITH_VALUE = 2;
@@ -46,7 +43,7 @@ public final class LazilyLoadedCtor implements Serializable {
 		scope.addLazilyInitializedValue(propertyName, 0, this, ScriptableObject.DONTENUM);
 	}
 
-	void init() {
+	void init(Context cx) {
 		synchronized (this) {
 			if (state == STATE_INITIALIZING) {
 				throw new IllegalStateException("Recursive initialization for " + propertyName);
@@ -57,7 +54,7 @@ public final class LazilyLoadedCtor implements Serializable {
 				// buildValue throws.
 				Object value = Scriptable.NOT_FOUND;
 				try {
-					value = buildValue();
+					value = buildValue(cx);
 				} finally {
 					initializedValue = value;
 					state = STATE_WITH_VALUE;
@@ -73,25 +70,24 @@ public final class LazilyLoadedCtor implements Serializable {
 		return initializedValue;
 	}
 
-	private Object buildValue() {
+	private Object buildValue(Context cx) {
 		//if (privileged) {
 		//	return AccessController.doPrivileged((PrivilegedAction<Object>) () -> buildValue0());
 		//}
-		return buildValue0();
+		return buildValue0(cx);
 	}
 
-	private Object buildValue0() {
+	private Object buildValue0(Context cx) {
 		Class<? extends Scriptable> cl = cast(Kit.classOrNull(className));
 		if (cl != null) {
 			try {
-				Context cx = Context.getCurrentContext();
 				Object value = ScriptableObject.buildClassCtor(cx, scope, cl, sealed, false);
 				if (value != null) {
 					return value;
 				}
 				// cl has own static initializer which is expected
 				// to set the property on its own.
-				value = scope.get(propertyName, scope);
+				value = scope.get(cx, propertyName, scope);
 				if (value != Scriptable.NOT_FOUND) {
 					return value;
 				}

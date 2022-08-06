@@ -61,18 +61,20 @@ public class RhinoTest {
 	}
 
 	public void test(String name, String script, String console) {
+		var cx = getContext();
+
 		try {
-			var scope = sharedScope == null ? getContext().initStandardObjects() : sharedScope;
+			var scope = sharedScope == null ? cx.initStandardObjects() : sharedScope;
 
 			for (var entry : include.entrySet()) {
 				if (entry.getValue() instanceof Class<?> c) {
-					ScriptableObject.putProperty(scope, entry.getKey(), new NativeJavaClass(scope, c));
+					ScriptableObject.putProperty(cx, scope, entry.getKey(), new NativeJavaClass(cx, scope, c));
 				} else {
-					ScriptableObject.putProperty(scope, entry.getKey(), Context.javaToJS(entry.getValue(), scope));
+					ScriptableObject.putProperty(cx, scope, entry.getKey(), Context.javaToJS(entry.getValue(), scope));
 				}
 			}
 
-			getContext().evaluateString(scope, script, testName + "/" + name, 1, null);
+			cx.evaluateString(scope, script, testName + "/" + name, 1, null);
 		} catch (Exception ex) {
 			TestConsole.info("Error: " + ex.getMessage());
 			// ex.printStackTrace();

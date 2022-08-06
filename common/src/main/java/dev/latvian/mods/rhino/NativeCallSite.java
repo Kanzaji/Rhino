@@ -6,8 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.Serial;
-
 /**
  * This class is used by the V8 extension "Error.prepareStackTrace." It is
  * passed to that function, which may then use it to format the stack as it sees
@@ -15,21 +13,19 @@ import java.io.Serial;
  */
 
 public class NativeCallSite extends IdScriptableObject {
-	@Serial
-	private static final long serialVersionUID = 2688372752566593594L;
 	private static final String CALLSITE_TAG = "CallSite";
 	private ScriptStackElement element;
 
-	static void init(Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope, boolean sealed) {
 		NativeCallSite cs = new NativeCallSite();
-		cs.exportAsJSClass(MAX_PROTOTYPE_ID, scope, sealed);
+		cs.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, sealed);
 	}
 
-	static NativeCallSite make(Scriptable scope, Scriptable ctorObj) {
+	static NativeCallSite make(Context cx, Scriptable scope, Scriptable ctorObj) {
 		NativeCallSite cs = new NativeCallSite();
-		Scriptable proto = (Scriptable) (ctorObj.get("prototype", ctorObj));
+		Scriptable proto = (Scriptable) (ctorObj.get(cx, "prototype", ctorObj));
 		cs.setParentScope(scope);
-		cs.setPrototype(proto);
+		cs.setPrototype(cx, proto);
 		return cs;
 	}
 
@@ -46,7 +42,7 @@ public class NativeCallSite extends IdScriptableObject {
 	}
 
 	@Override
-	protected void initPrototypeId(int id) {
+	protected void initPrototypeId(Context cx, int id) {
 		String s;
 		int arity;
 		switch (id) {
@@ -112,7 +108,7 @@ public class NativeCallSite extends IdScriptableObject {
 			}
 			default -> throw new IllegalArgumentException(String.valueOf(id));
 		}
-		initPrototypeMethod(CALLSITE_TAG, id, s, arity);
+		initPrototypeMethod(cx, CALLSITE_TAG, id, s, arity);
 	}
 
 	@Override
@@ -122,14 +118,14 @@ public class NativeCallSite extends IdScriptableObject {
 		}
 		int id = f.methodId();
 		return switch (id) {
-			case Id_constructor -> make(scope, f);
-			case Id_getFunctionName -> getFunctionName(thisObj);
-			case Id_getFileName -> getFileName(thisObj);
-			case Id_getLineNumber -> getLineNumber(thisObj);
+			case Id_constructor -> make(cx, scope, f);
+			case Id_getFunctionName -> getFunctionName(cx, thisObj);
+			case Id_getFileName -> getFileName(cx, thisObj);
+			case Id_getLineNumber -> getLineNumber(cx, thisObj);
 			case Id_getThis, Id_getTypeName, Id_getFunction, Id_getColumnNumber -> Undefined.instance;
 			case Id_getMethodName -> null;
 			case Id_getEvalOrigin, Id_isEval, Id_isConstructor, Id_isNative, Id_isToplevel -> Boolean.FALSE;
-			case Id_toString -> js_toString(thisObj);
+			case Id_toString -> js_toString(cx, thisObj);
 			default -> throw new IllegalArgumentException(String.valueOf(id));
 		};
 	}
@@ -142,9 +138,9 @@ public class NativeCallSite extends IdScriptableObject {
 		return element.toString();
 	}
 
-	private static Object js_toString(Scriptable obj) {
+	private static Object js_toString(Context cx, Scriptable obj) {
 		while (obj != null && !(obj instanceof NativeCallSite)) {
-			obj = obj.getPrototype();
+			obj = obj.getPrototype(cx);
 		}
 		if (obj == null) {
 			return NOT_FOUND;
@@ -155,9 +151,9 @@ public class NativeCallSite extends IdScriptableObject {
 		return sb.toString();
 	}
 
-	private static Object getFunctionName(Scriptable obj) {
+	private static Object getFunctionName(Context cx, Scriptable obj) {
 		while (obj != null && !(obj instanceof NativeCallSite)) {
-			obj = obj.getPrototype();
+			obj = obj.getPrototype(cx);
 		}
 		if (obj == null) {
 			return NOT_FOUND;
@@ -166,9 +162,9 @@ public class NativeCallSite extends IdScriptableObject {
 		return (cs.element == null ? null : cs.element.functionName);
 	}
 
-	private static Object getFileName(Scriptable obj) {
+	private static Object getFileName(Context cx, Scriptable obj) {
 		while (obj != null && !(obj instanceof NativeCallSite)) {
-			obj = obj.getPrototype();
+			obj = obj.getPrototype(cx);
 		}
 		if (obj == null) {
 			return NOT_FOUND;
@@ -177,9 +173,9 @@ public class NativeCallSite extends IdScriptableObject {
 		return (cs.element == null ? null : cs.element.fileName);
 	}
 
-	private static Object getLineNumber(Scriptable obj) {
+	private static Object getLineNumber(Context cx, Scriptable obj) {
 		while (obj != null && !(obj instanceof NativeCallSite)) {
-			obj = obj.getPrototype();
+			obj = obj.getPrototype(cx);
 		}
 		if (obj == null) {
 			return NOT_FOUND;

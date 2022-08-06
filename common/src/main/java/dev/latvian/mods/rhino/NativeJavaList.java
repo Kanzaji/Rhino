@@ -6,6 +6,8 @@
 package dev.latvian.mods.rhino;
 
 import dev.latvian.mods.rhino.util.Deletable;
+import dev.latvian.mods.rhino.util.JavaIteratorWrapper;
+import dev.latvian.mods.rhino.util.NativeArrayWrapper;
 import dev.latvian.mods.rhino.util.ValueUnwrapper;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,19 +21,19 @@ import java.util.function.Predicate;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class NativeJavaList extends NativeJavaObject {
-	private final List list;
+	public final List list;
 	private final Class<?> listType;
 	private final ValueUnwrapper valueUnwrapper;
 
-	public NativeJavaList(Scriptable scope, Object jo, List list, @Nullable Class<?> listType, ValueUnwrapper valueUnwrapper) {
-		super(scope, jo, jo.getClass());
+	public NativeJavaList(Context cx, Scriptable scope, Object jo, List list, @Nullable Class<?> listType, ValueUnwrapper valueUnwrapper) {
+		super(cx, scope, jo, jo.getClass());
 		this.list = list;
 		this.listType = listType;
 		this.valueUnwrapper = valueUnwrapper;
 	}
 
-	public NativeJavaList(Scriptable scope, Object jo, List list) {
-		this(scope, jo, list, null, ValueUnwrapper.DEFAULT);
+	public NativeJavaList(Context cx, Scriptable scope, Object jo, List list) {
+		this(cx, scope, jo, list, null, ValueUnwrapper.DEFAULT);
 	}
 
 	@Override
@@ -40,51 +42,58 @@ public class NativeJavaList extends NativeJavaObject {
 	}
 
 	@Override
-	public boolean has(int index, Scriptable start) {
+	public boolean has(Context cx, int index, Scriptable start) {
 		if (isWithValidIndex(index)) {
 			return true;
 		}
-		return super.has(index, start);
+		return super.has(cx, index, start);
 	}
 
 	@Override
-	public boolean has(Symbol key, Scriptable start) {
-		if (SymbolKey.IS_CONCAT_SPREADABLE.equals(key)) {
+	public boolean has(Context cx, Symbol key, Scriptable start) {
+		if (SymbolKey.ITERATOR.equals(key) || SymbolKey.IS_CONCAT_SPREADABLE.equals(key)) {
 			return true;
 		}
-		return super.has(key, start);
+		return super.has(cx, key, start);
 	}
 
 	@Override
-	public Object get(int index, Scriptable start) {
+	public Object get(Context cx, int index, Scriptable start) {
 		if (isWithValidIndex(index)) {
 			return valueUnwrapper.unwrap(this, list.get(index));
 		}
+
 		return Undefined.instance;
 	}
 
 	@Override
-	public Object get(Symbol key, Scriptable start) {
+	public Object get(Context cx, Symbol key, Scriptable start) {
+		if (SymbolKey.ITERATOR.equals(key)) {
+			return new JavaIteratorWrapper(list.iterator());
+		}
+
 		if (SymbolKey.IS_CONCAT_SPREADABLE.equals(key)) {
 			return Boolean.TRUE;
 		}
-		return super.get(key, start);
+
+		return super.get(cx, key, start);
 	}
 
 	@Override
-	public void put(int index, Scriptable start, Object value) {
-		if (isWithValidIndex(index)) {
-			list.set(index, Context.jsToJava(value, listType));
-			return;
+	public void put(Context cx, int index, Scriptable start, Object value) {
+		if (index >= list.size()) {
+			list.add(Context.jsToJava(cx, value, listType));
+		} else if (isWithValidIndex(index)) {
+			list.set(index, Context.jsToJava(cx, value, listType));
+		} else {
+			super.put(cx, index, start, value);
 		}
-		super.put(index, start, value);
 	}
 
 	@Override
-	public Object[] getIds() {
-		List<?> list = (List<?>) javaObject;
-		Object[] result = new Object[list.size()];
+	public Object[] getIds(Context cx) {
 		int i = list.size();
+		Object[] result = new Object[i];
 		while (--i >= 0) {
 			result[i] = i;
 		}
@@ -96,15 +105,15 @@ public class NativeJavaList extends NativeJavaObject {
 	}
 
 	@Override
-	public void delete(int index) {
+	public void delete(Context cx, int index) {
 		if (isWithValidIndex(index)) {
 			Deletable.deleteObject(list.remove(index));
 		}
 	}
 
 	@Override
-	protected void initMembers() {
-		super.initMembers();
+	protected void initMembers(Context cx) {
+		super.initMembers(cx);
 		addCustomProperty("length", this::getLength);
 		addCustomFunction("push", this::push, Object.class);
 		addCustomFunction("pop", this::pop);
@@ -127,7 +136,7 @@ public class NativeJavaList extends NativeJavaObject {
 		addCustomFunction("findLastIndex", this::findLastIndex, Predicate.class);
 	}
 
-	private int getLength() {
+	public int getLength() {
 		return list.size();
 	}
 
@@ -377,5 +386,31 @@ public class NativeJavaList extends NativeJavaObject {
 		}
 
 		return -1;
+	}
+
+	@Override
+	public String toString() {
+		return list.toString();
+	}
+
+	@Override
+	public Scriptable getPrototype(Context cx) {
+		if (prototype == null) {
+			prototype = ScriptableObject.getArrayPrototype(cx, this.getParentScope());
+		}
+		return prototype;
+	}
+
+	@Override
+	public boolean hasInstance(Context cx, Scriptable value) {
+		if (list instanceof NativeArrayWrapper a) {
+			if (!(value instanceof Wrapper)) {
+				return false;
+			}
+			Object instance = ((Wrapper) value).unwrap();
+			return a.type.isInstance(instance);
+		}
+
+		return super.hasInstance(cx, value);
 	}
 }

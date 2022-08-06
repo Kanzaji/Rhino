@@ -23,15 +23,15 @@ final class NativeMath extends IdScriptableObject {
 	private static final double LOG2E = 1.4426950408889634;
 	private static final Double Double32 = 32d;
 
-	static void init(Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope, boolean sealed) {
 		NativeMath obj = new NativeMath();
 		obj.activatePrototypeMap(MAX_ID);
-		obj.setPrototype(getObjectPrototype(scope));
+		obj.setPrototype(cx, getObjectPrototype(cx, scope));
 		obj.setParentScope(scope);
 		if (sealed) {
-			obj.sealObject();
+			obj.sealObject(cx);
 		}
-		defineProperty(scope, "Math", obj, DONTENUM);
+		defineProperty(cx, scope, "Math", obj, DONTENUM);
 	}
 
 	private NativeMath() {
@@ -43,7 +43,7 @@ final class NativeMath extends IdScriptableObject {
 	}
 
 	@Override
-	protected void initPrototypeId(int id) {
+	protected void initPrototypeId(Context cx, int id) {
 		if (id <= LAST_METHOD_ID) {
 			String name;
 			int arity;
@@ -194,7 +194,7 @@ final class NativeMath extends IdScriptableObject {
 				}
 				default -> throw new IllegalStateException(String.valueOf(id));
 			}
-			initPrototypeMethod(MATH_TAG, id, name, arity);
+			initPrototypeMethod(cx, MATH_TAG, id, name, arity);
 		} else {
 			String name;
 			double x;

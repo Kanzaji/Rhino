@@ -35,7 +35,7 @@ public class IteratorLikeIterable implements Iterable<Object>, Closeable {
 		// This will throw if "next" is not a function or undefined
 		next = ScriptRuntime.getPropFunctionAndThis(target, ES6Iterator.NEXT_METHOD, cx, scope);
 		iterator = ScriptRuntime.lastStoredScriptable(cx);
-		Object retObj = ScriptRuntime.getObjectPropNoWarn(target, ES6Iterator.RETURN_PROPERTY, cx, scope);
+		Object retObj = ScriptRuntime.getObjectPropNoWarn(cx, target, ES6Iterator.RETURN_PROPERTY, scope);
 		// We only care about "return" if it is not null or undefined
 		if ((retObj != null) && !Undefined.isUndefined(retObj)) {
 			if (!(retObj instanceof Callable)) {
@@ -52,7 +52,7 @@ public class IteratorLikeIterable implements Iterable<Object>, Closeable {
 		if (!closed) {
 			closed = true;
 			if (returnFunc != null) {
-				returnFunc.call(cx, scope, iterator, ScriptRuntime.emptyArgs);
+				returnFunc.call(cx, scope, iterator, ScriptRuntime.EMPTY_ARGS);
 			}
 		}
 	}
@@ -68,10 +68,10 @@ public class IteratorLikeIterable implements Iterable<Object>, Closeable {
 
 		@Override
 		public boolean hasNext() {
-			Object val = next.call(cx, scope, iterator, ScriptRuntime.emptyArgs);
+			Object val = next.call(cx, scope, iterator, ScriptRuntime.EMPTY_ARGS);
 			// This will throw if "val" is not an object. 
 			// "getObjectPropNoWarn" won't, so do this as follows.
-			Object doneval = ScriptableObject.getProperty(ScriptableObject.ensureScriptable(val), ES6Iterator.DONE_PROPERTY);
+			Object doneval = ScriptableObject.getProperty(cx, ScriptableObject.ensureScriptable(val), ES6Iterator.DONE_PROPERTY);
 			if (doneval == Scriptable.NOT_FOUND) {
 				doneval = Undefined.instance;
 			}
@@ -80,7 +80,7 @@ public class IteratorLikeIterable implements Iterable<Object>, Closeable {
 				isDone = true;
 				return false;
 			}
-			nextVal = ScriptRuntime.getObjectPropNoWarn(val, ES6Iterator.VALUE_PROPERTY, cx, scope);
+			nextVal = ScriptRuntime.getObjectPropNoWarn(cx, val, ES6Iterator.VALUE_PROPERTY, scope);
 			return true;
 		}
 
