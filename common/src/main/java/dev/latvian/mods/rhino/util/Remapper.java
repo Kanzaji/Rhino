@@ -1,52 +1,54 @@
 package dev.latvian.mods.rhino.util;
 
+import dev.latvian.mods.rhino.SharedContextData;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.function.Function;
 
 public interface Remapper {
-	String remapClass(Class<?> from, String className);
+	String remapClass(SharedContextData data, Class<?> from, String className);
 
-	String unmapClass(String from);
+	String unmapClass(SharedContextData data, String from);
 
-	String remapField(Class<?> from, Field field, String fieldName);
+	String remapField(SharedContextData data, Class<?> from, Field field, String fieldName);
 
-	String remapMethod(Class<?> from, Method method, String methodString);
+	String remapMethod(SharedContextData data, Class<?> from, Method method, String methodString);
 
-	default String getMappedClass(Class<?> from) {
+	default String getMappedClass(SharedContextData data, Class<?> from) {
 		String n = from.getName();
-		String s = remapClass(from, n);
+		String s = remapClass(data, from, n);
 		return s.isEmpty() ? n : s;
 	}
 
-	default String getUnmappedClass(String from) {
-		String s = unmapClass(from);
+	default String getUnmappedClass(SharedContextData data, String from) {
+		String s = unmapClass(data, from);
 		return s.isEmpty() ? from : s;
 	}
 
-	default String getMappedField(Class<?> from, Field field) {
-		return getMappedField(from, field, field.getName());
+	default String getMappedField(SharedContextData data, Class<?> from, Field field) {
+		return getMappedField(data, from, field, field.getName());
 	}
 
-	default String getMappedField(Class<?> from, Field field, String fieldName) {
+	default String getMappedField(SharedContextData data, Class<?> from, Field field, String fieldName) {
 		if (from == null || from == Object.class) {
 			return field.getName();
 		}
 
-		String s = remapField(from, field, fieldName);
+		String s = remapField(data, from, field, fieldName);
 
 		if (!s.isEmpty()) {
 			return s;
 		}
 
-		String ss = getMappedField(from.getSuperclass(), field, fieldName);
+		String ss = getMappedField(data, from.getSuperclass(), field, fieldName);
 
 		if (!ss.isEmpty()) {
 			return ss;
 		}
 
 		for (Class<?> c : from.getInterfaces()) {
-			String si = getMappedField(c, field, fieldName);
+			String si = getMappedField(data, c, field, fieldName);
 
 			if (!si.isEmpty()) {
 				return si;
@@ -56,7 +58,7 @@ public interface Remapper {
 		return field.getName();
 	}
 
-	default String getMappedMethod(Class<?> from, Method method) {
+	default String getMappedMethod(SharedContextData data, Class<?> from, Method method) {
 		StringBuilder sb = new StringBuilder(method.getName());
 		sb.append('(');
 
@@ -67,28 +69,28 @@ public interface Remapper {
 		}
 
 		sb.append(')');
-		return getMappedMethod(from, method, sb.toString());
+		return getMappedMethod(data, from, method, sb.toString());
 	}
 
-	default String getMappedMethod(Class<?> from, Method method, String methodString) {
+	default String getMappedMethod(SharedContextData data, Class<?> from, Method method, String methodString) {
 		if (from == null || from == Object.class) {
 			return method.getName();
 		}
 
-		String s = remapMethod(from, method, methodString);
+		String s = remapMethod(data, from, method, methodString);
 
 		if (!s.isEmpty()) {
 			return s;
 		}
 
-		String ss = getMappedMethod(from.getSuperclass(), method, methodString);
+		String ss = getMappedMethod(data, from.getSuperclass(), method, methodString);
 
 		if (!ss.isEmpty()) {
 			return ss;
 		}
 
 		for (Class<?> c : from.getInterfaces()) {
-			String si = getMappedMethod(c, method, methodString);
+			String si = getMappedMethod(data, c, method, methodString);
 
 			if (!si.isEmpty()) {
 				return si;

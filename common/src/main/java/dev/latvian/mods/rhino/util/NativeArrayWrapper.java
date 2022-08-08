@@ -2,13 +2,23 @@ package dev.latvian.mods.rhino.util;
 
 import java.lang.reflect.Array;
 import java.util.AbstractList;
+import java.util.Arrays;
+import java.util.List;
 
 public class NativeArrayWrapper extends AbstractList<Object> {
+	public static List<Object> of(Object array) {
+		if (array instanceof Object[] a) {
+			return Arrays.asList(a);
+		}
+
+		return new NativeArrayWrapper(array);
+	}
+
 	public final Object array;
 	public final int length;
 	public final Class<?> type;
 
-	public NativeArrayWrapper(Object o) {
+	private NativeArrayWrapper(Object o) {
 		this.array = o;
 		this.length = Array.getLength(o);
 		this.type = array.getClass().getComponentType();

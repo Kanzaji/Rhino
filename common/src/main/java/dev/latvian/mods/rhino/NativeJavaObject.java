@@ -9,10 +9,7 @@ package dev.latvian.mods.rhino;
 import dev.latvian.mods.rhino.util.Deletable;
 import dev.latvian.mods.rhino.util.JavaIteratorWrapper;
 import dev.latvian.mods.rhino.util.wrap.TypeWrapperFactory;
-import dev.latvian.mods.rhino.util.wrap.TypeWrappers;
-import org.jetbrains.annotations.Nullable;
 
-import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -29,7 +26,7 @@ import java.util.Map;
  * @see NativeJavaClass
  */
 
-public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, Serializable {
+public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 	private static final Object COERCED_INTERFACE_KEY = "Coerced Interface";
 
 	/**
@@ -329,7 +326,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 	 * function, but for now I'll hide behind precedent.
 	 */
 	public static boolean canConvert(Context cx, Object fromObj, Class<?> to) {
-		return getConversionWeight(cx, fromObj, to) < CONVERSION_NONE;
+		return getConversionWeight(cx, fromObj, Wrapper.unwrapped(fromObj), to) < CONVERSION_NONE;
 	}
 
 	private static final int JSTYPE_UNDEFINED = 0; // undefined type
@@ -355,8 +352,10 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 	 * <a href="http://www.mozilla.org/js/liveconnect/lc3_method_overloading.html">
 	 * "preferred method conversions" from Live Connect 3</a>
 	 */
-	static int getConversionWeight(Context cx, Object fromObj, Class<?> to) {
-		if (cx.getFactory().hasTypeWrappers() && cx.getFactory().getTypeWrappers().getWrapperFactory(to, fromObj) != null) {
+	static int getConversionWeight(Context cx, Object fromObj, Object unwrappedFromObj, Class<?> to) {
+		var wrapperFactory = cx.getSharedData().hasTypeWrappers() ? cx.getSharedData().getTypeWrappers().getWrapperFactory(cx.getSharedData(), to, unwrappedFromObj) : null;
+
+		if (wrapperFactory != null) {
 			return CONVERSION_NONTRIVIAL;
 		}
 
@@ -548,13 +547,13 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 	 * Type-munging for field setting and method invocation.
 	 * Conforms to LC3 specification
 	 */
-	static Object coerceTypeImpl(Context cx, @Nullable TypeWrappers typeWrappers, Class<?> type, Object value) {
+	static Object coerceTypeImpl(Context cx, Class<?> type, Object value) {
 		if (value == null || value.getClass() == type) {
 			return value;
 		}
 
 		Object unwrappedValue = Wrapper.unwrapped(value);
-		TypeWrapperFactory<?> typeWrapper = typeWrappers == null ? null : typeWrappers.getWrapperFactory(type, unwrappedValue);
+		TypeWrapperFactory<?> typeWrapper = cx.getSharedData().hasTypeWrappers() ? cx.getSharedData().getTypeWrappers().getWrapperFactory(cx.getSharedData(), type, unwrappedValue) : null;
 
 		if (typeWrapper != null) {
 			return typeWrapper.wrap(unwrappedValue);
@@ -666,7 +665,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 					Object Result = Array.newInstance(arrayType, (int) length);
 					for (int i = 0; i < length; ++i) {
 						try {
-							Array.set(Result, i, coerceTypeImpl(cx, typeWrappers, arrayType, array.get(cx, i, array)));
+							Array.set(Result, i, coerceTypeImpl(cx, arrayType, array.get(cx, i, array)));
 						} catch (EvaluatorException ee) {
 							return reportConversionError(cx, value, type);
 						}
@@ -851,5 +850,10 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper, 
 		// It uses String.valueOf(value), not value.toString() since
 		// value can be null, bug 282447.
 		throw Context.reportRuntimeError2(cx, "msg.conversion.not.allowed", String.valueOf(stringValue), JavaMembers.javaSignature(type));
+	}
+
+	@Override
+	public String toString() {
+		return String.valueOf(javaObject);
 	}
 }

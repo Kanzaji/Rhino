@@ -9,7 +9,6 @@ package dev.latvian.mods.rhino;
 import dev.latvian.mods.rhino.ast.FunctionNode;
 import dev.latvian.mods.rhino.ast.ScriptNode;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -31,7 +30,7 @@ public final class Interpreter extends Icode implements Evaluator {
 	/**
 	 * Class to hold data corresponding to one interpreted call stack frame.
 	 */
-	private static class CallFrame implements Cloneable, Serializable {
+	private static class CallFrame implements Cloneable {
 		// fields marked "final" in a comment are effectively final except when they're modified immediately after cloning.
 
 		/*final*/ CallFrame parentFrame;
@@ -792,7 +791,7 @@ public final class Interpreter extends Icode implements Evaluator {
 							case Token.SHEQ:
 							case Token.SHNE: {
 								--stackTop;
-								boolean valBln = doShallowEquals(stack, sDbl, stackTop);
+								boolean valBln = doShallowEquals(cx, stack, sDbl, stackTop);
 								valBln ^= (op == Token.SHNE);
 								stack[stackTop] = ScriptRuntime.wrapBoolean(valBln);
 								continue;
@@ -2023,7 +2022,7 @@ public final class Interpreter extends Icode implements Evaluator {
 		return ScriptRuntime.eq(cx, lhs, rhs);
 	}
 
-	private static boolean doShallowEquals(Object[] stack, double[] sDbl, int stackTop) {
+	private static boolean doShallowEquals(Context cx, Object[] stack, double[] sDbl, int stackTop) {
 		Object rhs = stack[stackTop + 1];
 		Object lhs = stack[stackTop];
 		final Object DBL_MRK = UniqueTag.DOUBLE_MARK;
@@ -2045,7 +2044,7 @@ public final class Interpreter extends Icode implements Evaluator {
 				return false;
 			}
 		} else {
-			return ScriptRuntime.shallowEq(lhs, rhs);
+			return ScriptRuntime.shallowEq(cx, lhs, rhs);
 		}
 		return (ldbl == rdbl);
 	}

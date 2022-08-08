@@ -1,5 +1,7 @@
 package dev.latvian.mods.rhino.util;
 
+import dev.latvian.mods.rhino.Context;
+
 /**
  * Implement this on a class to override == != === and !== checks in JavaScript
  */
@@ -8,16 +10,16 @@ public interface SpecialEquality {
 		return equals(o);
 	}
 
-	static boolean checkSpecialEquality(Object o, Object o1, boolean shallow) {
+	static boolean checkSpecialEquality(Context cx, Object o, Object o1, boolean shallow) {
 		if (o == o1) {
 			return true;
 		} else if (o instanceof SpecialEquality s) {
 			return s.specialEquals(o1, shallow);
-		} else if (o != null && o1 != null && o.getClass().isEnum()) {
-			if (o1 instanceof Number) {
-				return ((Enum<?>) o).ordinal() == ((Number) o1).intValue();
+		} else if (o1 != null && o instanceof Enum<?> e) {
+			if (o1 instanceof Number n) {
+				return e.ordinal() == n.intValue();
 			} else {
-				return EnumTypeWrapper.getName(o.getClass(), (Enum<?>) o, true).equalsIgnoreCase(String.valueOf(o1));
+				return EnumTypeWrapperFactory.getName(cx.getSharedData(), o.getClass(), e).equalsIgnoreCase(String.valueOf(o1));
 			}
 		}
 

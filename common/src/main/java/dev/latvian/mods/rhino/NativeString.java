@@ -9,7 +9,6 @@ package dev.latvian.mods.rhino;
 import dev.latvian.mods.rhino.regexp.NativeRegExp;
 import dev.latvian.mods.rhino.regexp.RegExp;
 
-import java.io.Serial;
 import java.text.Collator;
 import java.text.Normalizer;
 import java.util.Locale;
@@ -28,9 +27,6 @@ import java.util.Locale;
  * @author Ronald Brill
  */
 final class NativeString extends IdScriptableObject implements Wrapper {
-	@Serial
-	private static final long serialVersionUID = 920268368584188687L;
-
 	private static final Object STRING_TAG = "String";
 
 	static void init(Context cx, Scriptable scope, boolean sealed) {

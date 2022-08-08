@@ -68,7 +68,6 @@ import dev.latvian.mods.rhino.ast.WithStatement;
 import dev.latvian.mods.rhino.ast.Yield;
 
 import java.io.IOException;
-import java.io.Serial;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -150,8 +149,6 @@ public class Parser {
 
 	// Exception to unwind
 	private static class ParserException extends RuntimeException {
-		@Serial
-		private static final long serialVersionUID = 5882582646773765630L;
 	}
 
 	public Parser() {
@@ -1071,7 +1068,6 @@ public class Parser {
 				}
 				return withStatement();
 
-			case Token.CONST:
 			case Token.VAR:
 				consumeToken();
 				int lineno = ts.lineno;
@@ -1080,7 +1076,8 @@ public class Parser {
 				break;
 
 			case Token.LET:
-				pn = letStatement();
+			case Token.CONST:
+				pn = letStatement(tt);
 				if (pn instanceof VariableDeclaration && peekToken() == Token.SEMI) {
 					break;
 				}
@@ -1770,17 +1767,17 @@ public class Parser {
 		return pn;
 	}
 
-	private AstNode letStatement() throws IOException {
-		if (currentToken != Token.LET) {
-			codeBug();
+	private AstNode letStatement(int tt) throws IOException {
+		if (tt != Token.LET && tt != Token.CONST) {
+			throw codeBug();
 		}
 		consumeToken();
 		int lineno = ts.lineno, pos = ts.tokenBeg;
 		AstNode pn;
 		if (peekToken() == Token.LP) {
-			pn = let(true, pos);
+			pn = let(tt, true, pos);
 		} else {
-			pn = variables(Token.LET, pos, true);  // else, e.g.: let x=6, y=7;
+			pn = variables(tt, pos, true);  // else, e.g.: let x=6, y=7;
 		}
 		pn.setLineno(lineno);
 		return pn;
@@ -2059,7 +2056,7 @@ public class Parser {
 	}
 
 	// have to pass in 'let' kwd position to compute kid offsets properly
-	private AstNode let(boolean isStatement, int pos) throws IOException {
+	private AstNode let(int tt, boolean isStatement, int pos) throws IOException {
 		LetNode pn = new LetNode(pos);
 		pn.setLineno(ts.lineno);
 		if (mustMatchToken(Token.LP, "msg.no.paren.after.let", true)) {
@@ -2067,7 +2064,7 @@ public class Parser {
 		}
 		pushScope(pn);
 		try {
-			VariableDeclaration vars = variables(Token.LET, ts.tokenBeg, isStatement);
+			VariableDeclaration vars = variables(tt, ts.tokenBeg, isStatement);
 			pn.setVariables(vars);
 			if (mustMatchToken(Token.RP, "msg.no.paren.let", true)) {
 				pn.setRp(ts.tokenBeg - pos);
@@ -2081,7 +2078,7 @@ public class Parser {
 				stmt.setLength(ts.tokenEnd - beg);
 				pn.setLength(ts.tokenEnd - pos);
 				pn.setBody(stmt);
-				pn.setType(Token.LET);
+				pn.setType(tt);
 			} else {
 				// let expression
 				AstNode expr = expr();
@@ -2713,8 +2710,9 @@ public class Parser {
 				return objectLiteral();
 
 			case Token.LET:
+			case Token.CONST:
 				consumeToken();
-				return let(false, ts.tokenBeg);
+				return let(tt, false, ts.tokenBeg);
 
 			case Token.LP:
 				consumeToken();

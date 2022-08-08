@@ -6,11 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serial;
-
 /**
  * Map to associate non-negative integers to objects or integers.
  * The map does not synchronize any of its operation, so either use
@@ -380,70 +375,6 @@ public class UintMap {
 		keys[index] = key;
 		++keyCount;
 		return index;
-	}
-
-	@Serial
-	private void writeObject(ObjectOutputStream out) throws IOException {
-		out.defaultWriteObject();
-
-		int count = keyCount;
-		if (count != 0) {
-			boolean hasIntValues = (ivaluesShift != 0);
-			boolean hasObjectValues = (values != null);
-			out.writeBoolean(hasIntValues);
-			out.writeBoolean(hasObjectValues);
-
-			for (int i = 0; count != 0; ++i) {
-				int key = keys[i];
-				if (key != EMPTY && key != DELETED) {
-					--count;
-					out.writeInt(key);
-					if (hasIntValues) {
-						out.writeInt(keys[ivaluesShift + i]);
-					}
-					if (hasObjectValues) {
-						out.writeObject(values[i]);
-					}
-				}
-			}
-		}
-	}
-
-	@Serial
-	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-		in.defaultReadObject();
-
-		int writtenKeyCount = keyCount;
-		if (writtenKeyCount != 0) {
-			keyCount = 0;
-			boolean hasIntValues = in.readBoolean();
-			boolean hasObjectValues = in.readBoolean();
-
-			int N = 1 << power;
-			if (hasIntValues) {
-				keys = new int[2 * N];
-				ivaluesShift = N;
-			} else {
-				keys = new int[N];
-			}
-			for (int i = 0; i != N; ++i) {
-				keys[i] = EMPTY;
-			}
-			if (hasObjectValues) {
-				values = new Object[N];
-			}
-			for (int i = 0; i != writtenKeyCount; ++i) {
-				int key = in.readInt();
-				int index = insertNewKey(key);
-				if (hasIntValues) {
-					int ivalue = in.readInt();
-					keys[ivaluesShift + index] = ivalue;
-				}
-				if (hasObjectValues) {
-					values[index] = in.readObject();
-				}
-			}
-		}
 	}
 
 	// A == golden_ratio * (1 << 32) = ((sqrt(5) - 1) / 2) * (1 << 32)

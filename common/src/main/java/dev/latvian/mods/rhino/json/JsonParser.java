@@ -10,7 +10,6 @@ import dev.latvian.mods.rhino.Context;
 import dev.latvian.mods.rhino.ScriptRuntime;
 import dev.latvian.mods.rhino.Scriptable;
 
-import java.io.Serial;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -134,7 +133,7 @@ public class JsonParser {
 						throw new ParseException("Unexpected comma in array literal");
 					}
 					pos += 1;
-					return cx.newArray(scope, list.toArray());
+					return cx.newArray(scope, list);
 				}
 				case ',' -> {
 					if (!needsComma) {
@@ -346,10 +345,6 @@ public class JsonParser {
 	}
 
 	public static class ParseException extends Exception {
-
-		@Serial
-		private static final long serialVersionUID = 4804542791749920772L;
-
 		ParseException(String message) {
 			super(message);
 		}

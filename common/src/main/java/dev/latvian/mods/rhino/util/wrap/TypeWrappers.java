@@ -1,12 +1,12 @@
 package dev.latvian.mods.rhino.util.wrap;
 
-import dev.latvian.mods.rhino.util.EnumTypeWrapper;
+import dev.latvian.mods.rhino.SharedContextData;
+import dev.latvian.mods.rhino.util.EnumTypeWrapperFactory;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Array;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
@@ -15,13 +15,8 @@ import java.util.function.Predicate;
 public class TypeWrappers {
 	private final Map<Class<?>, TypeWrapper<?>> wrappers = new LinkedHashMap<>();
 
-	@Deprecated
-	public <F, T> void register(String id, Class<F> from, Class<T> to, Function<F, T> factory) {
-		// Keep old one for now so that it doesn't crash
-	}
-
 	@SuppressWarnings("unchecked")
-	public <T> void register(Class<T> target, Predicate<Object> validator, TypeWrapperFactory<T> factory) {
+	public <T> TypeWrapper<T> register(Class<T> target, Predicate<Object> validator, TypeWrapperFactory<T> factory) {
 		if (target == null || target == Object.class) {
 			throw new IllegalArgumentException("target can't be Object.class!");
 		} else if (target.isArray()) {
@@ -52,24 +47,29 @@ public class TypeWrappers {
 		wrappers.put(target3, typeWrapper3);
 
 		// 4D.. yeah no. 3D already is an overkill
+		return typeWrapper0;
 	}
 
-	public <T> void register(Class<T> target, TypeWrapperFactory<T> factory) {
-		register(target, TypeWrapper.ALWAYS_VALID, factory);
+	public <T> TypeWrapper<T> register(Class<T> target, TypeWrapperFactory<T> factory) {
+		return register(target, TypeWrapper.ALWAYS_VALID, factory);
 	}
 
 	@Nullable
-	public TypeWrapperFactory<?> getWrapperFactory(Class<?> target, @Nullable Object from) {
+	@SuppressWarnings({"rawtypes", "unchecked"})
+	public TypeWrapperFactory<?> getWrapperFactory(SharedContextData data, Class target, @Nullable Object from) {
 		if (target == Object.class) {
 			return null;
 		}
 
 		TypeWrapper<?> wrapper = wrappers.get(target);
 
+		if (wrapper == null && target.isEnum()) {
+			wrapper = register(target, new EnumTypeWrapperFactory(data, target));
+			return wrapper.factory;
+		}
+
 		if (wrapper != null && wrapper.validator.test(from)) {
 			return wrapper.factory;
-		} else if (target.isEnum()) {
-			return EnumTypeWrapper.get(target);
 		}
 
 		//else if (from != null && target.isArray() && !from.getClass().isArray() && target.getComponentType() == from.getClass() && !target.isPrimitive())

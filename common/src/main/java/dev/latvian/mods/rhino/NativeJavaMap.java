@@ -108,4 +108,9 @@ public class NativeJavaMap extends NativeJavaObject {
 	private boolean hasOwnProperty(Object[] args) {
 		return map.containsKey(ScriptRuntime.toString(args[0]));
 	}
+
+	@Override
+	public String toString() {
+		return map.toString();
+	}
 }

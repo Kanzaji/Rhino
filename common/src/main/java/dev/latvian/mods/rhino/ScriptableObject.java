@@ -15,11 +15,6 @@ import dev.latvian.mods.rhino.annotations.JSSetter;
 import dev.latvian.mods.rhino.annotations.JSStaticFunction;
 import dev.latvian.mods.rhino.util.Deletable;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serial;
-import java.io.Serializable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
@@ -110,7 +105,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * This holds all the slots. It may or may not be thread-safe, and may expand itself to
 	 * a different data structure depending on the size of the object.
 	 */
-	private transient SlotMapContainer slotMap;
+	private final transient SlotMapContainer slotMap;
 
 	// Where external array data is stored.
 	private transient ExternalArrayData externalData;
@@ -138,9 +133,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * This is the object that is stored in the SlotMap. For historical reasons it remains
 	 * inside this class. SlotMap references a number of members of this class directly.
 	 */
-	static class Slot implements Serializable {
-		@Serial
-		private static final long serialVersionUID = -6090581677123995491L;
+	static class Slot {
 		Object name; // This can change due to caching
 		int indexOrHash;
 		private short attributes;
@@ -152,14 +145,6 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 			this.name = name;
 			this.indexOrHash = indexOrHash;
 			this.attributes = (short) attributes;
-		}
-
-		@Serial
-		private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-			in.defaultReadObject();
-			if (name != null) {
-				indexOrHash = name.hashCode();
-			}
 		}
 
 		boolean setValue(Context cx, Object value, Scriptable owner, Scriptable start) {
@@ -210,9 +195,6 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * via Object.defineProperty() and its friends instead of regular values.
 	 */
 	static final class GetterSlot extends Slot {
-		@Serial
-		private static final long serialVersionUID = -4900574849788797588L;
-
 		Object getter;
 		Object setter;
 
@@ -1734,7 +1716,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * @param id   the name/index of the property
 	 * @param desc the new property descriptor, as described in 8.6.1
 	 */
-	public void defineOwnProperty(Context cx, Object id, ScriptableObject desc) {
+	public void defineOwnProperty(Context cx, Object id, Scriptable desc) {
 		checkPropertyDefinition(cx, desc);
 		defineOwnProperty(cx, id, desc, true);
 	}
@@ -1749,7 +1731,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * @param desc       the new property descriptor, as described in 8.6.1
 	 * @param checkValid whether to perform validity checks
 	 */
-	protected void defineOwnProperty(Context cx, Object id, ScriptableObject desc, boolean checkValid) {
+	protected void defineOwnProperty(Context cx, Object id, Scriptable desc, boolean checkValid) {
 
 		Slot slot = getSlot(cx, id, SlotAccess.QUERY);
 		boolean isNew = slot == null;
@@ -1802,7 +1784,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 		}
 	}
 
-	protected void checkPropertyDefinition(Context cx, ScriptableObject desc) {
+	protected void checkPropertyDefinition(Context cx, Scriptable desc) {
 		Object getter = getProperty(cx, desc, "get");
 		if (getter != NOT_FOUND && getter != Undefined.instance && !(getter instanceof Callable)) {
 			throw ScriptRuntime.notFunctionError(getter);
@@ -1816,7 +1798,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 		}
 	}
 
-	protected void checkPropertyChange(Context cx, Object id, ScriptableObject current, ScriptableObject desc) {
+	protected void checkPropertyChange(Context cx, Object id, Scriptable current, Scriptable desc) {
 		if (current == null) { // new property
 			if (!isExtensible()) {
 				throw ScriptRuntime.typeError0("msg.not.extensible");
@@ -1839,16 +1821,16 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 							throw ScriptRuntime.typeError1("msg.change.writable.false.to.true.with.configurable.false", id);
 						}
 
-						if (!sameValue(getProperty(cx, desc, "value"), current.get(cx, "value", current))) {
+						if (!sameValue(cx, getProperty(cx, desc, "value"), current.get(cx, "value", current))) {
 							throw ScriptRuntime.typeError1("msg.change.value.with.writable.false", id);
 						}
 					}
 				} else if (isAccessor && isAccessorDescriptor(cx, current)) {
-					if (!sameValue(getProperty(cx, desc, "set"), current.get(cx, "set", current))) {
+					if (!sameValue(cx, getProperty(cx, desc, "set"), current.get(cx, "set", current))) {
 						throw ScriptRuntime.typeError1("msg.change.setter.with.configurable.false", id);
 					}
 
-					if (!sameValue(getProperty(cx, desc, "get"), current.get(cx, "get", current))) {
+					if (!sameValue(cx, getProperty(cx, desc, "get"), current.get(cx, "get", current))) {
 						throw ScriptRuntime.typeError1("msg.change.getter.with.configurable.false", id);
 					}
 				} else {
@@ -1877,7 +1859,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * @param currentValue the current value
 	 * @return true if values are the same as defined by ES5 9.12
 	 */
-	protected boolean sameValue(Object newValue, Object currentValue) {
+	protected boolean sameValue(Context cx, Object newValue, Object currentValue) {
 		if (newValue == NOT_FOUND) {
 			return true;
 		}
@@ -1896,10 +1878,10 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 				return false;
 			}
 		}
-		return ScriptRuntime.shallowEq(currentValue, newValue);
+		return ScriptRuntime.shallowEq(cx, currentValue, newValue);
 	}
 
-	protected int applyDescriptorToAttributeBitset(Context cx, int attributes, ScriptableObject desc) {
+	protected int applyDescriptorToAttributeBitset(Context cx, int attributes, Scriptable desc) {
 		Object enumerable = getProperty(cx, desc, "enumerable");
 		if (enumerable != NOT_FOUND) {
 			attributes = ScriptRuntime.toBoolean(enumerable) ? attributes & ~DONTENUM : attributes | DONTENUM;
@@ -1924,7 +1906,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * @param desc a property descriptor
 	 * @return true if this is a data descriptor.
 	 */
-	protected boolean isDataDescriptor(Context cx, ScriptableObject desc) {
+	protected boolean isDataDescriptor(Context cx, Scriptable desc) {
 		return hasProperty(cx, desc, "value") || hasProperty(cx, desc, "writable");
 	}
 
@@ -1934,7 +1916,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * @param desc a property descriptor
 	 * @return true if this is an accessor descriptor.
 	 */
-	protected boolean isAccessorDescriptor(Context cx, ScriptableObject desc) {
+	protected boolean isAccessorDescriptor(Context cx, Scriptable desc) {
 		return hasProperty(cx, desc, "get") || hasProperty(cx, desc, "set");
 	}
 
@@ -1944,7 +1926,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * @param desc a property descriptor
 	 * @return true if this is a generic descriptor.
 	 */
-	protected boolean isGenericDescriptor(Context cx, ScriptableObject desc) {
+	protected boolean isGenericDescriptor(Context cx, Scriptable desc) {
 		return !isDataDescriptor(cx, desc) && !isAccessorDescriptor(cx, desc);
 	}
 
@@ -2764,37 +2746,6 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 		return result;
 	}
 
-	@Serial
-	private void writeObject(ObjectOutputStream out) throws IOException {
-		out.defaultWriteObject();
-		final long stamp = slotMap.readLock();
-		try {
-			int objectsCount = slotMap.dirtySize();
-			if (objectsCount == 0) {
-				out.writeInt(0);
-			} else {
-				out.writeInt(objectsCount);
-				for (Slot slot : slotMap) {
-					out.writeObject(slot);
-				}
-			}
-		} finally {
-			slotMap.unlockRead(stamp);
-		}
-	}
-
-	@Serial
-	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-		in.defaultReadObject();
-
-		int tableSize = in.readInt();
-		slotMap = createSlotMap(tableSize);
-		for (int i = 0; i < tableSize; i++) {
-			Slot slot = (Slot) in.readObject();
-			slotMap.addSlot(slot);
-		}
-	}
-
 	protected ScriptableObject getOwnPropertyDescriptor(Context cx, Object id) {
 		Slot slot = getSlot(cx, id, SlotAccess.QUERY);
 		if (slot == null) {
@@ -2853,10 +2804,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * change their order, but simply move all the numeric properties to the front, since this
 	 * method is defined to be stable.
 	 */
-	public static final class KeyComparator implements Comparator<Object>, Serializable {
-		@Serial
-		private static final long serialVersionUID = 6411335891523988149L;
-
+	public static final class KeyComparator implements Comparator<Object> {
 		@Override
 		public int compare(Object o1, Object o2) {
 			if (o1 instanceof Integer) {

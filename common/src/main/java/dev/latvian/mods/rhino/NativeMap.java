@@ -6,9 +6,7 @@
 
 package dev.latvian.mods.rhino;
 
-import java.util.Iterator;
-
-public class NativeMap extends IdScriptableObject {
+public class NativeMap extends IdScriptableObject implements Wrapper {
 	private static final Object MAP_TAG = "Map";
 	static final String ITERATOR_TAG = "Map Iterator";
 
@@ -22,7 +20,7 @@ public class NativeMap extends IdScriptableObject {
 		NativeMap obj = new NativeMap();
 		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, false);
 
-		ScriptableObject desc = (ScriptableObject) cx.newObject(scope);
+		var desc = cx.newObject(scope);
 		desc.put(cx, "enumerable", desc, Boolean.FALSE);
 		desc.put(cx, "configurable", desc, Boolean.TRUE);
 		desc.put(cx, "get", desc, obj.get(cx, NativeSet.GETSIZE, obj));
@@ -131,8 +129,7 @@ public class NativeMap extends IdScriptableObject {
 		}
 
 		boolean isStrict = cx.isStrictMode();
-		Iterator<Hashtable.Entry> i = entries.iterator();
-		while (i.hasNext()) {
+		for (Hashtable.Entry entry : entries) {
 			// Per spec must convert every time so that primitives are always regenerated...
 			Scriptable thisObj = ScriptRuntime.toObjectOrNull(cx, arg2, scope);
 
@@ -143,13 +140,12 @@ public class NativeMap extends IdScriptableObject {
 				thisObj = Undefined.SCRIPTABLE_UNDEFINED;
 			}
 
-			final Hashtable.Entry e = i.next();
-			Object val = e.value;
+			Object val = entry.value;
 			if (val == NULL_VALUE) {
 				val = null;
 			}
 
-			f.call(cx, scope, thisObj, new Object[]{val, e.key, this});
+			f.call(cx, scope, thisObj, new Object[]{val, entry.key, this});
 		}
 		return Undefined.instance;
 	}
@@ -324,4 +320,9 @@ public class NativeMap extends IdScriptableObject {
 	private static final int SymbolId_getSize = 11;
 	private static final int SymbolId_toStringTag = 12;
 	private static final int MAX_PROTOTYPE_ID = SymbolId_toStringTag;
+
+	@Override
+	public Object unwrap() {
+		return entries;
+	}
 }

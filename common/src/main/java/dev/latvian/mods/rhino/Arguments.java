@@ -321,7 +321,7 @@ final class Arguments extends IdScriptableObject {
 	}
 
 	@Override
-	protected void defineOwnProperty(Context cx, Object id, ScriptableObject desc, boolean checkValid) {
+	protected void defineOwnProperty(Context cx, Object id, Scriptable desc, boolean checkValid) {
 		super.defineOwnProperty(cx, id, desc, checkValid);
 		if (ScriptRuntime.isSymbol(id)) {
 			return;

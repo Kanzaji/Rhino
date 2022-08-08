@@ -1,6 +1,5 @@
 package dev.latvian.mods.rhino;
 
-import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -32,7 +31,7 @@ public class Hashtable implements Iterable<Hashtable.Entry> {
 	 * node in the linked list.
 	 */
 
-	public static final class Entry implements Serializable {
+	public static final class Entry {
 		protected Object key;
 		protected Object value;
 		protected boolean deleted;

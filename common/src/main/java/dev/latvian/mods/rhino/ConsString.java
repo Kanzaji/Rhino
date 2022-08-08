@@ -6,7 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.Serializable;
 import java.util.ArrayDeque;
 
 /**
@@ -25,7 +24,7 @@ import java.util.ArrayDeque;
  *
  * <p>Both the name and the concept are borrowed from V8.</p>
  */
-public class ConsString implements CharSequence, Serializable {
+public class ConsString implements CharSequence {
 	private CharSequence left;
 	private CharSequence right;
 	private final int length;

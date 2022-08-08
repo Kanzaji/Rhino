@@ -27,14 +27,14 @@ public class RhinoTest {
 		context = Context.enterWithNewFactory();
 		// context.setClassShutter((fullClassName, type) -> type != ClassShutter.TYPE_CLASS_IN_PACKAGE || isClassAllowed(fullClassName));
 
-		var typeWrappers = context.getFactory().getTypeWrappers();
+		var typeWrappers = context.getSharedData().getTypeWrappers();
 		typeWrappers.register(CompoundTag.class, NBTUtils::isTagCompound, NBTUtils::toTagCompound);
 		typeWrappers.register(CollectionTag.class, NBTUtils::isTagCollection, NBTUtils::toTagCollection);
 		typeWrappers.register(ListTag.class, NBTUtils::isTagCollection, NBTUtils::toTagList);
 		typeWrappers.register(Tag.class, NBTUtils::toTag);
 
-		context.addCustomJavaToJsWrapper(CompoundTag.class, CompoundTagWrapper::new);
-		context.addCustomJavaToJsWrapper(CollectionTag.class, CollectionTagWrapper::new);
+		context.getSharedData().addCustomJavaToJsWrapper(CompoundTag.class, CompoundTagWrapper::new);
+		context.getSharedData().addCustomJavaToJsWrapper(CollectionTag.class, CollectionTagWrapper::new);
 
 		return context;
 	}

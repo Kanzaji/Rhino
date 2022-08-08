@@ -6,8 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.Serializable;
-
 /**
  * Base class for native object implementation that uses IdFunctionObject to
  * export its methods to script via &lt;class-name&gt;.prototype object.
@@ -26,7 +24,7 @@ import java.io.Serializable;
 public abstract class IdScriptableObject extends ScriptableObject implements IdFunctionCall {
 	private transient PrototypeValues prototypeValues;
 
-	private static final class PrototypeValues implements Serializable {
+	private static final class PrototypeValues {
 		private static final int NAME_SLOT = 1;
 		private static final int SLOT_SPAN = 2;
 
@@ -856,7 +854,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 	}
 
 	@Override
-	public void defineOwnProperty(Context cx, Object key, ScriptableObject desc) {
+	public void defineOwnProperty(Context cx, Object key, Scriptable desc) {
 		if (key instanceof String name) {
 			int info = findInstanceIdInfo(name);
 			if (info != 0) {
@@ -871,7 +869,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 					Object value = getProperty(cx, desc, "value");
 					if (value != NOT_FOUND && (attr & READONLY) == 0) {
 						Object currentValue = getInstanceIdValue(cx, id);
-						if (!sameValue(value, currentValue)) {
+						if (!sameValue(cx, value, currentValue)) {
 							setInstanceIdValue(cx, id, value);
 						}
 					}
@@ -892,7 +890,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 						Object value = getProperty(cx, desc, "value");
 						if (value != NOT_FOUND && (attr & READONLY) == 0) {
 							Object currentValue = prototypeValues.get(cx, id);
-							if (!sameValue(value, currentValue)) {
+							if (!sameValue(cx, value, currentValue)) {
 								prototypeValues.set(cx, id, this, value);
 							}
 						}

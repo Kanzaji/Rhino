@@ -2,8 +2,11 @@ package dev.latvian.mods.rhino.util;
 
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
+import java.util.function.Function;
+
 @SuppressWarnings("unchecked")
-public record Possible<T>(@Nullable Object value) {
+public record Possible<T>(@Nullable T value) {
 	public static final Possible<?> EMPTY = new Possible<>(null);
 	public static final Possible<?> NULL = new Possible<>(null);
 
@@ -24,6 +27,10 @@ public record Possible<T>(@Nullable Object value) {
 		return this == EMPTY;
 	}
 
+	public T get() {
+		return Objects.requireNonNull(value);
+	}
+
 	@Override
 	public String toString() {
 		return this == EMPTY ? "EMPTY" : String.valueOf(value);
@@ -31,5 +38,13 @@ public record Possible<T>(@Nullable Object value) {
 
 	public <C> Possible<C> cast(Class<C> type) {
 		return (Possible<C>) this;
+	}
+
+	public <C> Possible<C> map(Function<T, C> mapper) {
+		return isSet() ? of(value == null ? null : mapper.apply(value)) : absent();
+	}
+
+	public <C> Possible<C> mapNullable(Function<T, C> mapper) {
+		return isSet() ? of(mapper.apply(value)) : absent();
 	}
 }

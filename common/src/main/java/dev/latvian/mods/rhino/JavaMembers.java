@@ -81,7 +81,7 @@ class JavaMembers {
 				if (bp.getter == null) {
 					return Scriptable.NOT_FOUND;
 				}
-				rval = bp.getter.invoke(javaObject, Context.emptyArgs);
+				rval = bp.getter.invoke(javaObject, ScriptRuntime.EMPTY_ARGS);
 				type = bp.getter.method().getReturnType();
 			} else {
 				Field field = (Field) member;
@@ -387,7 +387,7 @@ class JavaMembers {
 			int mods = method.getModifiers();
 			boolean isStatic = Modifier.isStatic(mods);
 			Map<String, Object> ht = isStatic ? staticMembers : members;
-			String name = cx.getFactory().getRemapper().getMappedMethod(cl, method);
+			String name = cx.getSharedData().getRemapper().getMappedMethod(cx.getSharedData(), cl, method);
 
 			Object value = ht.get(name);
 			if (value == null) {
@@ -443,7 +443,7 @@ class JavaMembers {
 
 		// Reflect fields.
 		for (Field field : getAccessibleFields(includeProtected, includePrivate)) {
-			String name = cx.getFactory().getRemapper().getMappedField(cl, field);
+			String name = cx.getSharedData().getRemapper().getMappedField(cx.getSharedData(), cl, field);
 
 			int mods = field.getModifiers();
 			try {

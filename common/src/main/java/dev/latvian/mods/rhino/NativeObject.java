@@ -6,16 +6,9 @@
 
 package dev.latvian.mods.rhino;
 
-import dev.latvian.mods.rhino.util.DataObject;
-
-import java.io.Serial;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 
 /**
  * This class implements the Object native object.
@@ -23,10 +16,7 @@ import java.util.function.Supplier;
  *
  * @author Norris Boyd
  */
-public class NativeObject extends IdScriptableObject implements DataObject {
-	@Serial
-	private static final long serialVersionUID = -6345305608474346996L;
-
+public class NativeObject extends IdScriptableObject {
 	private static final Object OBJECT_TAG = "Object";
 
 	static void init(Context cx, Scriptable scope, boolean sealed) {
@@ -398,12 +388,12 @@ public class NativeObject extends IdScriptableObject implements DataObject {
 				ScriptableObject obj = ensureScriptableObject(s);
 				Object[] ids = obj.getIds(cx, true, true);
 				ArrayList<Object> syms = new ArrayList<>();
-				for (int i = 0; i < ids.length; i++) {
-					if (ids[i] instanceof Symbol) {
-						syms.add(ids[i]);
+				for (Object o : ids) {
+					if (o instanceof Symbol) {
+						syms.add(o);
 					}
 				}
-				return cx.newArray(scope, syms.toArray());
+				return cx.newArray(scope, syms);
 			}
 			case ConstructorId_getOwnPropertyDescriptor: {
 				Object arg = args.length < 1 ? Undefined.instance : args[0];
@@ -652,34 +642,5 @@ public class NativeObject extends IdScriptableObject implements DataObject {
 	private static final int Id___lookupGetter__ = 11;
 	private static final int Id___lookupSetter__ = 12;
 	private static final int MAX_PROTOTYPE_ID = 12;
-
-	@Override
-	public <T> T createDataObject(Context cx, Supplier<T> instanceFactory) {
-		T inst = instanceFactory.get();
-
-		try {
-			for (Field field : inst.getClass().getFields()) {
-				if (Modifier.isPublic(field.getModifiers()) && !Modifier.isTransient(field.getModifiers()) && has(cx, field.getName(), this)) {
-					field.setAccessible(true);
-					field.set(inst, get(cx, field.getName(), this));
-				}
-			}
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-
-		return inst;
-	}
-
-	@Override
-	public <T> List<T> createDataObjectList(Context cx, Supplier<T> instanceFactory) {
-		return Collections.singletonList(createDataObject(cx, instanceFactory));
-	}
-
-	@Override
-	public boolean isDataObjectList() {
-		return false;
-	}
-
 	// #/string_id_map#
 }

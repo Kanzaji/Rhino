@@ -10,8 +10,6 @@ import dev.latvian.mods.rhino.Kit;
 import dev.latvian.mods.rhino.Node;
 import dev.latvian.mods.rhino.Token;
 
-import java.io.Serial;
-import java.io.Serializable;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
@@ -134,10 +132,7 @@ public abstract class AstNode extends Node implements Comparable<AstNode> {
 		operatorNames.put(Token.OPTIONAL_CHAINING, "?.");
 	}
 
-	public static class PositionComparator implements Comparator<AstNode>, Serializable {
-		@Serial
-		private static final long serialVersionUID = 1L;
-
+	public static class PositionComparator implements Comparator<AstNode> {
 		/**
 		 * Sorts nodes by (relative) start position.  The start positions are
 		 * relative to their parent, so this comparator is only meaningful for
@@ -347,7 +342,8 @@ public abstract class AstNode extends Node implements Comparable<AstNode> {
 	@Override
 	public boolean hasSideEffects() {
 		return switch (getType()) {         // Avoid cascaded error messages
-			case Token.ASSIGN, Token.ASSIGN_ADD, Token.ASSIGN_BITAND, Token.ASSIGN_BITOR, Token.ASSIGN_BITXOR, Token.ASSIGN_DIV, Token.ASSIGN_LSH, Token.ASSIGN_MOD, Token.ASSIGN_MUL, Token.ASSIGN_RSH, Token.ASSIGN_SUB, Token.ASSIGN_URSH, Token.BLOCK, Token.BREAK, Token.CALL, Token.CATCH, Token.CATCH_SCOPE, Token.CONST, Token.CONTINUE, Token.DEC, Token.DELPROP, Token.DEL_REF, Token.DO, Token.ELSE, Token.ENTERWITH, Token.ERROR, Token.EXPORT, Token.EXPR_RESULT, Token.FINALLY, Token.FUNCTION, Token.FOR, Token.GOTO, Token.IF, Token.IFEQ, Token.IFNE, Token.IMPORT, Token.INC, Token.JSR, Token.LABEL, Token.LEAVEWITH, Token.LET, Token.LETEXPR, Token.LOCAL_BLOCK, Token.LOOP, Token.NEW, Token.REF_CALL, Token.RETHROW, Token.RETURN, Token.RETURN_RESULT, Token.SEMI, Token.SETELEM, Token.SETELEM_OP, Token.SETNAME, Token.SETPROP, Token.SETPROP_OP, Token.SETVAR, Token.SET_REF, Token.SET_REF_OP, Token.SWITCH, Token.TARGET, Token.THROW, Token.TRY, Token.VAR, Token.WHILE, Token.WITH, Token.WITHEXPR, Token.YIELD, Token.YIELD_STAR -> true;
+			case Token.ASSIGN, Token.ASSIGN_ADD, Token.ASSIGN_BITAND, Token.ASSIGN_BITOR, Token.ASSIGN_BITXOR, Token.ASSIGN_DIV, Token.ASSIGN_LSH, Token.ASSIGN_MOD, Token.ASSIGN_MUL, Token.ASSIGN_RSH, Token.ASSIGN_SUB, Token.ASSIGN_URSH, Token.BLOCK, Token.BREAK, Token.CALL, Token.CATCH, Token.CATCH_SCOPE, Token.CONST, Token.CONTINUE, Token.DEC, Token.DELPROP, Token.DEL_REF, Token.DO, Token.ELSE, Token.ENTERWITH, Token.ERROR, Token.EXPORT, Token.EXPR_RESULT, Token.FINALLY, Token.FUNCTION, Token.FOR, Token.GOTO, Token.IF, Token.IFEQ, Token.IFNE, Token.IMPORT, Token.INC, Token.JSR, Token.LABEL, Token.LEAVEWITH, Token.LET, Token.LETEXPR, Token.LOCAL_BLOCK, Token.LOOP, Token.NEW, Token.REF_CALL, Token.RETHROW, Token.RETURN, Token.RETURN_RESULT, Token.SEMI, Token.SETELEM, Token.SETELEM_OP, Token.SETNAME, Token.SETPROP, Token.SETPROP_OP, Token.SETVAR, Token.SET_REF, Token.SET_REF_OP, Token.SWITCH, Token.TARGET, Token.THROW, Token.TRY, Token.VAR, Token.WHILE, Token.WITH, Token.WITHEXPR, Token.YIELD, Token.YIELD_STAR ->
+					true;
 			default -> false;
 		};
 	}

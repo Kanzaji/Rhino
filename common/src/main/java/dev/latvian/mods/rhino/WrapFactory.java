@@ -71,7 +71,7 @@ public class WrapFactory {
 		Class<?> cls = obj.getClass();
 
 		if (cls.isArray()) {
-			return new NativeJavaList(cx, scope, obj, new NativeArrayWrapper(obj));
+			return new NativeJavaList(cx, scope, obj, NativeArrayWrapper.of(obj));
 		}
 
 		return wrapAsJavaObject(cx, scope, obj, staticType);
@@ -91,7 +91,7 @@ public class WrapFactory {
 		}
 		Class<?> cls = obj.getClass();
 		if (cls.isArray()) {
-			return new NativeJavaList(cx, scope, obj, new NativeArrayWrapper(obj));
+			return new NativeJavaList(cx, scope, obj, NativeArrayWrapper.of(obj));
 		}
 		return wrapAsJavaObject(cx, scope, obj, null);
 	}
@@ -120,7 +120,7 @@ public class WrapFactory {
 			return w.convertJavaToJs(cx, scope, staticType);
 		}
 
-		CustomJavaToJsWrapper w = cx.wrapCustomJavaToJs(javaObject);
+		CustomJavaToJsWrapper w = cx.getSharedData().wrapCustomJavaToJs(javaObject);
 
 		if (w != null) {
 			return w.convertJavaToJs(cx, scope, staticType);

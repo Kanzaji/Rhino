@@ -6,6 +6,8 @@
 
 package dev.latvian.mods.rhino;
 
+import java.util.List;
+
 public final class NativeArrayIterator extends ES6Iterator {
 	public enum ArrayIteratorType {
 		ENTRIES, KEYS, VALUES
@@ -55,7 +57,7 @@ public final class NativeArrayIterator extends ES6Iterator {
 		}
 
 		if (type == ArrayIteratorType.ENTRIES) {
-			value = cx.newArray(scope, new Object[]{index, value});
+			value = cx.newArray(scope, List.of(index, value));
 		}
 
 		index++;

@@ -6,12 +6,9 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.Serial;
 import java.util.Iterator;
 
 public class NativeSet extends IdScriptableObject {
-	@Serial
-	private static final long serialVersionUID = -8442212766987072986L;
 	private static final Object SET_TAG = "Set";
 	static final String ITERATOR_TAG = "Set Iterator";
 
@@ -25,7 +22,7 @@ public class NativeSet extends IdScriptableObject {
 		NativeSet obj = new NativeSet();
 		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, false);
 
-		ScriptableObject desc = (ScriptableObject) cx.newObject(scope);
+		var desc = cx.newObject(scope);
 		desc.put(cx, "enumerable", desc, Boolean.FALSE);
 		desc.put(cx, "configurable", desc, Boolean.TRUE);
 		desc.put(cx, "get", desc, obj.get(cx, GETSIZE, obj));

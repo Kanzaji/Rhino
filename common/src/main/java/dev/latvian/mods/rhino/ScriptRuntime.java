@@ -12,7 +12,6 @@ import dev.latvian.mods.rhino.util.SpecialEquality;
 import dev.latvian.mods.rhino.v8dtoa.DoubleConversion;
 import dev.latvian.mods.rhino.v8dtoa.FastDtoa;
 
-import java.io.Serial;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -26,6 +25,8 @@ import java.util.ResourceBundle;
  */
 
 public class ScriptRuntime {
+	public static final Object[] EMPTY_ARGS = new Object[0];
+	public static final String[] EMPTY_STRINGS = new String[0];
 
 	/**
 	 * No instances should be created.
@@ -40,9 +41,6 @@ public class ScriptRuntime {
 	public static BaseFunction typeErrorThrower(Context cx) {
 		if (cx.typeErrorThrower == null) {
 			BaseFunction thrower = new BaseFunction() {
-				@Serial
-				private static final long serialVersionUID = -5891740962154902286L;
-
 				@Override
 				public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
 					throw typeError0("msg.op.not.allowed");
@@ -2285,9 +2283,9 @@ public class ScriptRuntime {
 
 		if (x1 == y1) {
 			return true;
-		} else if (SpecialEquality.checkSpecialEquality(x1, y1, false)) {
+		} else if (SpecialEquality.checkSpecialEquality(cx, x1, y1, false)) {
 			return true;
-		} else if (SpecialEquality.checkSpecialEquality(y1, x1, false)) {
+		} else if (SpecialEquality.checkSpecialEquality(cx, y1, x1, false)) {
 			return true;
 		} else if (x instanceof Number) {
 			return eqNumber(cx, ((Number) x).doubleValue(), y);
@@ -2455,7 +2453,7 @@ public class ScriptRuntime {
 		}
 	}
 
-	public static boolean shallowEq(Object x, Object y) {
+	public static boolean shallowEq(Context cx, Object x, Object y) {
 		if (x == y) {
 			if (!(x instanceof Number)) {
 				return true;
@@ -2472,9 +2470,9 @@ public class ScriptRuntime {
 
 		if (x1 == y1) {
 			return true;
-		} else if (SpecialEquality.checkSpecialEquality(x1, y1, true)) {
+		} else if (SpecialEquality.checkSpecialEquality(cx, x1, y1, true)) {
 			return true;
-		} else if (SpecialEquality.checkSpecialEquality(y1, x1, true)) {
+		} else if (SpecialEquality.checkSpecialEquality(cx, y1, x1, true)) {
 			return true;
 		} else if (x1 instanceof Number) {
 			if (y1 instanceof Number) {
@@ -3430,6 +3428,28 @@ public class ScriptRuntime {
 		return toUint32(len);
 	}
 
-	public static final Object[] EMPTY_ARGS = new Object[0];
-	public static final String[] EMPTY_STRINGS = new String[0];
+	public static Object[] unwrapArgs(Object... args) {
+		if (args.length == 0) {
+			return EMPTY_ARGS;
+		}
+
+		boolean newArray = true;
+
+		for (int i = 0; i < args.length; i++) {
+			Object o = Wrapper.unwrapped(args[i]);
+
+			if (args[i] != o) {
+				if (newArray) {
+					newArray = false;
+					Object[] args2 = new Object[args.length];
+					System.arraycopy(args, 0, args2, 0, args.length);
+					args = args2;
+				}
+
+				args[i] = o;
+			}
+		}
+
+		return args;
+	}
 }

@@ -6,9 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.Serial;
 import java.util.WeakHashMap;
 
 /**
@@ -24,7 +21,7 @@ public class NativeWeakMap extends IdScriptableObject {
 
 	private boolean instanceOfWeakMap = false;
 
-	private transient WeakHashMap<Scriptable, Object> map = new WeakHashMap<>();
+	private final transient WeakHashMap<Scriptable, Object> map = new WeakHashMap<>();
 
 	private static final Object NULL_VALUE = new Object();
 
@@ -188,10 +185,4 @@ public class NativeWeakMap extends IdScriptableObject {
 	private static final int Id_set = 5;
 	private static final int SymbolId_toStringTag = 6;
 	private static final int MAX_PROTOTYPE_ID = SymbolId_toStringTag;
-
-	@Serial
-	private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException {
-		stream.defaultReadObject();
-		map = new WeakHashMap<>();
-	}
 }

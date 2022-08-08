@@ -1,6 +1,7 @@
 package dev.latvian.mods.rhino.classdata;
 
-import dev.latvian.mods.rhino.Context;
+import dev.latvian.mods.rhino.SharedContextData;
+import org.jetbrains.annotations.Nullable;
 
 public class MethodSignature {
 	public static final MethodSignature EMPTY = new MethodSignature();
@@ -16,33 +17,67 @@ public class MethodSignature {
 	public static final MethodSignature BOOLEAN = new MethodSignature(boolean.class);
 	public static final MethodSignature CHAR = new MethodSignature(char.class);
 
+	@Nullable
+	private static MethodSignature ofSingleType(Class<?> type) {
+		if (type == Object.class) {
+			return OBJECT;
+		} else if (type == Object[].class) {
+			return OBJECT_ARRAY;
+		} else if (type == String.class) {
+			return STRING;
+		} else if (type == byte.class) {
+			return BYTE;
+		} else if (type == short.class) {
+			return SHORT;
+		} else if (type == int.class) {
+			return INT;
+		} else if (type == long.class) {
+			return LONG;
+		} else if (type == float.class) {
+			return FLOAT;
+		} else if (type == double.class) {
+			return DOUBLE;
+		} else if (type == boolean.class) {
+			return BOOLEAN;
+		} else if (type == char.class) {
+			return CHAR;
+		}
+
+		return null;
+	}
+
 	public static MethodSignature of(Class<?>... types) {
 		if (types.length == 0) {
 			return EMPTY;
 		} else if (types.length == 1) {
-			if (types[0] == Object.class) {
-				return OBJECT;
-			} else if (types[0] == Object[].class) {
-				return OBJECT_ARRAY;
-			} else if (types[0] == String.class) {
-				return STRING;
-			} else if (types[0] == byte.class) {
-				return BYTE;
-			} else if (types[0] == short.class) {
-				return SHORT;
-			} else if (types[0] == int.class) {
-				return INT;
-			} else if (types[0] == long.class) {
-				return LONG;
-			} else if (types[0] == float.class) {
-				return FLOAT;
-			} else if (types[0] == double.class) {
-				return DOUBLE;
-			} else if (types[0] == boolean.class) {
-				return BOOLEAN;
-			} else if (types[0] == char.class) {
-				return CHAR;
+			var t = ofSingleType(types[0]);
+
+			if (t != null) {
+				return t;
 			}
+		}
+
+		return new MethodSignature(types);
+	}
+
+	public static MethodSignature ofArgs(Object... args) {
+		if (args.length == 0) {
+			return EMPTY;
+		} else if (args.length == 1) {
+			var c = args[0].getClass();
+			var t = ofSingleType(c);
+
+			if (t != null) {
+				return t;
+			}
+
+			return new MethodSignature(c);
+		}
+
+		Class<?>[] types = new Class<?>[args.length];
+
+		for (int i = 0; i < args.length; i++) {
+			types[i] = args[i].getClass();
 		}
 
 		return new MethodSignature(types);
@@ -109,11 +144,33 @@ public class MethodSignature {
 		return hashCode;
 	}
 
-	public boolean matches(MethodSignature actualArguments, Context cx) {
-		if (this == actualArguments) {
-			return true;
+	public int matches(SharedContextData data, Object[] args, MethodSignature argsSig) {
+		if (this == argsSig) {
+			return args.length;
 		}
 
-		return equals(actualArguments);
+		int exactMatches = -1;
+
+		if (types.length == args.length) {
+			for (int i = 0; i < args.length; i++) {
+				if (types[i] == argsSig.types[i]) {
+					if (exactMatches == -1) {
+						exactMatches = 0;
+					}
+
+					exactMatches++;
+				}
+
+				var typeWrapper = data.hasTypeWrappers() ? data.getTypeWrappers().getWrapperFactory(data, types[i], args[i]) : null;
+
+				if (typeWrapper != null) {
+					if (exactMatches == -1) {
+						exactMatches = 0;
+					}
+				}
+			}
+		}
+
+		return exactMatches;
 	}
 }

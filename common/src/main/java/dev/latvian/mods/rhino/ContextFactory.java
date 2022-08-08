@@ -8,19 +8,6 @@
 
 package dev.latvian.mods.rhino;
 
-import dev.latvian.mods.rhino.classdata.ClassDataCache;
-import dev.latvian.mods.rhino.util.CustomJavaToJsWrapperProvider;
-import dev.latvian.mods.rhino.util.CustomJavaToJsWrapperProviderHolder;
-import dev.latvian.mods.rhino.util.DefaultRemapper;
-import dev.latvian.mods.rhino.util.Remapper;
-import dev.latvian.mods.rhino.util.wrap.TypeWrappers;
-import org.jetbrains.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 /**
  * Factory class that Rhino runtime uses to create new {@link Context}
  * instances.  A <code>ContextFactory</code> can also notify listeners
@@ -121,12 +108,15 @@ public class ContextFactory {
 	private final Object listenersLock = new Object();
 	private volatile Object listeners;
 	private boolean disabledListening;
-	private TypeWrappers typeWrappers;
-	private Remapper remapper = DefaultRemapper.INSTANCE;
-	private ClassDataCache classDataCache;
-	final List<CustomJavaToJsWrapperProviderHolder<?>> customScriptableWrappers = new ArrayList<>();
-	final Map<Class<?>, CustomJavaToJsWrapperProvider> customScriptableWrapperCache = new HashMap<>();
-	private final Map<String, Object> extraProperties = new HashMap<>();
+	private SharedContextData sharedData;
+
+	public SharedContextData getSharedData() {
+		if (sharedData == null) {
+			sharedData = new SharedContextData(this);
+		}
+
+		return sharedData;
+	}
 
 	/**
 	 * Listener of {@link Context} creation and release events.
@@ -394,46 +384,5 @@ public class ContextFactory {
 	 */
 	public final Context enterContext(Context cx) {
 		return Context.enter(cx, this);
-	}
-
-	public void setExtraProperty(String key, @Nullable Object value) {
-		if (value == null) {
-			extraProperties.remove(key);
-		} else {
-			extraProperties.put(key, value);
-		}
-	}
-
-	@Nullable
-	public Object getExtraProperty(String key) {
-		return extraProperties.get(key);
-	}
-
-	public TypeWrappers getTypeWrappers() {
-		if (typeWrappers == null) {
-			typeWrappers = new TypeWrappers();
-		}
-
-		return typeWrappers;
-	}
-
-	public boolean hasTypeWrappers() {
-		return typeWrappers != null;
-	}
-
-	public void setRemapper(Remapper r) {
-		remapper = r;
-	}
-
-	public Remapper getRemapper() {
-		return remapper;
-	}
-
-	public ClassDataCache getClassDataCache() {
-		if (classDataCache == null) {
-			classDataCache = new ClassDataCache(this);
-		}
-
-		return classDataCache;
 	}
 }

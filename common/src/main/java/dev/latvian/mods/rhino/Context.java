@@ -12,10 +12,6 @@ import dev.latvian.mods.rhino.ast.AstRoot;
 import dev.latvian.mods.rhino.ast.ScriptNode;
 import dev.latvian.mods.rhino.classfile.ClassFileWriter.ClassFileFormatException;
 import dev.latvian.mods.rhino.regexp.RegExp;
-import dev.latvian.mods.rhino.util.CustomJavaToJsWrapper;
-import dev.latvian.mods.rhino.util.CustomJavaToJsWrapperProvider;
-import dev.latvian.mods.rhino.util.CustomJavaToJsWrapperProviderHolder;
-import org.jetbrains.annotations.Nullable;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -28,9 +24,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.function.Predicate;
 
 /**
  * This class represents the runtime context of an executing script.
@@ -231,7 +227,55 @@ public class Context {
 	/**
 	 * Convenient value to use as zero-length array of objects.
 	 */
-	public static final Object[] emptyArgs = ScriptRuntime.EMPTY_ARGS;
+
+	private final ContextFactory factory;
+	private boolean sealed;
+	private Object sealKey;
+
+	Scriptable topCallScope;
+	boolean isContinuationsTopCall;
+	NativeCall currentActivationCall;
+	BaseFunction typeErrorThrower;
+
+	// for Objects, Arrays to tag themselves as being printed out,
+	// so they don't print themselves out recursively.
+	// Use ObjToIntMap instead of java.util.HashSet for JDK 1.1 compatibility
+	ObjToIntMap iterating;
+
+	private boolean hasClassShutter;
+	private ClassShutter classShutter;
+	private ErrorReporter errorReporter;
+	RegExp regExp;
+	private Locale locale;
+	boolean useDynamicScope;
+	private int maximumInterpreterStackDepth;
+	private WrapFactory wrapFactory;
+	private int enterCount;
+	private Object propertyListeners;
+	private Map<Object, Object> threadLocalMap;
+	private ClassLoader applicationClassLoader;
+
+	// For the interpreter to store the last frame for error reports etc.
+	Object lastInterpreterFrame;
+
+	// For the interpreter to store information about previous invocations
+	// interpreter invocations
+	ObjArray previousInterpreterInvocations;
+
+	// For instruction counting (interpreter only)
+	int instructionCount;
+	int instructionThreshold;
+
+	// It can be used to return the second uint32 result from function
+	long scratchUint32;
+
+	// It can be used to return the second Scriptable result from function
+	Scriptable scratchScriptable;
+
+	// Generate an observer count on compiled code
+	public boolean generateObserverCount = false;
+
+	boolean isTopLevelStrict;
 
 	/**
 	 * Creates a new context. Provided as a preferred super constructor for
@@ -1047,8 +1091,10 @@ public class Context {
 	 *              against
 	 * @return the new object
 	 */
-	public Scriptable newObject(Scriptable scope) {
-		NativeObject result = new NativeObject();
+	public NativeObject newObject(Scriptable scope) {
+		//var map = new LinkedHashMap<String, Object>();
+		//var result = new NativeJavaMap(this, scope, map, map);
+		var result = new NativeObject();
 		ScriptRuntime.setBuiltinProtoAndParent(this, result, scope, TopLevel.Builtins.Object);
 		return result;
 	}
@@ -1123,6 +1169,12 @@ public class Context {
 
 		var list = new ArrayList<>(Arrays.asList(elements));
 		var result = new NativeJavaList(this, scope, list, list);
+		ScriptRuntime.setBuiltinProtoAndParent(this, result, scope, TopLevel.Builtins.Array);
+		return result;
+	}
+
+	public Scriptable newArray(Scriptable scope, List<Object> elements) {
+		var result = new NativeJavaList(this, scope, elements, elements);
 		ScriptRuntime.setBuiltinProtoAndParent(this, result, scope, TopLevel.Builtins.Array);
 		return result;
 	}
@@ -1268,7 +1320,7 @@ public class Context {
 			return value;
 		}
 
-		return NativeJavaObject.coerceTypeImpl(cx, cx.getFactory().hasTypeWrappers() ? cx.getFactory().getTypeWrappers() : null, desiredType, value);
+		return NativeJavaObject.coerceTypeImpl(cx, desiredType, value);
 	}
 
 	/**
@@ -1784,88 +1836,7 @@ public class Context {
 		return isTopLevelStrict || (currentActivationCall != null && currentActivationCall.isStrict);
 	}
 
-	@Nullable
-	@SuppressWarnings("unchecked")
-	public CustomJavaToJsWrapper wrapCustomJavaToJs(Object javaObject) {
-		if (factory.customScriptableWrappers.isEmpty()) {
-			return null;
-		}
-
-		var provider = factory.customScriptableWrapperCache.get(javaObject.getClass());
-
-		if (provider == null) {
-			for (CustomJavaToJsWrapperProviderHolder wrapper : factory.customScriptableWrappers) {
-				provider = wrapper.create(javaObject);
-
-				if (provider != null) {
-					break;
-				}
-			}
-
-			if (provider == null) {
-				provider = CustomJavaToJsWrapperProvider.NONE;
-			}
-
-			factory.customScriptableWrapperCache.put(javaObject.getClass(), provider);
-		}
-
-		return provider.create(javaObject);
+	public SharedContextData getSharedData() {
+		return factory.getSharedData();
 	}
-
-	public <T> void addCustomJavaToJsWrapper(Predicate<T> predicate, CustomJavaToJsWrapperProvider<T> provider) {
-		factory.customScriptableWrappers.add(new CustomJavaToJsWrapperProviderHolder<>(predicate, provider));
-	}
-
-	public <T> void addCustomJavaToJsWrapper(Class<T> type, CustomJavaToJsWrapperProvider<T> provider) {
-		addCustomJavaToJsWrapper(new CustomJavaToJsWrapperProviderHolder.PredicateFromClass<>(type), provider);
-	}
-
-	private final ContextFactory factory;
-	private boolean sealed;
-	private Object sealKey;
-
-	Scriptable topCallScope;
-	boolean isContinuationsTopCall;
-	NativeCall currentActivationCall;
-	BaseFunction typeErrorThrower;
-
-	// for Objects, Arrays to tag themselves as being printed out,
-	// so they don't print themselves out recursively.
-	// Use ObjToIntMap instead of java.util.HashSet for JDK 1.1 compatibility
-	ObjToIntMap iterating;
-
-	private boolean hasClassShutter;
-	private ClassShutter classShutter;
-	private ErrorReporter errorReporter;
-	RegExp regExp;
-	private Locale locale;
-	boolean useDynamicScope;
-	private int maximumInterpreterStackDepth;
-	private WrapFactory wrapFactory;
-	private int enterCount;
-	private Object propertyListeners;
-	private Map<Object, Object> threadLocalMap;
-	private ClassLoader applicationClassLoader;
-
-	// For the interpreter to store the last frame for error reports etc.
-	Object lastInterpreterFrame;
-
-	// For the interpreter to store information about previous invocations
-	// interpreter invocations
-	ObjArray previousInterpreterInvocations;
-
-	// For instruction counting (interpreter only)
-	int instructionCount;
-	int instructionThreshold;
-
-	// It can be used to return the second uint32 result from function
-	long scratchUint32;
-
-	// It can be used to return the second Scriptable result from function
-	Scriptable scratchScriptable;
-
-	// Generate an observer count on compiled code
-	public boolean generateObserverCount = false;
-
-	boolean isTopLevelStrict;
 }

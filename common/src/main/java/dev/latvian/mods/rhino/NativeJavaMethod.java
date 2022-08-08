@@ -6,7 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.Serial;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -21,9 +20,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 
 public class NativeJavaMethod extends BaseFunction {
-	@Serial
-	private static final long serialVersionUID = -3440381785576412928L;
-
 	NativeJavaMethod(MemberBox[] methods) {
 		this.functionName = methods[0].getName();
 		this.methods = methods;
@@ -288,11 +284,11 @@ public class NativeJavaMethod extends BaseFunction {
 			if (member.vararg) {
 				alength--;
 				if (alength > args.length) {
-					continue search;
+					continue;
 				}
 			} else {
 				if (alength != args.length) {
-					continue search;
+					continue;
 				}
 			}
 			for (int j = 0; j < alength; j++) {
@@ -456,11 +452,12 @@ public class NativeJavaMethod extends BaseFunction {
 				continue;
 			}
 			Object arg = args[j];
+			Object unwrappedArg = Wrapper.unwrapped(arg);
 
 			// Determine which of type1, type2 is easier to convert from arg.
 
-			int rank1 = NativeJavaObject.getConversionWeight(cx, arg, type1);
-			int rank2 = NativeJavaObject.getConversionWeight(cx, arg, type2);
+			int rank1 = NativeJavaObject.getConversionWeight(cx, arg, unwrappedArg, type1);
+			int rank2 = NativeJavaObject.getConversionWeight(cx, arg, unwrappedArg, type2);
 
 			int preference;
 			if (rank1 < rank2) {

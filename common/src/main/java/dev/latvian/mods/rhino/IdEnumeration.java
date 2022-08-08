@@ -1,7 +1,6 @@
 package dev.latvian.mods.rhino;
 
-import java.io.Serial;
-import java.io.Serializable;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -18,9 +17,7 @@ import java.util.function.Consumer;
  * avoid maintaining a hash table and instead perform lookups
  * to see if a given property has already been enumerated.
  */
-public class IdEnumeration implements Serializable, Consumer<Object> {
-	@Serial
-	private static final long serialVersionUID = 1L;
+public class IdEnumeration implements Consumer<Object> {
 	Scriptable obj;
 	Object[] ids;
 	ObjToIntMap used;
@@ -123,20 +120,12 @@ public class IdEnumeration implements Serializable, Consumer<Object> {
 			return currentId;
 		}
 
-		switch (enumType) {
-			case ScriptRuntime.ENUMERATE_KEYS:
-			case ScriptRuntime.ENUMERATE_KEYS_NO_ITERATOR:
-				return currentId;
-			case ScriptRuntime.ENUMERATE_VALUES:
-			case ScriptRuntime.ENUMERATE_VALUES_NO_ITERATOR:
-				return getValue(cx);
-			case ScriptRuntime.ENUMERATE_ARRAY:
-			case ScriptRuntime.ENUMERATE_ARRAY_NO_ITERATOR:
-				Object[] elements = {currentId, getValue(cx)};
-				return cx.newArray(ScriptableObject.getTopLevelScope(obj), elements);
-			default:
-				throw Kit.codeBug();
-		}
+		return switch (enumType) {
+			case ScriptRuntime.ENUMERATE_KEYS, ScriptRuntime.ENUMERATE_KEYS_NO_ITERATOR -> currentId;
+			case ScriptRuntime.ENUMERATE_VALUES, ScriptRuntime.ENUMERATE_VALUES_NO_ITERATOR -> getValue(cx);
+			case ScriptRuntime.ENUMERATE_ARRAY, ScriptRuntime.ENUMERATE_ARRAY_NO_ITERATOR -> cx.newArray(ScriptableObject.getTopLevelScope(obj), List.of(currentId, getValue(cx)));
+			default -> throw Kit.codeBug();
+		};
 	}
 
 	public Object getValue(Context cx) {

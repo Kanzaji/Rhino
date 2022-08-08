@@ -1,5 +1,6 @@
 package dev.latvian.mods.rhino.mod.util;
 
+import dev.latvian.mods.rhino.SharedContextData;
 import dev.latvian.mods.rhino.util.Remapper;
 import net.minecraft.SharedConstants;
 import net.minecraft.Util;
@@ -327,13 +328,13 @@ public abstract class MinecraftRemapper implements Remapper {
 	public abstract Path getLocalRhinoDir();
 
 	@Override
-	public String remapClass(Class<?> from, String className) {
+	public String remapClass(SharedContextData data, Class<?> from, String className) {
 		RemappedClass c = empty ? null : classMap.get(className);
 		return c == null ? "" : c.mappedName;
 	}
 
 	@Override
-	public String unmapClass(String from) {
+	public String unmapClass(SharedContextData data, String from) {
 		if (empty) {
 			return "";
 		} else if (inverseClassMap == null) {
@@ -348,13 +349,13 @@ public abstract class MinecraftRemapper implements Remapper {
 	}
 
 	@Override
-	public String remapField(Class<?> from, Field field, String fieldName) {
+	public String remapField(SharedContextData data, Class<?> from, Field field, String fieldName) {
 		RemappedClass c = empty ? null : classMap.get(from.getName());
 		return c == null ? "" : c.getChild(fieldName);
 	}
 
 	@Override
-	public String remapMethod(Class<?> from, Method method, String methodString) {
+	public String remapMethod(SharedContextData data, Class<?> from, Method method, String methodString) {
 		RemappedClass c = empty ? null : classMap.get(from.getName());
 		return c == null ? "" : c.getChild(methodString);
 	}

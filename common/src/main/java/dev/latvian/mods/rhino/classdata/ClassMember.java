@@ -1,7 +1,7 @@
 package dev.latvian.mods.rhino.classdata;
 
-import dev.latvian.mods.rhino.Context;
 import dev.latvian.mods.rhino.ScriptRuntime;
+import dev.latvian.mods.rhino.SharedContextData;
 import dev.latvian.mods.rhino.util.Possible;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,7 +19,7 @@ public class ClassMember {
 	public MethodInfo beanGet;
 	public MethodInfo beanSet;
 
-	private Map<MethodSignature, Possible<MethodInfo>> jsMethods;
+	private Map<MethodSignature, Possible<MethodInfo>> methodCache;
 
 	ClassMember(ClassData c, String n) {
 		classData = c;
@@ -31,17 +31,17 @@ public class ClassMember {
 		return name;
 	}
 
-	public Possible<?> get(@Nullable Object obj) throws Exception {
+	public Possible<?> get(SharedContextData data, @Nullable Object obj) throws Exception {
 		if (beanGet != null) {
 			return Possible.of(beanGet.method.invoke(obj, ScriptRuntime.EMPTY_ARGS));
 		} else if (field != null) {
-			return Possible.NULL;
+			return Possible.of(field.get(obj));
 		}
 
 		return Possible.EMPTY;
 	}
 
-	public Possible<?> set(@Nullable Object obj, @Nullable Object value) throws Exception {
+	public Possible<?> set(SharedContextData data, @Nullable Object obj, @Nullable Object value) throws Exception {
 		if (beanSet != null) {
 			return Possible.of(beanSet.method.invoke(obj, value));
 		} else if (!isFinal) {
@@ -52,38 +52,41 @@ public class ClassMember {
 		return Possible.EMPTY;
 	}
 
-	public Possible<?> invoke(MethodSignature sig, @Nullable Object obj, Object[] args) throws Exception {
-		var m = methods.get(sig);
+	public Possible<?> invoke(SharedContextData data, @Nullable Object obj, Object[] args, MethodSignature argsSig) throws Exception {
+		var m = method(data, args, argsSig);
 
-		if (m != null) {
-			return Possible.of(m.method.invoke(obj, args));
+		if (m.isSet()) {
+			return Possible.of(m.get().method.invoke(obj, args));
 		}
 
 		return Possible.EMPTY;
 	}
 
-	private Possible<MethodInfo> method(Context cx, MethodSignature sig, Object[] args) {
+	public Possible<MethodInfo> method(SharedContextData data, Object[] args, MethodSignature argsSig) {
 		if (methods == null) {
 			return Possible.absent();
 		}
 
-		if (jsMethods == null) {
-			jsMethods = new HashMap<>();
+		if (methodCache == null) {
+			methodCache = new HashMap<>();
 		}
 
-		var p = jsMethods.get(sig);
+		var p = methodCache.get(argsSig);
 
 		if (p == null) {
 			p = Possible.absent();
+			int ca = -1;
 
 			for (var m : methods.values()) {
-				if (m.signature.matches(sig, cx)) {
+				int a = m.signature.matches(data, args, argsSig);
+
+				if (a > ca) {
 					p = Possible.of(m);
-					break;
+					ca = a;
 				}
 			}
 
-			jsMethods.put(sig, p);
+			methodCache.put(argsSig, p);
 		}
 
 		return p;

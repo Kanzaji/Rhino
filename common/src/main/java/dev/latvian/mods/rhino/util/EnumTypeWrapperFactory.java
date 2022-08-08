@@ -1,5 +1,6 @@
 package dev.latvian.mods.rhino.util;
 
+import dev.latvian.mods.rhino.SharedContextData;
 import dev.latvian.mods.rhino.util.wrap.TypeWrapperFactory;
 
 import java.lang.reflect.Field;
@@ -7,24 +8,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class EnumTypeWrapper<T> implements TypeWrapperFactory<T> {
-	private static final Map<Class<?>, EnumTypeWrapper<?>> WRAPPERS = new HashMap<>();
-	private static final Map<Enum<?>, String> CACHED_NAMES = new HashMap<>();
-
-	@SuppressWarnings("unchecked")
-	public static <T> EnumTypeWrapper<T> get(Class<T> enumType) {
-		if (!enumType.isEnum()) {
-			throw new IllegalArgumentException("Class " + enumType.getName() + " is not an enum!");
-		}
-
-		return (EnumTypeWrapper<T>) WRAPPERS.computeIfAbsent(enumType, EnumTypeWrapper::new);
-	}
-
-	public static String getName(Class<?> enumType, Enum<?> e, boolean cache) {
-		if (cache) {
-			return get(enumType).valueNames.getOrDefault(e, e.name());
-		}
-
+public class EnumTypeWrapperFactory<T> implements TypeWrapperFactory<T> {
+	public static String getName(SharedContextData data, Class<?> enumType, Enum<?> e) {
 		String name = e.name();
 
 		if (e instanceof RemappedEnumConstant c) {
@@ -38,7 +23,7 @@ public class EnumTypeWrapper<T> implements TypeWrapperFactory<T> {
 		try {
 			Field field = enumType.getDeclaredField(name);
 			field.setAccessible(true);
-			String s = DefaultRemapper.INSTANCE.remapField(enumType, field, name);
+			String s = data.getRemapper().remapField(data, enumType, field, name);
 
 			if (!s.isEmpty()) {
 				return s;
@@ -54,14 +39,14 @@ public class EnumTypeWrapper<T> implements TypeWrapperFactory<T> {
 	public final Map<String, T> nameValues;
 	public final Map<T, String> valueNames;
 
-	private EnumTypeWrapper(Class<T> enumType) {
+	public EnumTypeWrapperFactory(SharedContextData data, Class<T> enumType) {
 		this.enumType = enumType;
 		this.indexValues = enumType.getEnumConstants();
 		this.nameValues = new HashMap<>();
 		this.valueNames = new HashMap<>();
 
 		for (T t : indexValues) {
-			String name = getName(enumType, (Enum<?>) t, false).toLowerCase();
+			String name = getName(data, enumType, (Enum<?>) t).toLowerCase();
 			nameValues.put(name, t);
 			valueNames.put(t, name);
 		}
