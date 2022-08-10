@@ -17,7 +17,7 @@ package dev.latvian.mods.rhino;
  * resulted in substantial performance regressions so we are doing the best that we can.
  */
 
-public interface SlotMap extends Iterable<ScriptableObject.Slot> {
+public interface SlotMap extends Iterable<Slot> {
 
 	/**
 	 * Return the size of the map.
@@ -34,23 +34,23 @@ public interface SlotMap extends Iterable<ScriptableObject.Slot> {
 	 * if it is not null, and otherwise "index". "accessType" is one of the
 	 * constants defined in ScriptableObject.
 	 */
-	ScriptableObject.Slot get(Object key, int index, ScriptableObject.SlotAccess accessType);
+	Slot get(Context cx, Object key, int index, SlotAccess accessType);
 
 	/**
 	 * This is an optimization that is the same as get with an accessType of SLOT_QUERY.
 	 * It should be used instead of SLOT_QUERY because it is more efficient.
 	 */
-	ScriptableObject.Slot query(Object key, int index);
+	Slot query(Context cx, Object key, int index);
 
 	/**
 	 * Insert a new slot to the map. Both "name" and "indexOrHash" must be populated.
 	 * Note that ScriptableObject generally adds slots via the "get" method.
 	 */
-	void addSlot(ScriptableObject.Slot newSlot);
+	void addSlot(Context cx, Slot newSlot);
 
 	/**
 	 * Remove the slot at either "key" or "index".
 	 */
-	void remove(Object key, int index);
+	void remove(Context cx, Object key, int index);
 }
 

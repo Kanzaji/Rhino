@@ -12,6 +12,17 @@ public class MiscTests {
 	public static final RhinoTest TEST = new RhinoTest("misc").shareScope();
 
 	@Test
+	@DisplayName("Console Output")
+	@Order(1)
+	public void consoleOutput() {
+		TEST.test("consoleOutput", """
+				console.info('hi')
+				""", """
+				hi
+				""");
+	}
+
+	@Test
 	@DisplayName("Init")
 	@Order(1)
 	public void init() {
@@ -33,8 +44,8 @@ public class MiscTests {
 	}
 
 	@Test
-	@DisplayName("Test Array")
-	public void testArray() {
+	@DisplayName("Array")
+	public void array() {
 		TEST.test("testArray", """
 				for (let x of console.testArray) {
 					console.info(x)

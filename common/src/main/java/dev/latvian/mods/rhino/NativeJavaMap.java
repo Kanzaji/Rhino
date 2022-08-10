@@ -53,7 +53,7 @@ public class NativeJavaMap extends NativeJavaObject {
 	@Override
 	public Object get(Context cx, String name, Scriptable start) {
 		if (map.containsKey(name)) {
-			return valueUnwrapper.unwrap(this, map.get(name));
+			return valueUnwrapper.unwrap(cx, this, map.get(name));
 		}
 		return super.get(cx, name, start);
 	}
@@ -61,7 +61,7 @@ public class NativeJavaMap extends NativeJavaObject {
 	@Override
 	public Object get(Context cx, int index, Scriptable start) {
 		if (map.containsKey(index)) {
-			return valueUnwrapper.unwrap(this, map.get(index));
+			return valueUnwrapper.unwrap(cx, this, map.get(index));
 		}
 		return super.get(cx, index, start);
 	}

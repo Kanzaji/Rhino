@@ -12,13 +12,13 @@ public class IdFunctionObjectES6 extends IdFunctionObject {
 	private boolean myName = true;
 
 	@Override
-	protected int findInstanceIdInfo(String s) {
+	protected int findInstanceIdInfo(Context cx, String s) {
 		if (s.equals("length")) {
 			return instanceIdInfo(READONLY | DONTENUM, Id_length);
 		} else if (s.equals("name")) {
 			return instanceIdInfo(READONLY | DONTENUM, Id_name);
 		}
-		return super.findInstanceIdInfo(s);
+		return super.findInstanceIdInfo(cx, s);
 	}
 
 	@Override

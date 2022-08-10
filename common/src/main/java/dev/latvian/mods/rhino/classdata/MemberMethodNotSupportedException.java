@@ -43,4 +43,10 @@ public class MemberMethodNotSupportedException extends IllegalStateException {
 			super(member, "getDeclaringClass()");
 		}
 	}
+
+	public static class Signature extends MemberMethodNotSupportedException {
+		public Signature(BaseMember member) {
+			super(member, "getSignature()");
+		}
+	}
 }

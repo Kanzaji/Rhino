@@ -107,7 +107,7 @@ public class BaseFunction extends IdScriptableObject implements Function {
 	}
 
 	@Override
-	protected int findInstanceIdInfo(String s) {
+	protected int findInstanceIdInfo(Context cx, String s) {
 		int id = switch (s) {
 			case "name" -> Id_name;
 			case "length" -> Id_length;
@@ -118,7 +118,7 @@ public class BaseFunction extends IdScriptableObject implements Function {
 		};
 
 		if (id == 0) {
-			return super.findInstanceIdInfo(s);
+			return super.findInstanceIdInfo(cx, s);
 		}
 
 		int attr;

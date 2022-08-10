@@ -52,10 +52,9 @@ public interface ConstProperties {
 	 * @param name  the name of the property
 	 * @param start the object whose property is being set
 	 * @param value value to set the property to
-	 * @see Scriptable#has(String, Scriptable)
-	 * @see Scriptable#get(String, Scriptable)
-	 * @see ScriptableObject#putProperty(Scriptable, String, Object)
-	 * @see Context#toObject(Object, Scriptable)
+	 * @see Scriptable#has(Context, String, Scriptable)
+	 * @see Scriptable#get(Context, String, Scriptable)
+	 * @see ScriptableObject#putProperty(Context, Scriptable, String, Object)
 	 */
 	void putConst(Context cx, String name, Scriptable start, Object value);
 

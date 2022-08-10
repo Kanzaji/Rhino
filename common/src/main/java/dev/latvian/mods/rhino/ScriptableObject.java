@@ -13,7 +13,6 @@ import dev.latvian.mods.rhino.classdata.ClassData;
 import dev.latvian.mods.rhino.classdata.ConstructorInfo;
 import dev.latvian.mods.rhino.classdata.DelegatedMember;
 import dev.latvian.mods.rhino.classdata.MethodInfo;
-import dev.latvian.mods.rhino.classdata.MethodSignature;
 import dev.latvian.mods.rhino.classdata.PublicClassData;
 import dev.latvian.mods.rhino.util.Deletable;
 
@@ -105,62 +104,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 
 	private volatile Map<Object, Object> associatedValues;
 
-	enum SlotAccess {
-		QUERY, MODIFY, MODIFY_CONST, MODIFY_GETTER_SETTER, CONVERT_ACCESSOR_TO_DATA
-	}
-
 	private boolean isExtensible = true;
-
-	/**
-	 * This is the object that is stored in the SlotMap. For historical reasons it remains
-	 * inside this class. SlotMap references a number of members of this class directly.
-	 */
-	static class Slot {
-		Object name; // This can change due to caching
-		int indexOrHash;
-		private short attributes;
-		Object value;
-		transient Slot next; // next in hash table bucket
-		transient Slot orderedNext; // next in linked list
-
-		Slot(Object name, int indexOrHash, int attributes) {
-			this.name = name;
-			this.indexOrHash = indexOrHash;
-			this.attributes = (short) attributes;
-		}
-
-		boolean setValue(Context cx, Object value, Scriptable owner, Scriptable start) {
-			if ((attributes & READONLY) != 0) {
-				if (cx.isStrictMode()) {
-					throw ScriptRuntime.typeError1("msg.modify.readonly", name);
-				}
-				return true;
-			}
-			if (owner == start) {
-				this.value = value;
-				return true;
-			}
-			return false;
-		}
-
-		Object getValue(Context cx, Scriptable start) {
-			return value;
-		}
-
-		int getAttributes() {
-			return attributes;
-		}
-
-		synchronized void setAttributes(int value) {
-			checkValidAttributes(value);
-			attributes = (short) value;
-		}
-
-		ScriptableObject getPropertyDescriptor(Context cx, Scriptable scope) {
-			return buildDataDescriptor(cx, scope, value, attributes);
-		}
-
-	}
 
 	protected static ScriptableObject buildDataDescriptor(Context cx, Scriptable scope, Object value, int attributes) {
 		ScriptableObject desc = new NativeObject();
@@ -170,109 +114,6 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 		desc.defineProperty(cx, "enumerable", (attributes & DONTENUM) == 0, EMPTY);
 		desc.defineProperty(cx, "configurable", (attributes & PERMANENT) == 0, EMPTY);
 		return desc;
-	}
-
-	/**
-	 * A GetterSlot is a specialication of a Slot for properties that are assigned functions
-	 * via Object.defineProperty() and its friends instead of regular values.
-	 */
-	static final class GetterSlot extends Slot {
-		Object getter;
-		Object setter;
-
-		GetterSlot(Object name, int indexOrHash, int attributes) {
-			super(name, indexOrHash, attributes);
-		}
-
-		@Override
-		ScriptableObject getPropertyDescriptor(Context cx, Scriptable scope) {
-			int attr = getAttributes();
-			ScriptableObject desc = new NativeObject();
-			ScriptRuntime.setBuiltinProtoAndParent(cx, desc, scope, TopLevel.Builtins.Object);
-			desc.defineProperty(cx, "enumerable", (attr & DONTENUM) == 0, EMPTY);
-			desc.defineProperty(cx, "configurable", (attr & PERMANENT) == 0, EMPTY);
-			if (getter == null && setter == null) {
-				desc.defineProperty(cx, "writable", (attr & READONLY) == 0, EMPTY);
-			}
-
-			String fName = name == null ? "f" : name.toString();
-			if (getter != null) {
-				if (getter instanceof BaseMember m) {
-					desc.defineProperty(cx, "get", new FunctionObject(cx, fName, m, scope), EMPTY);
-				} else {
-					desc.defineProperty(cx, "get", getter, EMPTY);
-				}
-			}
-
-			if (setter != null) {
-				if (setter instanceof BaseMember m) {
-					desc.defineProperty(cx, "set", new FunctionObject(cx, fName, m, scope), EMPTY);
-				} else {
-					desc.defineProperty(cx, "set", setter, EMPTY);
-				}
-			}
-			return desc;
-		}
-
-		@Override
-		boolean setValue(Context cx, Object value, Scriptable owner, Scriptable start) {
-			if (setter == null) {
-				if (getter != null) {
-					if (cx.isStrictMode()) {
-
-						String prop = "";
-						if (name != null) {
-							prop = "[" + start.getClassName() + "]." + name;
-						}
-						throw ScriptRuntime.typeError2("msg.set.prop.no.setter", prop, ScriptRuntime.toString(cx, value));
-					}
-					// Assignment to a property with only a getter defined. The
-					// assignment is ignored. See bug 478047.
-					return true;
-				}
-			} else {
-				if (setter instanceof BaseMember nativeSetter) {
-					Class<?>[] pTypes = nativeSetter.getSignature().types;
-					// XXX: cache tag since it is already calculated in
-					// defineProperty ?
-					Class<?> valueType = pTypes[pTypes.length - 1];
-					int tag = FunctionObject.getTypeTag(valueType);
-					Object actualArg = FunctionObject.convertArg(cx, start, value, tag);
-					Object[] args;
-					if (nativeSetter instanceof DelegatedMember) {
-						args = new Object[]{start, actualArg};
-					} else {
-						args = new Object[]{actualArg};
-					}
-					nativeSetter.actuallyInvoke(cx, start, start, args, MethodSignature.ofArgs(args));
-				} else if (setter instanceof Function f) {
-					f.call(cx, f.getParentScope(), start, new Object[]{value});
-				}
-				return true;
-			}
-			return super.setValue(cx, value, owner, start);
-		}
-
-		@Override
-		Object getValue(Context cx, Scriptable start) {
-			if (getter != null) {
-				if (getter instanceof MemberBox nativeGetter) {
-					Object getterThis;
-					Object[] args;
-					if (nativeGetter.delegateTo == null) {
-						getterThis = start;
-						args = ScriptRuntime.EMPTY_OBJECTS;
-					} else {
-						getterThis = nativeGetter.delegateTo;
-						args = new Object[]{start};
-					}
-					return nativeGetter.invoke(getterThis, args);
-				} else if (getter instanceof Function f) {
-					return f.call(cx, f.getParentScope(), start, ScriptRuntime.EMPTY_OBJECTS);
-				}
-			}
-			return this.value;
-		}
 	}
 
 	static void checkValidAttributes(int attributes) {
@@ -330,7 +171,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 */
 	@Override
 	public boolean has(Context cx, String name, Scriptable start) {
-		return null != slotMap.query(name, 0);
+		return null != slotMap.query(cx, name, 0);
 	}
 
 	/**
@@ -342,7 +183,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 */
 	@Override
 	public boolean has(Context cx, int index, Scriptable start) {
-		return null != slotMap.query(null, index);
+		return null != slotMap.query(cx, null, index);
 	}
 
 	/**
@@ -350,7 +191,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 */
 	@Override
 	public boolean has(Context cx, Symbol key, Scriptable start) {
-		return null != slotMap.query(key, 0);
+		return null != slotMap.query(cx, key, 0);
 	}
 
 	/**
@@ -365,7 +206,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 */
 	@Override
 	public Object get(Context cx, String name, Scriptable start) {
-		Slot slot = slotMap.query(name, 0);
+		Slot slot = slotMap.query(cx, name, 0);
 		if (slot == null) {
 			return NOT_FOUND;
 		}
@@ -381,7 +222,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 */
 	@Override
 	public Object get(Context cx, int index, Scriptable start) {
-		Slot slot = slotMap.query(null, index);
+		Slot slot = slotMap.query(cx, null, index);
 		if (slot == null) {
 			return NOT_FOUND;
 		}
@@ -393,7 +234,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 */
 	@Override
 	public Object get(Context cx, Symbol key, Scriptable start) {
-		Slot slot = slotMap.query(key, 0);
+		Slot slot = slotMap.query(cx, key, 0);
 		if (slot == null) {
 			return NOT_FOUND;
 		}
@@ -471,8 +312,8 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 */
 	@Override
 	public void delete(Context cx, Scriptable scope, String name) {
-		Slot s = slotMap.query(name, 0);
-		slotMap.remove(name, 0);
+		Slot s = slotMap.query(cx, name, 0);
+		slotMap.remove(cx, name, 0);
 		Deletable.deleteObject(s == null ? null : s.value);
 	}
 
@@ -486,8 +327,8 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 */
 	@Override
 	public void delete(Context cx, Scriptable scope, int index) {
-		Slot s = slotMap.query(null, index);
-		slotMap.remove(null, index);
+		Slot s = slotMap.query(cx, null, index);
+		slotMap.remove(cx, null, index);
 		Deletable.deleteObject(s == null ? null : s.value);
 	}
 
@@ -496,7 +337,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 */
 	@Override
 	public void delete(Context cx, Scriptable scope, Symbol key) {
-		slotMap.remove(key, 0);
+		slotMap.remove(cx, key, 0);
 	}
 
 	/**
@@ -553,7 +394,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 */
 	@Override
 	public boolean isConst(Context cx, String name) {
-		Slot slot = slotMap.query(name, 0);
+		Slot slot = slotMap.query(cx, name, 0);
 		if (slot == null) {
 			return false;
 		}
@@ -664,9 +505,9 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 
 		final GetterSlot gslot;
 		if (isExtensible()) {
-			gslot = (GetterSlot) slotMap.get(name, index, SlotAccess.MODIFY_GETTER_SETTER);
+			gslot = (GetterSlot) slotMap.get(cx, name, index, SlotAccess.MODIFY_GETTER_SETTER);
 		} else {
-			Slot slot = slotMap.query(name, index);
+			Slot slot = slotMap.query(cx, name, index);
 			if (!(slot instanceof GetterSlot)) {
 				return;
 			}
@@ -700,11 +541,11 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * @throws IllegalArgumentException if both name and index are nonnull
 	 *                                  and nonzero respectively.
 	 */
-	public Object getGetterOrSetter(String name, int index, boolean isSetter) {
+	public Object getGetterOrSetter(Context cx, String name, int index, boolean isSetter) {
 		if (name != null && index != 0) {
 			throw new IllegalArgumentException(name);
 		}
-		Slot slot = slotMap.query(name, index);
+		Slot slot = slotMap.query(cx, name, index);
 		if (slot == null) {
 			return null;
 		}
@@ -723,8 +564,8 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * @param setter true to check for a setter, false for a getter
 	 * @return whether the property is a getter or a setter
 	 */
-	protected boolean isGetterOrSetter(String name, int index, boolean setter) {
-		Slot slot = slotMap.query(name, index);
+	protected boolean isGetterOrSetter(Context cx, String name, int index, boolean setter) {
+		Slot slot = slotMap.query(cx, name, index);
 		if (slot instanceof GetterSlot) {
 			if (setter && ((GetterSlot) slot).setter != null) {
 				return true;
@@ -1240,7 +1081,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 			}
 		}
 
-		GetterSlot gslot = (GetterSlot) slotMap.get(propertyName, 0, SlotAccess.MODIFY_GETTER_SETTER);
+		GetterSlot gslot = (GetterSlot) slotMap.get(cx, propertyName, 0, SlotAccess.MODIFY_GETTER_SETTER);
 		gslot.setAttributes(attributes);
 		gslot.getter = getterBox;
 		gslot.setter = setterBox;
@@ -2114,23 +1955,23 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 		// so we inline the extensible/sealed checks below.
 		Slot slot;
 		if (this != start) {
-			slot = slotMap.query(key, index);
-			if (!isExtensible && (slot == null || (!(slot instanceof GetterSlot) && (slot.getAttributes() & READONLY) != 0)) && Context.getContext().isStrictMode()) {
+			slot = slotMap.query(cx, key, index);
+			if (!isExtensible && (slot == null || (!(slot instanceof GetterSlot) && (slot.getAttributes() & READONLY) != 0)) && cx.isStrictMode()) {
 				throw ScriptRuntime.typeError0("msg.not.extensible");
 			}
 			if (slot == null) {
 				return false;
 			}
 		} else if (!isExtensible) {
-			slot = slotMap.query(key, index);
-			if ((slot == null || (!(slot instanceof GetterSlot) && (slot.getAttributes() & READONLY) != 0)) && Context.getContext().isStrictMode()) {
+			slot = slotMap.query(cx, key, index);
+			if ((slot == null || (!(slot instanceof GetterSlot) && (slot.getAttributes() & READONLY) != 0)) && cx.isStrictMode()) {
 				throw ScriptRuntime.typeError0("msg.not.extensible");
 			}
 			if (slot == null) {
 				return true;
 			}
 		} else {
-			slot = slotMap.get(key, index, SlotAccess.MODIFY);
+			slot = slotMap.get(cx, key, index, SlotAccess.MODIFY);
 		}
 		return slot.setValue(cx, value, this, start);
 	}
@@ -2155,18 +1996,18 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 		}
 		Slot slot;
 		if (this != start) {
-			slot = slotMap.query(name, index);
+			slot = slotMap.query(cx, name, index);
 			if (slot == null) {
 				return false;
 			}
 		} else if (!isExtensible()) {
-			slot = slotMap.query(name, index);
+			slot = slotMap.query(cx, name, index);
 			if (slot == null) {
 				return true;
 			}
 		} else {
 			// either const hoisted declaration or initialization
-			slot = slotMap.get(name, index, SlotAccess.MODIFY_CONST);
+			slot = slotMap.get(cx, name, index, SlotAccess.MODIFY_CONST);
 			int attr = slot.getAttributes();
 			if ((attr & READONLY) == 0) {
 				throw Context.reportRuntimeError1(cx, "msg.var.redecl", name);
@@ -2184,7 +2025,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	}
 
 	private Slot findAttributeSlot(Context cx, String name, int index, SlotAccess accessType) {
-		Slot slot = slotMap.get(name, index, accessType);
+		Slot slot = slotMap.get(cx, name, index, accessType);
 		if (slot == null) {
 			String str = (name != null ? name : Integer.toString(index));
 			throw Context.reportRuntimeError1(cx, "msg.prop.not.found", str);
@@ -2193,7 +2034,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	}
 
 	private Slot findAttributeSlot(Context cx, Symbol key, SlotAccess accessType) {
-		Slot slot = slotMap.get(key, 0, accessType);
+		Slot slot = slotMap.get(cx, key, 0, accessType);
 		if (slot == null) {
 			throw Context.reportRuntimeError1(cx, "msg.prop.not.found", key);
 		}
@@ -2246,13 +2087,13 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 
 	protected Slot getSlot(Context cx, Object id, SlotAccess accessType) {
 		if (id instanceof Symbol) {
-			return slotMap.get(id, 0, accessType);
+			return slotMap.get(cx, id, 0, accessType);
 		}
 		ScriptRuntime.StringIdOrIndex s = ScriptRuntime.toStringIdOrIndex(cx, id);
 		if (s.stringId == null) {
-			return slotMap.get(null, s.index, accessType);
+			return slotMap.get(cx, null, s.index, accessType);
 		}
-		return slotMap.get(s.stringId, 0, accessType);
+		return slotMap.get(cx, s.stringId, 0, accessType);
 	}
 
 	// Partial implementation of java.util.Map. See NativeObject for

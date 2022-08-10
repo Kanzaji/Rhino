@@ -5,10 +5,7 @@ import dev.latvian.mods.rhino.Scriptable;
 
 @FunctionalInterface
 public interface ValueUnwrapper {
-	ValueUnwrapper DEFAULT = (scope, value) -> {
-		Context cx = Context.getContext();
-		return cx.getWrapFactory().wrap(cx, scope, value, value.getClass());
-	};
+	ValueUnwrapper DEFAULT = (cx, scope, value) -> cx.getWrapFactory().wrap(cx, scope, value, value.getClass());
 
-	Object unwrap(Scriptable scope, Object value);
+	Object unwrap(Context cx, Scriptable scope, Object value);
 }

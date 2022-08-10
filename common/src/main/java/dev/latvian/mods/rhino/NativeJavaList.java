@@ -60,7 +60,7 @@ public class NativeJavaList extends NativeJavaObject {
 	@Override
 	public Object get(Context cx, int index, Scriptable start) {
 		if (isWithValidIndex(index)) {
-			return valueUnwrapper.unwrap(this, list.get(index));
+			return valueUnwrapper.unwrap(cx, this, list.get(index));
 		}
 
 		return Undefined.instance;
@@ -298,10 +298,10 @@ public class NativeJavaList extends NativeJavaObject {
 		}
 
 		BinaryOperator operator = (BinaryOperator) args[0];
-		Object o = valueUnwrapper.unwrap(this, list.get(0));
+		Object o = valueUnwrapper.unwrap(cx, this, list.get(0));
 
 		for (int i = 1; i < list.size(); i++) {
-			o = valueUnwrapper.unwrap(this, operator.apply(o, valueUnwrapper.unwrap(this, list.get(i))));
+			o = valueUnwrapper.unwrap(cx, this, operator.apply(o, valueUnwrapper.unwrap(cx, this, list.get(i))));
 		}
 
 		return o;
@@ -315,10 +315,10 @@ public class NativeJavaList extends NativeJavaObject {
 		}
 
 		BinaryOperator operator = (BinaryOperator) args[0];
-		Object o = valueUnwrapper.unwrap(this, list.get(0));
+		Object o = valueUnwrapper.unwrap(cx, this, list.get(0));
 
 		for (int i = list.size() - 1; i >= 1; i--) {
-			o = valueUnwrapper.unwrap(this, operator.apply(o, valueUnwrapper.unwrap(this, list.get(i))));
+			o = valueUnwrapper.unwrap(cx, this, operator.apply(o, valueUnwrapper.unwrap(cx, this, list.get(i))));
 		}
 
 		return o;

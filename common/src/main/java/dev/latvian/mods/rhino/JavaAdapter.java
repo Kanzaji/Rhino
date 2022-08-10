@@ -4,12 +4,8 @@ import dev.latvian.mods.rhino.classdata.MethodSignature;
 import dev.latvian.mods.rhino.classfile.ByteCode;
 import dev.latvian.mods.rhino.classfile.ClassFileWriter;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -173,15 +169,15 @@ public final class JavaAdapter implements IdFunctionCall {
 				System.arraycopy(args, classCount + 1, ctorArgs, 2, argsCount);
 				// TODO: cache class wrapper?
 				NativeJavaClass classWrapper = new NativeJavaClass(cx, scope, adapterClass);
-				NativeJavaMethod ctors = classWrapper.members.ctors;
-				int index = ctors.findCachedFunction(cx, ctorArgs);
-				if (index < 0) {
+				var cp = classWrapper.classData.constructor(cx.getSharedData(scope), ctorArgs, MethodSignature.ofArgs(ctorArgs));
+
+				if (!cp.isSet()) {
 					String sig = MethodSignature.scriptSignature(args);
 					throw Context.reportRuntimeError2(cx, "msg.no.java.ctor", adapterClass.getName(), sig);
 				}
 
 				// Found the constructor, so try invoking it.
-				adapter = NativeJavaClass.constructInternal(cx, scope, ctorArgs, ctors.methods[index]);
+				adapter = NativeJavaClass.constructInternal(cx, scope, ctorArgs, cp.get());
 			} else {
 				Class<?>[] ctorParms = {ScriptRuntime.ScriptableClass, ScriptRuntime.ContextFactoryClass};
 				Object[] ctorArgs = {obj, cx.getFactory()};
@@ -203,66 +199,6 @@ public final class JavaAdapter implements IdFunctionCall {
 		} catch (Exception ex) {
 			throw Context.throwAsScriptRuntimeEx(ex);
 		}
-	}
-
-	// Needed by NativeJavaObject serializer
-	public static void writeAdapterObject(Object javaObject, ObjectOutputStream out) throws IOException {
-		Class<?> cl = javaObject.getClass();
-		out.writeObject(cl.getSuperclass().getName());
-
-		Class<?>[] interfaces = cl.getInterfaces();
-		String[] interfaceNames = new String[interfaces.length];
-
-		for (int i = 0; i < interfaces.length; i++) {
-			interfaceNames[i] = interfaces[i].getName();
-		}
-
-		out.writeObject(interfaceNames);
-
-		try {
-			Object delegee = cl.getField("delegee").get(javaObject);
-			out.writeObject(delegee);
-			return;
-		} catch (IllegalAccessException e) {
-		} catch (NoSuchFieldException e) {
-		}
-		throw new IOException();
-	}
-
-	// Needed by NativeJavaObject de-serializer
-	public static Object readAdapterObject(Scriptable self, ObjectInputStream in) throws IOException, ClassNotFoundException {
-		ContextFactory factory;
-		Context cx = Context.getCurrentContext();
-		if (cx != null) {
-			factory = cx.getFactory();
-		} else {
-			factory = null;
-		}
-
-		Class<?> superClass = Class.forName((String) in.readObject());
-
-		String[] interfaceNames = (String[]) in.readObject();
-		Class<?>[] interfaces = new Class[interfaceNames.length];
-
-		for (int i = 0; i < interfaceNames.length; i++) {
-			interfaces[i] = Class.forName(interfaceNames[i]);
-		}
-
-		Scriptable delegee = (Scriptable) in.readObject();
-
-		Class<?> adapterClass = getAdapterClass(cx, self, superClass, interfaces, delegee);
-
-		Class<?>[] ctorParms = {ScriptRuntime.ContextFactoryClass, ScriptRuntime.ScriptableClass, ScriptRuntime.ScriptableClass};
-		Object[] ctorArgs = {factory, delegee, self};
-		try {
-			return adapterClass.getConstructor(ctorParms).newInstance(ctorArgs);
-		} catch (InstantiationException e) {
-		} catch (IllegalAccessException e) {
-		} catch (InvocationTargetException e) {
-		} catch (NoSuchMethodException e) {
-		}
-
-		throw new ClassNotFoundException("adapter");
 	}
 
 	private static ObjToIntMap getObjectFunctionNames(Context cx, Scriptable obj) {
@@ -296,7 +232,7 @@ public final class JavaAdapter implements IdFunctionCall {
 			String adapterName = "adapter" + cache.newClassSerialNumber();
 			byte[] code = createAdapterCode(cx, names, adapterName, superClass, interfaces, null);
 
-			adapterClass = loadAdapterClass(adapterName, code);
+			adapterClass = loadAdapterClass(cx, adapterName, code);
 			generated.put(sig, adapterClass);
 		}
 		return adapterClass;
@@ -457,8 +393,7 @@ public final class JavaAdapter implements IdFunctionCall {
 		}
 	}
 
-	static Class<?> loadAdapterClass(String className, byte[] classBytes) {
-		Context cx = Context.getContext();
+	static Class<?> loadAdapterClass(Context cx, String className, byte[] classBytes) {
 		GeneratedClassLoader loader = cx.createClassLoader(cx.getApplicationClassLoader());
 		Class<?> result = loader.defineClass(className, classBytes);
 		loader.linkClass(result);

@@ -286,7 +286,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 			}
 			Object converterObject = get(cx, converterName, this);
 			if (converterObject instanceof Function f) {
-				value = f.call(Context.getContext(), f.getParentScope(), this, ScriptRuntime.EMPTY_OBJECTS);
+				value = f.call(cx, f.getParentScope(), this, ScriptRuntime.EMPTY_OBJECTS);
 			} else {
 				if (hint == ScriptRuntime.NumberClass && javaObject instanceof Boolean) {
 					boolean b = (Boolean) javaObject;
@@ -651,7 +651,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 					return reportConversionError(cx, unwrappedValue, type);
 				} else if (type.isInterface() && (value instanceof NativeObject || value instanceof NativeFunction || value instanceof ArrowFunction)) {
 					// Try to use function/object as implementation of Java interface.
-					return createInterfaceAdapter(type, (ScriptableObject) value);
+					return createInterfaceAdapter(cx, type, (ScriptableObject) value);
 				} else {
 					return reportConversionError(cx, value, type);
 				}
@@ -661,7 +661,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 		return value;
 	}
 
-	public static Object createInterfaceAdapter(Class<?> type, ScriptableObject so) {
+	public static Object createInterfaceAdapter(Context cx, Class<?> type, ScriptableObject so) {
 		// XXX: Currently only instances of ScriptableObject are
 		// supported since the resulting interface proxies should
 		// be reused next time conversion is made and generic
@@ -674,7 +674,6 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 			// Function was already wrapped
 			return old;
 		}
-		Context cx = Context.getContext();
 		Object glue = InterfaceAdapter.create(cx, type, so);
 		// Store for later retrieval
 		glue = so.associateValue(key, glue);

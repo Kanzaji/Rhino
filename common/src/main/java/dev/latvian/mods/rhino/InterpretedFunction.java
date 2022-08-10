@@ -24,7 +24,7 @@ final class InterpretedFunction extends NativeFunction implements Script {
 	/**
 	 * Create script from compiled bytecode.
 	 */
-	static InterpretedFunction createScript(InterpreterData idata, Object staticSecurityDomain) {
+	static InterpretedFunction createScript(Context cx, InterpreterData idata, Object staticSecurityDomain) {
 		InterpretedFunction f;
 		f = new InterpretedFunction(idata, staticSecurityDomain);
 		return f;

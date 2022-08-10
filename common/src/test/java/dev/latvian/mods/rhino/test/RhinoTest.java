@@ -64,7 +64,7 @@ public class RhinoTest {
 				if (entry.getValue() instanceof Class<?> c) {
 					ScriptableObject.putProperty(cx, scope, entry.getKey(), new NativeJavaClass(cx, scope, c));
 				} else {
-					ScriptableObject.putProperty(cx, scope, entry.getKey(), Context.javaToJS(entry.getValue(), scope));
+					ScriptableObject.putProperty(cx, scope, entry.getKey(), Context.javaToJS(cx, entry.getValue(), scope));
 				}
 			}
 

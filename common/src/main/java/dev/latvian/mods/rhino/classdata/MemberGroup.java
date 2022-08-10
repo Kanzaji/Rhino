@@ -13,6 +13,7 @@ public class MemberGroup implements BaseMember {
 	public final String name;
 	public BaseMember field;
 	public Map<MethodSignature, BaseMember> methods;
+	public BaseMember noArgMethod;
 	public BaseMember beanGet;
 	public BaseMember beanSet;
 
@@ -40,6 +41,8 @@ public class MemberGroup implements BaseMember {
 			return beanGet.getType();
 		} else if (beanSet != null) {
 			return beanSet.getType();
+		} else if (noArgMethod != null) {
+			return noArgMethod.getType();
 		} else if (methods != null) {
 			return methods.values().iterator().next().getType();
 		}
@@ -48,8 +51,37 @@ public class MemberGroup implements BaseMember {
 	}
 
 	void optimize(Map<String, BaseMember> map) {
-		// TODO: optimize
-		map.put(name, this);
+		int size = methods == null ? 0 : methods.size();
+
+		if (field != null) {
+			size++;
+		}
+
+		if (beanGet != null) {
+			size++;
+		}
+
+		if (beanSet != null) {
+			size++;
+		}
+
+		if (noArgMethod != null) {
+			size++;
+		}
+
+		if (size != 1) {
+			map.put(name, this);
+		} else if (field != null) {
+			map.put(name, field);
+		} else if (beanGet != null) {
+			map.put(name, beanGet);
+		} else if (beanSet != null) {
+			map.put(name, beanSet);
+		} else if (noArgMethod != null) {
+			map.put(name, noArgMethod);
+		} else {
+			map.put(name, methods.values().iterator().next());
+		}
 	}
 
 	@Override
@@ -76,10 +108,14 @@ public class MemberGroup implements BaseMember {
 
 	@Override
 	public Object invoke(Context cx, Scriptable scope, @Nullable Object self, Object[] args, MethodSignature argsSig) throws Exception {
-		var m = method(cx, scope, args, argsSig);
+		if (!argsSig.isEmpty()) {
+			var m = method(cx, scope, args, argsSig);
 
-		if (m.isSet()) {
-			return m.get().invoke(cx, scope, self, args, argsSig);
+			if (m.isSet()) {
+				return m.get().invoke(cx, scope, self, args, argsSig);
+			}
+		} else if (noArgMethod != null) {
+			return noArgMethod.invoke(cx, scope, self, args, argsSig);
 		}
 
 		throw new MemberMethodNotSupportedException.Invoke(this);
@@ -87,7 +123,7 @@ public class MemberGroup implements BaseMember {
 
 	// FIXME: override actualGet, actualSet, actualInvoke for proper type
 
-	public Possible<BaseMember> method(Context cx, Scriptable scope, Object[] args, MethodSignature argsSig) {
+	private Possible<BaseMember> method(Context cx, Scriptable scope, Object[] args, MethodSignature argsSig) {
 		if (methods == null) {
 			return Possible.absent();
 		}

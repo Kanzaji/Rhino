@@ -160,7 +160,7 @@ final class Arguments extends IdScriptableObject {
 	}
 
 	@Override
-	protected int findInstanceIdInfo(String s) {
+	protected int findInstanceIdInfo(Context cx, String s) {
 		int id = switch (s) {
 			case "callee" -> Id_callee;
 			case "length" -> Id_length;
@@ -168,16 +168,14 @@ final class Arguments extends IdScriptableObject {
 			default -> 0;
 		};
 
-		Context cx = Context.getContext();
-
 		if (cx.isStrictMode()) {
 			if (id == Id_callee || id == Id_caller) {
-				return super.findInstanceIdInfo(s);
+				return super.findInstanceIdInfo(cx, s);
 			}
 		}
 
 		if (id == 0) {
-			return super.findInstanceIdInfo(s);
+			return super.findInstanceIdInfo(cx, s);
 		}
 
 		int attr = switch (id) {

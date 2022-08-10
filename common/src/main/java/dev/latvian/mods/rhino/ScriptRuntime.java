@@ -830,13 +830,6 @@ public class ScriptRuntime {
 		return "not_supported";
 	}
 
-	public static Scriptable toObject(Scriptable scope, Object val) {
-		if (val instanceof Scriptable) {
-			return (Scriptable) val;
-		}
-		return toObject(Context.getContext(), scope, val);
-	}
-
 	/**
 	 * <strong>Warning</strong>: This doesn't allow to resolve primitive
 	 * prototype properly when many top scopes are involved
@@ -871,6 +864,10 @@ public class ScriptRuntime {
 	 * See ECMA 9.9.
 	 */
 	public static Scriptable toObject(Context cx, Scriptable scope, Object val) {
+		if (val instanceof Scriptable s) {
+			return s;
+		}
+
 		if (val == null) {
 			throw typeError0("msg.null.to.object");
 		}
@@ -1956,7 +1953,7 @@ public class ScriptRuntime {
 		if (arg1 == null || arg1 == Undefined.instance) {
 			return EMPTY_OBJECTS;
 		} else if (arg1 instanceof Scriptable && isArrayLike(cx, (Scriptable) arg1)) {
-			return ScriptRuntime.getArrayElements((Scriptable) arg1);
+			return ScriptRuntime.getArrayElements(cx, (Scriptable) arg1);
 		} else if (arg1 instanceof ScriptableObject) {
 			return EMPTY_OBJECTS;
 		} else {
@@ -2025,7 +2022,7 @@ public class ScriptRuntime {
 	}
 
 	public static MemberType typeof(Context cx, Object value) {
-		return MemberType.get(Context.getCurrentContext(), value);
+		return MemberType.get(cx, value);
 	}
 
 	/**
@@ -2788,7 +2785,7 @@ public class ScriptRuntime {
 			// Add special Rhino object __exception__ defined in the catch
 			// scope that can be used to retrieve the Java exception associated
 			// with the JavaScript exception (to get stack trace info, etc.)
-			catchScopeObject.defineProperty(cx, "__exception__", Context.javaToJS(t, scope), ScriptableObject.PERMANENT | ScriptableObject.DONTENUM);
+			catchScopeObject.defineProperty(cx, "__exception__", Context.javaToJS(cx, t, scope), ScriptableObject.PERMANENT | ScriptableObject.DONTENUM);
 		}
 
 		if (cacheObj) {
@@ -3017,8 +3014,7 @@ public class ScriptRuntime {
 		return obj instanceof NativeJavaList || obj instanceof Arguments;
 	}
 
-	public static Object[] getArrayElements(Scriptable object) {
-		Context cx = Context.getContext();
+	public static Object[] getArrayElements(Context cx, Scriptable object) {
 		long longLen = getLengthProperty(cx, object, false);
 		if (longLen > Integer.MAX_VALUE) {
 			// arrays beyond  MAX_INT is not in Java in any case

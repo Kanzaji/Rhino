@@ -64,12 +64,12 @@ final class NativeString extends IdScriptableObject implements Wrapper {
 	}
 
 	@Override
-	protected int findInstanceIdInfo(String s) {
+	protected int findInstanceIdInfo(Context cx, String s) {
 		return switch (s) {
 			case "length" -> instanceIdInfo(DONTENUM | READONLY | PERMANENT, Id_length);
 			case "namespace" -> instanceIdInfo(DONTENUM | READONLY | PERMANENT, Id_namespace);
 			case "path" -> instanceIdInfo(DONTENUM | READONLY | PERMANENT, Id_path);
-			default -> super.findInstanceIdInfo(s);
+			default -> super.findInstanceIdInfo(cx, s);
 		};
 	}
 

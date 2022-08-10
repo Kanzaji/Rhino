@@ -333,7 +333,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 
 	@Override
 	public boolean has(Context cx, String name, Scriptable start) {
-		int info = findInstanceIdInfo(name);
+		int info = findInstanceIdInfo(cx, name);
 		if (info != 0) {
 			int attr = (info >>> 16);
 			if ((attr & PERMANENT) != 0) {
@@ -380,7 +380,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 		if (value != NOT_FOUND) {
 			return value;
 		}
-		int info = findInstanceIdInfo(name);
+		int info = findInstanceIdInfo(cx, name);
 		if (info != 0) {
 			int id = (info & 0xFFFF);
 			value = getInstanceIdValue(cx, id);
@@ -424,7 +424,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 
 	@Override
 	public void put(Context cx, String name, Scriptable start, Object value) {
-		int info = findInstanceIdInfo(name);
+		int info = findInstanceIdInfo(cx, name);
 		if (info != 0) {
 			int attr = (info >>> 16);
 			if ((attr & READONLY) == 0) {
@@ -474,7 +474,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 
 	@Override
 	public void delete(Context cx, Scriptable scope, String name) {
-		int info = findInstanceIdInfo(name);
+		int info = findInstanceIdInfo(cx, name);
 		if (info != 0) {
 			// Let the super class to throw exceptions for sealed objects
 			int attr = (info >>> 16);
@@ -528,7 +528,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 
 	@Override
 	public int getAttributes(Context cx, String name) {
-		int info = findInstanceIdInfo(name);
+		int info = findInstanceIdInfo(cx, name);
 		if (info != 0) {
 			int attr = (info >>> 16);
 			return attr;
@@ -561,7 +561,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 	@Override
 	public void setAttributes(Context cx, String name, int attributes) {
 		ScriptableObject.checkValidAttributes(attributes);
-		int info = findInstanceIdInfo(name);
+		int info = findInstanceIdInfo(cx, name);
 		if (info != 0) {
 			int id = (info & 0xFFFF);
 			int currentAttributes = (info >>> 16);
@@ -595,7 +595,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 
 			for (int id = maxInstanceId; id != 0; --id) {
 				String name = getInstanceIdName(id);
-				int info = findInstanceIdInfo(name);
+				int info = findInstanceIdInfo(cx, name);
 				if (info != 0) {
 					int attr = (info >>> 16);
 					if ((attr & PERMANENT) == 0) {
@@ -642,7 +642,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 	 * Should return 0 if not found or the result of
 	 * {@link #instanceIdInfo(int, int)}.
 	 */
-	protected int findInstanceIdInfo(String name) {
+	protected int findInstanceIdInfo(Context cx, String name) {
 		return 0;
 	}
 
@@ -822,7 +822,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 	@Override
 	public void defineOwnProperty(Context cx, Object key, Scriptable desc) {
 		if (key instanceof String name) {
-			int info = findInstanceIdInfo(name);
+			int info = findInstanceIdInfo(cx, name);
 			if (info != 0) {
 				int id = (info & 0xFFFF);
 				if (isAccessorDescriptor(cx, desc)) {
@@ -896,7 +896,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 			scope = this;
 		}
 
-		int info = findInstanceIdInfo(name);
+		int info = findInstanceIdInfo(cx, name);
 		if (info != 0) {
 			int id = (info & 0xFFFF);
 			Object value = getInstanceIdValue(cx, id);

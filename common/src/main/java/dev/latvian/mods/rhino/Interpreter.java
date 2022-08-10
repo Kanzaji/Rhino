@@ -304,18 +304,18 @@ public final class Interpreter extends Icode implements Evaluator {
 	}
 
 	@Override
-	public Object compile(CompilerEnvirons compilerEnv, ScriptNode tree, boolean returnFunction) {
+	public Object compile(Context cx, CompilerEnvirons compilerEnv, ScriptNode tree, boolean returnFunction) {
 		CodeGenerator cgen = new CodeGenerator();
-		itsData = cgen.compile(compilerEnv, tree, returnFunction);
+		itsData = cgen.compile(cx, compilerEnv, tree, returnFunction);
 		return itsData;
 	}
 
 	@Override
-	public Script createScriptObject(Object bytecode, Object staticSecurityDomain) {
+	public Script createScriptObject(Context cx, Object bytecode, Object staticSecurityDomain) {
 		if (bytecode != itsData) {
 			throw Kit.codeBug();
 		}
-		return InterpretedFunction.createScript(itsData, staticSecurityDomain);
+		return InterpretedFunction.createScript(cx, itsData, staticSecurityDomain);
 	}
 
 	@Override

@@ -105,7 +105,7 @@ class NativeRegExpCtor extends BaseFunction {
 	}
 
 	@Override
-	protected int findInstanceIdInfo(String s) {
+	protected int findInstanceIdInfo(Context cx, String s) {
 		int id = switch (s) {
 			case "multiline" -> Id_multiline;
 			case "$*" -> Id_STAR;
@@ -132,7 +132,7 @@ class NativeRegExpCtor extends BaseFunction {
 		};
 
 		if (id == 0) {
-			return super.findInstanceIdInfo(s);
+			return super.findInstanceIdInfo(cx, s);
 		}
 
 		int attr = switch (id) {

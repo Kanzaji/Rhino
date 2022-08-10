@@ -284,7 +284,7 @@ public class NativeObject extends IdScriptableObject {
 				boolean isSetter = (id == Id___lookupSetter__);
 				Object gs;
 				for (; ; ) {
-					gs = so.getGetterOrSetter(s.stringId, index, isSetter);
+					gs = so.getGetterOrSetter(cx, s.stringId, index, isSetter);
 					if (gs != null) {
 						break;
 					}

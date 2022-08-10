@@ -65,11 +65,15 @@ public class ClassData {
 				String n = cache.sharedData.getRemapper().getMappedMethod(cache.sharedData, publicClassData, method);
 				var cm = make(m1, n);
 
-				if (cm.methods == null) {
-					cm.methods = new HashMap<>();
-				}
+				if (method.signature.isEmpty()) {
+					cm.noArgMethod = method;
+				} else {
+					if (cm.methods == null) {
+						cm.methods = new HashMap<>();
+					}
 
-				cm.methods.put(method.signature, method);
+					cm.methods.put(method.signature, method);
+				}
 
 				if (method.signature.types.length == 0 && n.length() >= 4 && !method.isVoid() && Character.isUpperCase(n.charAt(3)) && n.startsWith("get")) {
 					make(m1, n.substring(3, 4).toLowerCase() + n.substring(4)).beanGet = method;

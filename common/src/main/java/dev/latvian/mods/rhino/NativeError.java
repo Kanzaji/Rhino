@@ -6,8 +6,7 @@
 
 package dev.latvian.mods.rhino;
 
-import dev.latvian.mods.rhino.classdata.BaseMember;
-import dev.latvian.mods.rhino.classdata.CallbackMethodMember;
+import dev.latvian.mods.rhino.classdata.SyntheticMethod;
 
 /**
  * The class of error objects
@@ -17,11 +16,11 @@ import dev.latvian.mods.rhino.classdata.CallbackMethodMember;
 final class NativeError extends IdScriptableObject {
 	private static final Object ERROR_TAG = "Error";
 
-	private static final BaseMember ERROR_DELEGATE_GET_STACK = new CallbackMethodMember<NativeError>((cx, scope, self, args) -> self.getStackDelegated((Context) args[0], (Scriptable) args[1]));
-	private static final BaseMember ERROR_DELEGATE_SET_STACK = new CallbackMethodMember<NativeError>((cx, scope, self, args) -> {
+	private static final SyntheticMethod<NativeError> ERROR_DELEGATE_GET_STACK = SyntheticMethod.make((cx, scope, self, args) -> self.getStackDelegated((Context) args[0], (Scriptable) args[1]), Context.class, Scriptable.class);
+	private static final SyntheticMethod<NativeError> ERROR_DELEGATE_SET_STACK = SyntheticMethod.make((cx, scope, self, args) -> {
 		self.setStackDelegated((Context) args[0], (Scriptable) args[1], args[2]);
 		return null;
-	});
+	}, Context.class, Scriptable.class, Object.class);
 
 	/**
 	 * Default stack limit is set to "Infinity", here represented as a negative int
@@ -281,16 +280,16 @@ final class NativeError extends IdScriptableObject {
 	private static final class ProtoProps {
 		static final String KEY = "_ErrorPrototypeProps";
 
-		static final BaseMember GET_STACK_LIMIT = new CallbackMethodMember<ProtoProps>((cx, scope, obj, args) -> obj.getStackTraceLimit((Scriptable) args[0]));
-		static final BaseMember SET_STACK_LIMIT = new CallbackMethodMember<ProtoProps>((cx, scope, obj, args) -> {
+		static final SyntheticMethod<ProtoProps> GET_STACK_LIMIT = SyntheticMethod.make((cx, scope, obj, args) -> obj.getStackTraceLimit((Scriptable) args[0]), Scriptable.class);
+		static final SyntheticMethod<ProtoProps> SET_STACK_LIMIT = SyntheticMethod.make((cx, scope, obj, args) -> {
 			obj.setStackTraceLimit(cx, (Scriptable) args[0], args[1]);
 			return null;
-		});
-		static final BaseMember GET_PREPARE_STACK = new CallbackMethodMember<ProtoProps>((cx, scope, obj, args) -> obj.getPrepareStackTrace((Scriptable) args[0]));
-		static final BaseMember SET_PREPARE_STACK = new CallbackMethodMember<ProtoProps>((cx, scope, obj, args) -> {
+		}, Context.class, Scriptable.class, Object.class);
+		static final SyntheticMethod<ProtoProps> GET_PREPARE_STACK = SyntheticMethod.make((cx, scope, obj, args) -> obj.getPrepareStackTrace((Scriptable) args[0]), Scriptable.class);
+		static final SyntheticMethod<ProtoProps> SET_PREPARE_STACK = SyntheticMethod.make((cx, scope, obj, args) -> {
 			obj.setPrepareStackTrace((Scriptable) args[0], args[1]);
 			return null;
-		});
+		}, Scriptable.class, Object.class);
 
 		private int stackTraceLimit = DEFAULT_STACK_LIMIT;
 		private Function prepareStackTrace;

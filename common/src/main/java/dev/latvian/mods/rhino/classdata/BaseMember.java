@@ -9,7 +9,7 @@ import java.lang.reflect.InvocationTargetException;
 
 public interface BaseMember {
 	default MethodSignature getSignature() {
-		throw new IllegalStateException("getSignature() is not supported for this member!");
+		throw new MemberMethodNotSupportedException.Signature(this);
 	}
 
 	default boolean isMethod() {

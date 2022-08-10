@@ -140,6 +140,18 @@ public class Context {
 	}
 
 	/**
+	 * Internal method that reports an error for missing calls to
+	 * enter().
+	 */
+	public static Context getContext() {
+		Context cx = getCurrentContext();
+		if (cx == null) {
+			throw new RuntimeException("No Context associated with current Thread");
+		}
+		return cx;
+	}
+
+	/**
 	 * Same as calling {@link ContextFactory#enterContext()} on the global
 	 * ContextFactory instance.
 	 *
@@ -829,13 +841,12 @@ public class Context {
 	 * @param scope top scope object
 	 * @return value suitable to pass to any API that takes JavaScript values.
 	 */
-	public static Object javaToJS(Object value, Scriptable scope) {
+	public static Object javaToJS(Context cx, Object value, Scriptable scope) {
 		if (value instanceof String || value instanceof Number || value instanceof Boolean || value instanceof Scriptable) {
 			return value;
 		} else if (value instanceof Character) {
 			return String.valueOf(((Character) value).charValue());
 		} else {
-			Context cx = Context.getContext();
 			return cx.getWrapFactory().wrap(cx, scope, value, null);
 		}
 	}
@@ -1189,18 +1200,6 @@ public class Context {
 
 	/********** end of API **********/
 
-	/**
-	 * Internal method that reports an error for missing calls to
-	 * enter().
-	 */
-	public static Context getContext() {
-		Context cx = getCurrentContext();
-		if (cx == null) {
-			throw new RuntimeException("No Context associated with current Thread");
-		}
-		return cx;
-	}
-
 	private Object compileImpl(Context cx, Scriptable scope, String sourceString, String sourceName, int lineno, Object securityDomain, boolean returnFunction, Evaluator compiler, ErrorReporter compilationErrorReporter) throws IOException {
 		if (sourceName == null) {
 			sourceName = "unnamed script";
@@ -1228,7 +1227,7 @@ public class Context {
 				compiler = createCompiler();
 			}
 
-			bytecode = compiler.compile(compilerEnv, tree, returnFunction);
+			bytecode = compiler.compile(cx, compilerEnv, tree, returnFunction);
 		} catch (ClassFileFormatException e) {
 			// we hit some class file limit, fall back to interpreter or report
 
@@ -1236,14 +1235,14 @@ public class Context {
 			tree = parse(cx, sourceString, sourceName, lineno, compilerEnv, compilationErrorReporter, returnFunction);
 
 			compiler = createInterpreter();
-			bytecode = compiler.compile(compilerEnv, tree, returnFunction);
+			bytecode = compiler.compile(cx, compilerEnv, tree, returnFunction);
 		}
 
 		Object result;
 		if (returnFunction) {
 			result = compiler.createFunctionObject(this, scope, bytecode, securityDomain);
 		} else {
-			result = compiler.createScriptObject(bytecode, securityDomain);
+			result = compiler.createScriptObject(cx, bytecode, securityDomain);
 		}
 
 		return result;

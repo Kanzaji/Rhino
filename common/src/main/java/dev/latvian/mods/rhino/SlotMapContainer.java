@@ -6,9 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import dev.latvian.mods.rhino.ScriptableObject.Slot;
-import dev.latvian.mods.rhino.ScriptableObject.SlotAccess;
-
 import java.util.Iterator;
 
 /**
@@ -49,27 +46,27 @@ class SlotMapContainer implements SlotMap {
 	}
 
 	@Override
-	public Slot get(Object key, int index, SlotAccess accessType) {
+	public Slot get(Context cx, Object key, int index, SlotAccess accessType) {
 		if (accessType != SlotAccess.QUERY) {
-			checkMapSize();
+			checkMapSize(cx);
 		}
-		return map.get(key, index, accessType);
+		return map.get(cx, key, index, accessType);
 	}
 
 	@Override
-	public Slot query(Object key, int index) {
-		return map.query(key, index);
+	public Slot query(Context cx, Object key, int index) {
+		return map.query(cx, key, index);
 	}
 
 	@Override
-	public void addSlot(Slot newSlot) {
-		checkMapSize();
-		map.addSlot(newSlot);
+	public void addSlot(Context cx, Slot newSlot) {
+		checkMapSize(cx);
+		map.addSlot(cx, newSlot);
 	}
 
 	@Override
-	public void remove(Object key, int index) {
-		map.remove(key, index);
+	public void remove(Context cx, Object key, int index) {
+		map.remove(cx, key, index);
 	}
 
 	@Override
@@ -90,11 +87,11 @@ class SlotMapContainer implements SlotMap {
 	 * Before inserting a new item in the map, check and see if we need to expand from the embedded
 	 * map to a HashMap that is more robust against large numbers of hash collisions.
 	 */
-	protected void checkMapSize() {
+	protected void checkMapSize(Context cx) {
 		if ((map instanceof EmbeddedSlotMap) && map.size() >= LARGE_HASH_SIZE) {
 			SlotMap newMap = new HashSlotMap();
 			for (Slot s : map) {
-				newMap.addSlot(s);
+				newMap.addSlot(cx, s);
 			}
 			map = newMap;
 		}

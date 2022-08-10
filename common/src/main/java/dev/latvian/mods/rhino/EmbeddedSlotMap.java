@@ -18,21 +18,21 @@ import java.util.NoSuchElementException;
 
 public class EmbeddedSlotMap implements SlotMap {
 
-	private ScriptableObject.Slot[] slots;
+	private Slot[] slots;
 
 	// gateways into the definition-order linked list of slots
-	private ScriptableObject.Slot firstAdded;
-	private ScriptableObject.Slot lastAdded;
+	private Slot firstAdded;
+	private Slot lastAdded;
 
 	private int count;
 
 	// initial slot array size, must be a power of 2
 	private static final int INITIAL_SLOT_SIZE = 4;
 
-	private static final class Iter implements Iterator<ScriptableObject.Slot> {
-		private ScriptableObject.Slot next;
+	private static final class Iter implements Iterator<Slot> {
+		private Slot next;
 
-		Iter(ScriptableObject.Slot slot) {
+		Iter(Slot slot) {
 			next = slot;
 		}
 
@@ -42,8 +42,8 @@ public class EmbeddedSlotMap implements SlotMap {
 		}
 
 		@Override
-		public ScriptableObject.Slot next() {
-			ScriptableObject.Slot ret = next;
+		public Slot next() {
+			Slot ret = next;
 			if (ret == null) {
 				throw new NoSuchElementException();
 			}
@@ -66,7 +66,7 @@ public class EmbeddedSlotMap implements SlotMap {
 	}
 
 	@Override
-	public Iterator<ScriptableObject.Slot> iterator() {
+	public Iterator<Slot> iterator() {
 		return new Iter(firstAdded);
 	}
 
@@ -74,14 +74,14 @@ public class EmbeddedSlotMap implements SlotMap {
 	 * Locate the slot with the given name or index.
 	 */
 	@Override
-	public ScriptableObject.Slot query(Object key, int index) {
+	public Slot query(Context cx, Object key, int index) {
 		if (slots == null) {
 			return null;
 		}
 
 		final int indexOrHash = (key != null ? key.hashCode() : index);
 		final int slotIndex = getSlotIndex(slots.length, indexOrHash);
-		for (ScriptableObject.Slot slot = slots[slotIndex]; slot != null; slot = slot.next) {
+		for (Slot slot = slots[slotIndex]; slot != null; slot = slot.next) {
 			Object skey = slot.name;
 			if (indexOrHash == slot.indexOrHash && (skey == key || (key != null && key.equals(skey)))) {
 				return slot;
@@ -98,13 +98,13 @@ public class EmbeddedSlotMap implements SlotMap {
 	 * @param index index or 0 if slot holds property name.
 	 */
 	@Override
-	public ScriptableObject.Slot get(Object key, int index, ScriptableObject.SlotAccess accessType) {
-		if (slots == null && accessType == ScriptableObject.SlotAccess.QUERY) {
+	public Slot get(Context cx, Object key, int index, SlotAccess accessType) {
+		if (slots == null && accessType == SlotAccess.QUERY) {
 			return null;
 		}
 
 		final int indexOrHash = (key != null ? key.hashCode() : index);
-		ScriptableObject.Slot slot = null;
+		Slot slot = null;
 
 		if (slots != null) {
 			final int slotIndex = getSlotIndex(slots.length, indexOrHash);
@@ -124,12 +124,12 @@ public class EmbeddedSlotMap implements SlotMap {
 					}
 					break;
 				case MODIFY_GETTER_SETTER:
-					if (slot instanceof ScriptableObject.GetterSlot) {
+					if (slot instanceof GetterSlot) {
 						return slot;
 					}
 					break;
 				case CONVERT_ACCESSOR_TO_DATA:
-					if (!(slot instanceof ScriptableObject.GetterSlot)) {
+					if (!(slot instanceof GetterSlot)) {
 						return slot;
 					}
 					break;
@@ -141,16 +141,16 @@ public class EmbeddedSlotMap implements SlotMap {
 		return createSlot(key, indexOrHash, accessType, slot);
 	}
 
-	private ScriptableObject.Slot createSlot(Object key, int indexOrHash, ScriptableObject.SlotAccess accessType, ScriptableObject.Slot existingSlot) {
+	private Slot createSlot(Object key, int indexOrHash, SlotAccess accessType, Slot existingSlot) {
 		if (count == 0) {
 			// Always throw away old slots if any on empty insert.
-			slots = new ScriptableObject.Slot[INITIAL_SLOT_SIZE];
+			slots = new Slot[INITIAL_SLOT_SIZE];
 		} else if (existingSlot != null) {
 			// Re-search the slot list because it is a singly-linked list to find
 			// where to replace it with a new object if necessary
 			final int insertPos = getSlotIndex(slots.length, indexOrHash);
-			ScriptableObject.Slot prev = slots[insertPos];
-			ScriptableObject.Slot slot = prev;
+			Slot prev = slots[insertPos];
+			Slot slot = prev;
 			while (slot != null) {
 				if (slot.indexOrHash == indexOrHash && (slot.name == key || (key != null && key.equals(slot.name)))) {
 					break;
@@ -165,13 +165,13 @@ public class EmbeddedSlotMap implements SlotMap {
 				// vice versa, or it could be a race in application code.
 				// Check if we need to replace the slot depending on the
 				// accessType flag and return the appropriate slot instance.
-				ScriptableObject.Slot newSlot;
+				Slot newSlot;
 
-				if (accessType == ScriptableObject.SlotAccess.MODIFY_GETTER_SETTER && !(slot instanceof ScriptableObject.GetterSlot)) {
-					newSlot = new ScriptableObject.GetterSlot(key, indexOrHash, slot.getAttributes());
-				} else if (accessType == ScriptableObject.SlotAccess.CONVERT_ACCESSOR_TO_DATA && (slot instanceof ScriptableObject.GetterSlot)) {
-					newSlot = new ScriptableObject.Slot(key, indexOrHash, slot.getAttributes());
-				} else if (accessType == ScriptableObject.SlotAccess.MODIFY_CONST) {
+				if (accessType == SlotAccess.MODIFY_GETTER_SETTER && !(slot instanceof GetterSlot)) {
+					newSlot = new GetterSlot(key, indexOrHash, slot.getAttributes());
+				} else if (accessType == SlotAccess.CONVERT_ACCESSOR_TO_DATA && (slot instanceof GetterSlot)) {
+					newSlot = new Slot(key, indexOrHash, slot.getAttributes());
+				} else if (accessType == SlotAccess.MODIFY_CONST) {
 					return null;
 				} else {
 					return slot;
@@ -184,7 +184,7 @@ public class EmbeddedSlotMap implements SlotMap {
 				if (slot == firstAdded) {
 					firstAdded = newSlot;
 				} else {
-					ScriptableObject.Slot ps = firstAdded;
+					Slot ps = firstAdded;
 					while ((ps != null) && (ps.orderedNext != slot)) {
 						ps = ps.orderedNext;
 					}
@@ -211,13 +211,13 @@ public class EmbeddedSlotMap implements SlotMap {
 		// Check if the table is not too full before inserting.
 		if (4 * (count + 1) > 3 * slots.length) {
 			// table size must be a power of 2 -- always grow by x2!
-			ScriptableObject.Slot[] newSlots = new ScriptableObject.Slot[slots.length * 2];
+			Slot[] newSlots = new Slot[slots.length * 2];
 			copyTable(slots, newSlots);
 			slots = newSlots;
 		}
 
-		ScriptableObject.Slot newSlot = (accessType == ScriptableObject.SlotAccess.MODIFY_GETTER_SETTER ? new ScriptableObject.GetterSlot(key, indexOrHash, 0) : new ScriptableObject.Slot(key, indexOrHash, 0));
-		if (accessType == ScriptableObject.SlotAccess.MODIFY_CONST) {
+		Slot newSlot = (accessType == SlotAccess.MODIFY_GETTER_SETTER ? new GetterSlot(key, indexOrHash, 0) : new Slot(key, indexOrHash, 0));
+		if (accessType == SlotAccess.MODIFY_CONST) {
 			newSlot.setAttributes(ScriptableObject.CONST);
 		}
 		insertNewSlot(newSlot);
@@ -225,14 +225,14 @@ public class EmbeddedSlotMap implements SlotMap {
 	}
 
 	@Override
-	public void addSlot(ScriptableObject.Slot newSlot) {
+	public void addSlot(Context cx, Slot newSlot) {
 		if (slots == null) {
-			slots = new ScriptableObject.Slot[INITIAL_SLOT_SIZE];
+			slots = new Slot[INITIAL_SLOT_SIZE];
 		}
 		insertNewSlot(newSlot);
 	}
 
-	private void insertNewSlot(ScriptableObject.Slot newSlot) {
+	private void insertNewSlot(Slot newSlot) {
 		++count;
 		// add new slot to linked list
 		if (lastAdded != null) {
@@ -247,13 +247,13 @@ public class EmbeddedSlotMap implements SlotMap {
 	}
 
 	@Override
-	public void remove(Object key, int index) {
+	public void remove(Context cx, Object key, int index) {
 		int indexOrHash = (key != null ? key.hashCode() : index);
 
 		if (count != 0) {
 			final int slotIndex = getSlotIndex(slots.length, indexOrHash);
-			ScriptableObject.Slot prev = slots[slotIndex];
-			ScriptableObject.Slot slot = prev;
+			Slot prev = slots[slotIndex];
+			Slot slot = prev;
 			while (slot != null) {
 				if (slot.indexOrHash == indexOrHash && (slot.name == key || (key != null && key.equals(slot.name)))) {
 					break;
@@ -264,7 +264,6 @@ public class EmbeddedSlotMap implements SlotMap {
 			if (slot != null) {
 				// non-configurable
 				if ((slot.getAttributes() & ScriptableObject.PERMANENT) != 0) {
-					Context cx = Context.getContext();
 					if (cx.isStrictMode()) {
 						throw ScriptRuntime.typeError1("msg.delete.property.with.configurable.false", key);
 					}
@@ -300,10 +299,10 @@ public class EmbeddedSlotMap implements SlotMap {
 		}
 	}
 
-	private static void copyTable(ScriptableObject.Slot[] oldSlots, ScriptableObject.Slot[] newSlots) {
-		for (ScriptableObject.Slot slot : oldSlots) {
+	private static void copyTable(Slot[] oldSlots, Slot[] newSlots) {
+		for (Slot slot : oldSlots) {
 			while (slot != null) {
-				ScriptableObject.Slot nextSlot = slot.next;
+				Slot nextSlot = slot.next;
 				slot.next = null;
 				addKnownAbsentSlot(newSlots, slot);
 				slot = nextSlot;
@@ -316,9 +315,9 @@ public class EmbeddedSlotMap implements SlotMap {
 	 * This is an optimization to use when inserting into empty table,
 	 * after table growth or during deserialization.
 	 */
-	private static void addKnownAbsentSlot(ScriptableObject.Slot[] addSlots, ScriptableObject.Slot slot) {
+	private static void addKnownAbsentSlot(Slot[] addSlots, Slot slot) {
 		final int insertPos = getSlotIndex(addSlots.length, slot.indexOrHash);
-		ScriptableObject.Slot old = addSlots[insertPos];
+		Slot old = addSlots[insertPos];
 		addSlots[insertPos] = slot;
 		slot.next = old;
 	}

@@ -27,7 +27,7 @@ public interface Evaluator {
 	 * createFunctionObject or createScriptObject, depending on the
 	 * value of returnFunction
 	 */
-	Object compile(CompilerEnvirons compilerEnv, ScriptNode tree, boolean returnFunction);
+	Object compile(Context cx, CompilerEnvirons compilerEnv, ScriptNode tree, boolean returnFunction);
 
 	/**
 	 * Create a function object.
@@ -47,7 +47,7 @@ public interface Evaluator {
 	 * @param staticSecurityDomain security domain
 	 * @return Script object that can be evaluated
 	 */
-	Script createScriptObject(Object bytecode, Object staticSecurityDomain);
+	Script createScriptObject(Context cx, Object bytecode, Object staticSecurityDomain);
 
 	/**
 	 * Capture stack information from the given exception.

@@ -2466,7 +2466,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 	}
 
 	@Override
-	protected int findInstanceIdInfo(String s) {
+	protected int findInstanceIdInfo(Context cx, String s) {
 		int id = switch (s) {
 			case "lastIndex" -> Id_lastIndex;
 			case "source" -> Id_source;
@@ -2477,7 +2477,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 		};
 
 		if (id == 0) {
-			return super.findInstanceIdInfo(s);
+			return super.findInstanceIdInfo(cx, s);
 		}
 
 		int attr = switch (id) {
