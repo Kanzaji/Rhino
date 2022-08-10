@@ -17,9 +17,9 @@ package dev.latvian.mods.rhino;
 public final class NativeCall extends IdScriptableObject {
 	private static final Object CALL_TAG = "Call";
 
-	static void init(Context cx, Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope) {
 		NativeCall obj = new NativeCall();
-		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, sealed);
+		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope);
 	}
 
 	NativeCall() {
@@ -31,7 +31,7 @@ public final class NativeCall extends IdScriptableObject {
 		setParentScope(scope);
 		// leave prototype null
 
-		this.originalArgs = (args == null) ? ScriptRuntime.EMPTY_ARGS : args;
+		this.originalArgs = (args == null) ? ScriptRuntime.EMPTY_OBJECTS : args;
 		this.isStrict = isStrict;
 
 		// initialize values of arguments

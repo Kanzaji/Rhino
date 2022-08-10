@@ -7,15 +7,12 @@
 package dev.latvian.mods.rhino;
 
 public abstract class ES6Iterator extends IdScriptableObject {
-	protected static void init(Context cx, ScriptableObject scope, boolean sealed, IdScriptableObject prototype, String tag) {
+	protected static void init(Context cx, ScriptableObject scope, IdScriptableObject prototype, String tag) {
 		if (scope != null) {
 			prototype.setParentScope(scope);
 			prototype.setPrototype(cx, getObjectPrototype(cx, scope));
 		}
 		prototype.activatePrototypeMap(MAX_PROTOTYPE_ID);
-		if (sealed) {
-			prototype.sealObject(cx);
-		}
 
 		// Need to access Iterator prototype when constructing
 		// Iterator instances, but don't have a iterator constructor

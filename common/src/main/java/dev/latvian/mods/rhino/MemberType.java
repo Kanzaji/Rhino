@@ -17,7 +17,7 @@ public enum MemberType {
 		name = n;
 	}
 
-	public static MemberType get(@Nullable Object value) {
+	public static MemberType get(Context cx, @Nullable Object value) {
 		if (value == null) {
 			return OBJECT;
 		}
@@ -36,7 +36,7 @@ public enum MemberType {
 		if (value instanceof Boolean) {
 			return BOOLEAN;
 		}
-		throw ScriptRuntime.errorWithClassName(Context.getCurrentContext(), "msg.invalid.type", value);
+		throw ScriptRuntime.errorWithClassName(cx, "msg.invalid.type", value);
 	}
 
 	@Override

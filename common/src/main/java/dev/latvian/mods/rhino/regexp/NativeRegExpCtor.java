@@ -236,12 +236,12 @@ class NativeRegExpCtor extends BaseFunction {
 		switch (shifted) {
 			case Id_multiline:
 			case Id_STAR:
-				getImpl(cx).multiline = ScriptRuntime.toBoolean(value);
+				getImpl(cx).multiline = ScriptRuntime.toBoolean(cx, value);
 				return;
 
 			case Id_input:
 			case Id_UNDERSCORE:
-				getImpl(cx).input = ScriptRuntime.toString(value);
+				getImpl(cx).input = ScriptRuntime.toString(cx, value);
 				return;
 
 			case Id_lastMatch:

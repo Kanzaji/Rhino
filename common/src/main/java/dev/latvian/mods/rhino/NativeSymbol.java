@@ -24,9 +24,9 @@ public class NativeSymbol extends IdScriptableObject implements Symbol {
 	private final SymbolKey key;
 	private final NativeSymbol symbolData;
 
-	public static void init(Context cx, Scriptable scope, boolean sealed) {
+	public static void init(Context cx, Scriptable scope) {
 		NativeSymbol obj = new NativeSymbol("");
-		ScriptableObject ctor = obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, false);
+		ScriptableObject ctor = obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope);
 
 		cx.putThreadLocal(CONSTRUCTOR_SLOT, Boolean.TRUE);
 		try {
@@ -45,11 +45,6 @@ public class NativeSymbol extends IdScriptableObject implements Symbol {
 
 		} finally {
 			cx.removeThreadLocal(CONSTRUCTOR_SLOT);
-		}
-
-		if (sealed) {
-			// Can't seal until we have created all the stuff above!
-			ctor.sealObject(cx);
 		}
 	}
 
@@ -187,7 +182,7 @@ public class NativeSymbol extends IdScriptableObject implements Symbol {
 						throw ScriptRuntime.typeError0("msg.no.symbol.new");
 					}
 					// Unless we are being called by our own internal "new"
-					return js_constructor(args);
+					return js_constructor(cx, args);
 				}
 				return construct(cx, scope, args);
 
@@ -209,13 +204,13 @@ public class NativeSymbol extends IdScriptableObject implements Symbol {
 		}
 	}
 
-	private static NativeSymbol js_constructor(Object[] args) {
+	private static NativeSymbol js_constructor(Context cx, Object[] args) {
 		String desc;
 		if (args.length > 0) {
 			if (Undefined.instance.equals(args[0])) {
 				desc = "";
 			} else {
-				desc = ScriptRuntime.toString(args[0]);
+				desc = ScriptRuntime.toString(cx, args[0]);
 			}
 		} else {
 			desc = "";
@@ -234,7 +229,7 @@ public class NativeSymbol extends IdScriptableObject implements Symbol {
 	}
 
 	private Object js_for(Context cx, Scriptable scope, Object[] args) {
-		String name = (args.length > 0 ? ScriptRuntime.toString(args[0]) : ScriptRuntime.toString(Undefined.instance));
+		String name = (args.length > 0 ? ScriptRuntime.toString(cx, args[0]) : ScriptRuntime.toString(cx, Undefined.instance));
 
 		Map<String, NativeSymbol> table = getGlobalMap();
 		NativeSymbol ret = table.get(name);
@@ -266,18 +261,11 @@ public class NativeSymbol extends IdScriptableObject implements Symbol {
 		return key.toString();
 	}
 
-	// Symbol objects have a special property that one cannot add properties.
-
-	private static boolean isStrictMode() {
-		final Context cx = Context.getCurrentContext();
-		return (cx != null) && cx.isStrictMode();
-	}
-
 	@Override
 	public void put(Context cx, String name, Scriptable start, Object value) {
 		if (!isSymbol()) {
 			super.put(cx, name, start, value);
-		} else if (isStrictMode()) {
+		} else if (cx.isStrictMode()) {
 			throw ScriptRuntime.typeError0("msg.no.assign.symbol.strict");
 		}
 	}
@@ -286,7 +274,7 @@ public class NativeSymbol extends IdScriptableObject implements Symbol {
 	public void put(Context cx, int index, Scriptable start, Object value) {
 		if (!isSymbol()) {
 			super.put(cx, index, start, value);
-		} else if (isStrictMode()) {
+		} else if (cx.isStrictMode()) {
 			throw ScriptRuntime.typeError0("msg.no.assign.symbol.strict");
 		}
 	}
@@ -295,7 +283,7 @@ public class NativeSymbol extends IdScriptableObject implements Symbol {
 	public void put(Context cx, Symbol key, Scriptable start, Object value) {
 		if (!isSymbol()) {
 			super.put(cx, key, start, value);
-		} else if (isStrictMode()) {
+		} else if (cx.isStrictMode()) {
 			throw ScriptRuntime.typeError0("msg.no.assign.symbol.strict");
 		}
 	}

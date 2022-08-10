@@ -1,10 +1,9 @@
 package dev.latvian.mods.rhino.test.classdata;
 
 import dev.latvian.mods.rhino.Context;
-import dev.latvian.mods.rhino.ScriptRuntime;
 import dev.latvian.mods.rhino.classdata.MethodSignature;
+import dev.latvian.mods.rhino.classdata.PublicClassData;
 import dev.latvian.mods.rhino.mod.util.NBTUtils;
-import dev.latvian.mods.rhino.util.HideFromJS;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.player.Player;
 import org.junit.jupiter.api.Assertions;
@@ -13,8 +12,8 @@ import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 
@@ -27,7 +26,7 @@ public class ClassDataTests {
 		Context cx = Context.enterWithNewFactory();
 		var cache = cx.getSharedData().getClassDataCache();
 		var data = cache.of(Player.class);
-		var member = data.getMember("x");
+		var member = data.getMember("x", false);
 		System.out.println(member);
 		Context.exit();
 	}
@@ -40,7 +39,7 @@ public class ClassDataTests {
 		typeWrappers.register(CompoundTag.class, NBTUtils::isTagCompound, NBTUtils::toTagCompound);
 		var cache = cx.getSharedData().getClassDataCache();
 		var data = cache.of(CompoundTag.class);
-		var member = data.getMember("merge");
+		var member = data.getMember("merge", false);
 		System.out.println(member);
 		Context.exit();
 
@@ -49,7 +48,7 @@ public class ClassDataTests {
 			return;
 		}
 
-		Object[] args = ScriptRuntime.unwrapArgs(new LinkedHashMap<>());
+		Object[] args = MethodSignature.unwrapArgs(cx, new Object[]{new LinkedHashMap<>()}, new Class<?>[]{CompoundTag.class});
 		var argsSig = MethodSignature.ofArgs(args);
 
 		var m = member.method(cx.getSharedData(), args, argsSig);
@@ -57,33 +56,13 @@ public class ClassDataTests {
 	}
 
 	@Test
-	@DisplayName("Public member test")
-	public void publicMemberTest() {
-		List<String> members = new ArrayList<>();
-		var type = TestClassC.class;
-
-		for (var constructor : type.getConstructors()) {
-			if (!constructor.isAnnotationPresent(HideFromJS.class)) {
-				members.add(constructor.toString());
-			}
-		}
-
-		for (var field : type.getFields()) {
-			int m = field.getModifiers();
-
-			if (!Modifier.isTransient(m) && !field.isAnnotationPresent(HideFromJS.class)) {
-				members.add(field.toString());
-			}
-		}
-
-		for (var method : type.getMethods()) {
-			int m = method.getModifiers();
-
-			if (!Modifier.isNative(m) && method.getDeclaringClass() != Object.class && !method.isAnnotationPresent(HideFromJS.class)) {
-				members.add(method.toString());
-			}
-		}
-
+	@DisplayName("PublicClassData test")
+	public void publicClassDataTest() {
+		List<Object> members = new ArrayList<>();
+		var data = PublicClassData.of(TestClassC.class);
+		members.addAll(Arrays.asList(data.getConstructors()));
+		members.addAll(Arrays.asList(data.getFields()));
+		members.addAll(Arrays.asList(data.getMethods()));
 		System.out.println(members);
 	}
 }

@@ -18,9 +18,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ClassCache {
 	private static final Object AKEY = "ClassCache";
-	private volatile boolean cachingIsEnabled = true;
-	private transient Map<Class<?>, JavaMembers> classTable;
+	private transient Map<JavaAdapter.JavaAdapterSignature, Class<?>> classAdapterCache;
 	private transient Map<Class<?>, Object> interfaceAdapterCache;
+	private int generatedClassSerial;
 	private Scriptable associatedScope;
 
 	/**
@@ -65,59 +65,15 @@ public class ClassCache {
 		return false;
 	}
 
-	/**
-	 * Empty caches of generated Java classes and Java reflection information.
-	 */
-	public synchronized void clearCaches() {
-		classTable = null;
-		interfaceAdapterCache = null;
+	Map<JavaAdapter.JavaAdapterSignature, Class<?>> getInterfaceAdapterCacheMap() {
+		if (classAdapterCache == null) {
+			classAdapterCache = new ConcurrentHashMap<>(16, 0.75f, 1);
+		}
+		return classAdapterCache;
 	}
 
-	/**
-	 * Check if generated Java classes and Java reflection information
-	 * is cached.
-	 */
-	public final boolean isCachingEnabled() {
-		return cachingIsEnabled;
-	}
-
-	/**
-	 * Set whether to cache some values.
-	 * <p>
-	 * By default, the engine will cache the results of
-	 * <code>Class.getMethods()</code> and similar calls.
-	 * This can speed execution dramatically, but increases the memory
-	 * footprint. Also, with caching enabled, references may be held to
-	 * objects past the lifetime of any real usage.
-	 * <p>
-	 * If caching is enabled and this method is called with a
-	 * <code>false</code> argument, the caches will be emptied.
-	 * <p>
-	 * Caching is enabled by default.
-	 *
-	 * @param enabled if true, caching is enabled
-	 * @see #clearCaches()
-	 */
-	public synchronized void setCachingEnabled(boolean enabled) {
-		if (enabled == cachingIsEnabled) {
-			return;
-		}
-		if (!enabled) {
-			clearCaches();
-		}
-		cachingIsEnabled = enabled;
-	}
-
-	/**
-	 * @return a map from classes to associated JavaMembers objects
-	 */
-	Map<Class<?>, JavaMembers> getClassCacheMap() {
-		if (classTable == null) {
-			// Use 1 as concurrency level here and for other concurrent hash maps
-			// as we don't expect high levels of sustained concurrent writes.
-			classTable = new ConcurrentHashMap<>(16, 0.75f, 1);
-		}
-		return classTable;
+	public final synchronized int newClassSerialNumber() {
+		return ++generatedClassSerial;
 	}
 
 	Object getInterfaceAdapter(Class<?> cl) {
@@ -125,12 +81,10 @@ public class ClassCache {
 	}
 
 	synchronized void cacheInterfaceAdapter(Class<?> cl, Object iadapter) {
-		if (cachingIsEnabled) {
-			if (interfaceAdapterCache == null) {
-				interfaceAdapterCache = new ConcurrentHashMap<>(16, 0.75f, 1);
-			}
-			interfaceAdapterCache.put(cl, iadapter);
+		if (interfaceAdapterCache == null) {
+			interfaceAdapterCache = new ConcurrentHashMap<>(16, 0.75f, 1);
 		}
+		interfaceAdapterCache.put(cl, iadapter);
 	}
 
 	Scriptable getAssociatedScope() {

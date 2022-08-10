@@ -37,7 +37,7 @@ public class RegExp {
 	public Object action(Context cx, Scriptable scope, Scriptable thisObj, Object[] args, int actionType) {
 		GlobData data = new GlobData();
 		data.mode = actionType;
-		data.str = ScriptRuntime.toString(thisObj);
+		data.str = ScriptRuntime.toString(cx, thisObj);
 
 		switch (actionType) {
 			case RA_MATCH -> {
@@ -59,7 +59,7 @@ public class RegExp {
 					re = createRegExp(cx, scope, args, 2, true);
 				} else {
 					Object arg0 = args.length < 1 ? Undefined.instance : args[0];
-					search = ScriptRuntime.toString(arg0);
+					search = ScriptRuntime.toString(cx, arg0);
 				}
 
 				Object arg1 = args.length < 2 ? Undefined.instance : args[1];
@@ -68,7 +68,7 @@ public class RegExp {
 				if (arg1 instanceof Function && (!(arg1 instanceof NativeRegExp))) {
 					lambda = (Function) arg1;
 				} else {
-					repstr = ScriptRuntime.toString(arg1);
+					repstr = ScriptRuntime.toString(cx, arg1);
 				}
 
 				data.lambda = lambda;
@@ -121,11 +121,11 @@ public class RegExp {
 		} else if (args[0] instanceof NativeRegExp) {
 			re = (NativeRegExp) args[0];
 		} else {
-			String src = ScriptRuntime.toString(args[0]);
+			String src = ScriptRuntime.toString(cx, args[0]);
 			String opt;
 			if (optarg < args.length) {
 				args[0] = src;
-				opt = ScriptRuntime.toString(args[optarg]);
+				opt = ScriptRuntime.toString(cx, args[optarg]);
 			} else {
 				opt = null;
 			}
@@ -307,7 +307,7 @@ public class RegExp {
 			try {
 				Scriptable parent = ScriptableObject.getTopLevelScope(scope);
 				Object result = rdata.lambda.call(cx, parent, parent, args);
-				lambdaStr = ScriptRuntime.toString(result);
+				lambdaStr = ScriptRuntime.toString(cx, result);
 			} finally {
 				ScriptRuntime.setRegExpProxy(cx, reImpl);
 			}
@@ -449,7 +449,7 @@ public class RegExp {
 		long limit = 0;  // Initialize to avoid warning.
 		if (limited) {
 			/* Clamp limit between 0 and 1 + string length. */
-			limit = ScriptRuntime.toUint32(args[1]);
+			limit = ScriptRuntime.toUint32(cx, args[1]);
 			if (limit == 0) {
 				return result;
 			}
@@ -478,7 +478,7 @@ public class RegExp {
 			}
 		}
 		if (re == null) {
-			separator = ScriptRuntime.toString(args[0]);
+			separator = ScriptRuntime.toString(cx, args[0]);
 			matchlen[0] = separator.length();
 		}
 

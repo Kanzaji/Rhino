@@ -13,7 +13,7 @@ package dev.latvian.mods.rhino;
  * for operations on its parent.
  */
 public class NativeWith implements Scriptable, SymbolScriptable, IdFunctionCall {
-	static void init(Context cx, Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope) {
 		NativeWith obj = new NativeWith();
 
 		obj.setParentScope(scope);
@@ -21,9 +21,6 @@ public class NativeWith implements Scriptable, SymbolScriptable, IdFunctionCall 
 
 		IdFunctionObject ctor = new IdFunctionObject(obj, FTAG, Id_constructor, "With", 0, scope);
 		ctor.markAsConstructor(obj);
-		if (sealed) {
-			ctor.sealObject(cx);
-		}
 		ctor.exportAsScopeProperty(cx);
 	}
 
@@ -112,21 +109,21 @@ public class NativeWith implements Scriptable, SymbolScriptable, IdFunctionCall 
 	}
 
 	@Override
-	public void delete(Context cx, String id) {
-		prototype.delete(cx, id);
+	public void delete(Context cx, Scriptable scope, String id) {
+		prototype.delete(cx, scope, id);
 	}
 
 	@Override
-	public void delete(Context cx, Symbol key) {
+	public void delete(Context cx, Scriptable scope, Symbol key) {
 		if (prototype instanceof SymbolScriptable) {
-			((SymbolScriptable) prototype).delete(cx, key);
+			((SymbolScriptable) prototype).delete(cx, scope, key);
 		}
 	}
 
 
 	@Override
-	public void delete(Context cx, int index) {
-		prototype.delete(cx, index);
+	public void delete(Context cx, Scriptable scope, int index) {
+		prototype.delete(cx, scope, index);
 	}
 
 	@Override

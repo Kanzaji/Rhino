@@ -38,7 +38,7 @@ public abstract class RhinoException extends RuntimeException {
 
 	@Override
 	public final String getMessage() {
-		String details = details();
+		String details = details(Context.getCurrentContext());
 		if (sourceName == null || lineNumber <= 0) {
 			return details;
 		}
@@ -53,7 +53,7 @@ public abstract class RhinoException extends RuntimeException {
 		return buf.toString();
 	}
 
-	public String details() {
+	public String details(Context cx) {
 		return super.getMessage();
 	}
 
@@ -196,8 +196,8 @@ public abstract class RhinoException extends RuntimeException {
 	 * @return a script stack dump
 	 * @since 1.6R6
 	 */
-	public String getScriptStackTrace() {
-		return getScriptStackTrace(NativeError.DEFAULT_STACK_LIMIT, null);
+	public String getScriptStackTrace(Context cx) {
+		return getScriptStackTrace(cx, NativeError.DEFAULT_STACK_LIMIT, null);
 	}
 
 	/**
@@ -214,9 +214,9 @@ public abstract class RhinoException extends RuntimeException {
 	 * @return a script stack dump
 	 * @since 1.8.0
 	 */
-	public String getScriptStackTrace(int limit, String functionName) {
+	public String getScriptStackTrace(Context cx, int limit, String functionName) {
 		ScriptStackElement[] stack = getScriptStack(limit, functionName);
-		return formatStackTrace(stack, details());
+		return formatStackTrace(stack, details(cx));
 	}
 
 	static String formatStackTrace(ScriptStackElement[] stack, String message) {

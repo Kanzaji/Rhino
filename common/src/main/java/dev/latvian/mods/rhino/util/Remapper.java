@@ -1,24 +1,24 @@
 package dev.latvian.mods.rhino.util;
 
 import dev.latvian.mods.rhino.SharedContextData;
+import dev.latvian.mods.rhino.classdata.FieldInfo;
+import dev.latvian.mods.rhino.classdata.MethodInfo;
+import dev.latvian.mods.rhino.classdata.PublicClassData;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.function.Function;
 
 public interface Remapper {
-	String remapClass(SharedContextData data, Class<?> from, String className);
+	String remapClass(SharedContextData data, PublicClassData from);
 
 	String unmapClass(SharedContextData data, String from);
 
-	String remapField(SharedContextData data, Class<?> from, Field field, String fieldName);
+	String remapField(SharedContextData data, PublicClassData from, FieldInfo field);
 
-	String remapMethod(SharedContextData data, Class<?> from, Method method, String methodString);
+	String remapMethod(SharedContextData data, PublicClassData from, MethodInfo method);
 
-	default String getMappedClass(SharedContextData data, Class<?> from) {
-		String n = from.getName();
-		String s = remapClass(data, from, n);
-		return s.isEmpty() ? n : s;
+	default String getMappedClass(SharedContextData data, PublicClassData from) {
+		String s = remapClass(data, from);
+		return s.isEmpty() ? from.toString() : s;
 	}
 
 	default String getUnmappedClass(SharedContextData data, String from) {
@@ -26,78 +26,48 @@ public interface Remapper {
 		return s.isEmpty() ? from : s;
 	}
 
-	default String getMappedField(SharedContextData data, Class<?> from, Field field) {
-		return getMappedField(data, from, field, field.getName());
-	}
-
-	default String getMappedField(SharedContextData data, Class<?> from, Field field, String fieldName) {
-		if (from == null || from == Object.class) {
-			return field.getName();
+	default String getMappedField(SharedContextData data, PublicClassData from, FieldInfo field) {
+		if (!field.remappedName.isEmpty()) {
+			return field.remappedName;
 		}
 
-		String s = remapField(data, from, field, fieldName);
+		String s = remapField(data, from, field);
 
 		if (!s.isEmpty()) {
 			return s;
 		}
 
-		String ss = getMappedField(data, from.getSuperclass(), field, fieldName);
+		for (var p : from.getParents()) {
+			String ss = remapField(data, p, field);
 
-		if (!ss.isEmpty()) {
-			return ss;
-		}
-
-		for (Class<?> c : from.getInterfaces()) {
-			String si = getMappedField(data, c, field, fieldName);
-
-			if (!si.isEmpty()) {
-				return si;
+			if (!ss.isEmpty()) {
+				return ss;
 			}
 		}
 
-		return field.getName();
+		return field.member.getName();
 	}
 
-	default String getMappedMethod(SharedContextData data, Class<?> from, Method method) {
-		StringBuilder sb = new StringBuilder(method.getName());
-		sb.append('(');
-
-		if (method.getParameterCount() > 0) {
-			for (Class<?> param : method.getParameterTypes()) {
-				sb.append(Remapper.getTypeName(param.getTypeName()));
-			}
+	default String getMappedMethod(SharedContextData data, PublicClassData from, MethodInfo method) {
+		if (!method.remappedName.isEmpty()) {
+			return method.remappedName;
 		}
 
-		sb.append(')');
-		return getMappedMethod(data, from, method, sb.toString());
-	}
-
-	default String getMappedMethod(SharedContextData data, Class<?> from, Method method, String methodString) {
-		if (from == null || from == Object.class) {
-			return method.getName();
-		}
-
-		String s = remapMethod(data, from, method, methodString);
+		String s = remapMethod(data, from, method);
 
 		if (!s.isEmpty()) {
 			return s;
 		}
 
-		String ss = getMappedMethod(data, from.getSuperclass(), method, methodString);
+		for (var p : from.getParents()) {
+			String ss = remapMethod(data, p, method);
 
-		if (!ss.isEmpty()) {
-			return ss;
-		}
-
-		for (Class<?> c : from.getInterfaces()) {
-			String si = getMappedMethod(data, c, method, methodString);
-
-			if (!si.isEmpty()) {
-				return si;
+			if (!ss.isEmpty()) {
+				return ss;
 			}
 		}
 
-		return method.getName();
+		return method.member.getName();
 	}
 
 	static String getTypeName(String type, Function<String, String> remap) {

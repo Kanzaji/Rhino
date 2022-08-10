@@ -103,12 +103,14 @@ package dev.latvian.mods.rhino;
 public class ContextFactory {
 	private static final ContextFactory global = new ContextFactory();
 
-	private volatile boolean sealed;
-
 	private final Object listenersLock = new Object();
 	private volatile Object listeners;
 	private boolean disabledListening;
 	private SharedContextData sharedData;
+
+	public SharedContextData getSharedData(Scriptable scope) {
+		return getSharedData();
+	}
 
 	public SharedContextData getSharedData() {
 		if (sharedData == null) {
@@ -155,32 +157,6 @@ public class ContextFactory {
 	 */
 	protected Context makeContext() {
 		return new Context(this);
-	}
-
-	/**
-	 * Implementation of {@link Context#hasFeature(int featureIndex)}.
-	 * This can be used to customize {@link Context} without introducing
-	 * additional subclasses.
-	 */
-	@SuppressWarnings("DuplicateBranchesInSwitch")
-	protected boolean hasFeature(Context cx, int featureIndex) {
-		return switch (featureIndex) {
-			case Context.FEATURE_MEMBER_EXPR_AS_FUNCTION_NAME -> false;
-			case Context.FEATURE_RESERVED_KEYWORD_AS_IDENTIFIER -> true;
-			case Context.FEATURE_PARENT_PROTO_PROPERTIES -> true;
-			case Context.FEATURE_DYNAMIC_SCOPE -> false;
-			case Context.FEATURE_STRICT_VARS -> false;
-			case Context.FEATURE_STRICT_EVAL -> false;
-			case Context.FEATURE_LOCATION_INFORMATION_IN_ERROR -> false;
-			case Context.FEATURE_STRICT_MODE -> false;
-			case Context.FEATURE_WARNING_AS_ERROR -> false;
-			case Context.FEATURE_ENHANCED_JAVA_ACCESS -> false;
-			case Context.FEATURE_V8_EXTENSIONS -> true;
-			case Context.FEATURE_THREAD_SAFE_OBJECTS -> false;
-			case Context.FEATURE_INTEGER_WITHOUT_DECIMAL_PLACE -> false;
-			case Context.FEATURE_LITTLE_ENDIAN -> false;
-			default -> throw new IllegalArgumentException(String.valueOf(featureIndex));
-		};
 	}
 
 	/**
@@ -249,7 +225,6 @@ public class ContextFactory {
 	}
 
 	public final void addListener(Listener listener) {
-		checkNotSealed();
 		synchronized (listenersLock) {
 			if (disabledListening) {
 				throw new IllegalStateException();
@@ -259,7 +234,6 @@ public class ContextFactory {
 	}
 
 	public final void removeListener(Listener listener) {
-		checkNotSealed();
 		synchronized (listenersLock) {
 			if (disabledListening) {
 				throw new IllegalStateException();
@@ -273,36 +247,9 @@ public class ContextFactory {
 	 * Context.disableStaticContextListening()
 	 */
 	final void disableContextListening() {
-		checkNotSealed();
 		synchronized (listenersLock) {
 			disabledListening = true;
 			listeners = null;
-		}
-	}
-
-	/**
-	 * Checks if this is a sealed ContextFactory.
-	 *
-	 * @see #seal()
-	 */
-	public final boolean isSealed() {
-		return sealed;
-	}
-
-	/**
-	 * Seal this ContextFactory so any attempt to modify it like to add or
-	 * remove its listeners will throw an exception.
-	 *
-	 * @see #isSealed()
-	 */
-	public final void seal() {
-		checkNotSealed();
-		sealed = true;
-	}
-
-	protected final void checkNotSealed() {
-		if (sealed) {
-			throw new IllegalStateException();
 		}
 	}
 

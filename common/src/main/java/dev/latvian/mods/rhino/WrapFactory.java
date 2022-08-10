@@ -136,7 +136,7 @@ public class WrapFactory {
 
 		// TODO: Wrap Gson
 
-		return new NativeJavaObject(cx, scope, javaObject, staticType);
+		return new NativeJavaObject(cx, scope, javaObject, javaObject.getClass());
 	}
 
 	/**
@@ -175,10 +175,6 @@ public class WrapFactory {
 	 * @see #isJavaPrimitiveWrap()
 	 */
 	public final void setJavaPrimitiveWrap(boolean value) {
-		Context cx = Context.getCurrentContext();
-		if (cx != null && cx.isSealed()) {
-			Context.onSealedMutation();
-		}
 		javaPrimitiveWrap = value;
 	}
 

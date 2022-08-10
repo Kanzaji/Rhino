@@ -24,9 +24,9 @@ final class NativeNumber extends IdScriptableObject {
 	private static final int MAX_PRECISION = 100;
 	private static final double MIN_SAFE_INTEGER = -MAX_SAFE_INTEGER;
 
-	static void init(Context cx, Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope) {
 		NativeNumber obj = new NativeNumber(0.0);
-		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, sealed);
+		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope);
 	}
 
 	NativeNumber(double number) {
@@ -109,7 +109,7 @@ final class NativeNumber extends IdScriptableObject {
 		}
 		int id = f.methodId();
 		if (id == Id_constructor) {
-			double val = (args.length >= 1) ? ScriptRuntime.toNumber(args[0]) : 0.0;
+			double val = (args.length >= 1) ? ScriptRuntime.toNumber(cx, args[0]) : 0.0;
 			if (thisObj == null) {
 				// new Number(val) creates a new Number object.
 				return new NativeNumber(val);
@@ -118,7 +118,7 @@ final class NativeNumber extends IdScriptableObject {
 			return ScriptRuntime.wrapNumber(val);
 
 		} else if (id < Id_constructor) {
-			return execConstructorCall(id, args);
+			return execConstructorCall(cx, id, args);
 		}
 
 		// The rest of Number.prototype methods require thisObj to be Number
@@ -133,8 +133,8 @@ final class NativeNumber extends IdScriptableObject {
 			case Id_toString:
 			case Id_toLocaleString: {
 				// toLocaleString is just an alias for toString for now
-				int base = (args.length == 0 || args[0] == Undefined.instance) ? 10 : ScriptRuntime.toInt32(args[0]);
-				return ScriptRuntime.numberToString(value, base);
+				int base = (args.length == 0 || args[0] == Undefined.instance) ? 10 : ScriptRuntime.toInt32(cx, args[0]);
+				return ScriptRuntime.numberToString(cx, value, base);
 			}
 
 			case Id_toSource:
@@ -144,7 +144,7 @@ final class NativeNumber extends IdScriptableObject {
 				return ScriptRuntime.wrapNumber(value);
 
 			case Id_toFixed:
-				return num_to(value, args, DToA.DTOSTR_FIXED, DToA.DTOSTR_FIXED, 0, 0);
+				return num_to(cx, value, args, DToA.DTOSTR_FIXED, DToA.DTOSTR_FIXED, 0, 0);
 
 			case Id_toExponential: {
 				// Handle special values before range check
@@ -158,13 +158,13 @@ final class NativeNumber extends IdScriptableObject {
 					return "-Infinity";
 				}
 				// General case
-				return num_to(value, args, DToA.DTOSTR_STANDARD_EXPONENTIAL, DToA.DTOSTR_EXPONENTIAL, 0, 1);
+				return num_to(cx, value, args, DToA.DTOSTR_STANDARD_EXPONENTIAL, DToA.DTOSTR_EXPONENTIAL, 0, 1);
 			}
 
 			case Id_toPrecision: {
 				// Undefined precision, fall back to ToString()
 				if (args.length == 0 || args[0] == Undefined.instance) {
-					return ScriptRuntime.numberToString(value, 10);
+					return ScriptRuntime.numberToString(cx, value, 10);
 				}
 				// Handle special values before range check
 				if (Double.isNaN(value)) {
@@ -176,7 +176,7 @@ final class NativeNumber extends IdScriptableObject {
 					}
 					return "-Infinity";
 				}
-				return num_to(value, args, DToA.DTOSTR_STANDARD, DToA.DTOSTR_PRECISION, 1, 0);
+				return num_to(cx, value, args, DToA.DTOSTR_STANDARD, DToA.DTOSTR_PRECISION, 1, 0);
 			}
 
 			default:
@@ -184,7 +184,7 @@ final class NativeNumber extends IdScriptableObject {
 		}
 	}
 
-	private static Object execConstructorCall(int id, Object[] args) {
+	private static Object execConstructorCall(Context cx, int id, Object[] args) {
 		switch (id) {
 			case ConstructorId_isFinite:
 				if ((args.length == 0) || (Undefined.instance == args[0])) {
@@ -192,7 +192,7 @@ final class NativeNumber extends IdScriptableObject {
 				}
 				if (args[0] instanceof Number) {
 					// Match ES6 polyfill, which only works for "number" types
-					return isFinite(args[0]);
+					return isFinite(cx, args[0]);
 				}
 				return Boolean.FALSE;
 
@@ -224,10 +224,10 @@ final class NativeNumber extends IdScriptableObject {
 				return Boolean.FALSE;
 
 			case ConstructorId_parseFloat:
-				return NativeGlobal.js_parseFloat(args);
+				return NativeGlobal.js_parseFloat(cx, args);
 
 			case ConstructorId_parseInt:
-				return NativeGlobal.js_parseInt(args);
+				return NativeGlobal.js_parseInt(cx, args);
 
 			default:
 				throw new IllegalArgumentException(String.valueOf(id));
@@ -236,7 +236,8 @@ final class NativeNumber extends IdScriptableObject {
 
 	@Override
 	public String toString() {
-		return ScriptRuntime.numberToString(doubleValue, 10);
+		Context cx = Context.getCurrentContext();
+		return ScriptRuntime.numberToString(cx, doubleValue, 10);
 	}
 
 	@Override
@@ -244,7 +245,7 @@ final class NativeNumber extends IdScriptableObject {
 		return MemberType.NUMBER;
 	}
 
-	private static String num_to(double val, Object[] args, int zeroArgMode, int oneArgMode, int precisionMin, int precisionOffset) {
+	private static String num_to(Context cx, double val, Object[] args, int zeroArgMode, int oneArgMode, int precisionMin, int precisionOffset) {
 		int precision;
 		if (args.length == 0) {
 			precision = 0;
@@ -252,9 +253,9 @@ final class NativeNumber extends IdScriptableObject {
 		} else {
             /* We allow a larger range of precision than
                ECMA requires; this is permitted by ECMA. */
-			double p = ScriptRuntime.toInteger(args[0]);
+			double p = ScriptRuntime.toInteger(cx, args[0]);
 			if (p < precisionMin || p > MAX_PRECISION) {
-				String msg = ScriptRuntime.getMessage1("msg.bad.precision", ScriptRuntime.toString(args[0]));
+				String msg = ScriptRuntime.getMessage1("msg.bad.precision", ScriptRuntime.toString(cx, args[0]));
 				throw ScriptRuntime.rangeError(msg);
 			}
 			precision = ScriptRuntime.toInt32(p);
@@ -264,8 +265,8 @@ final class NativeNumber extends IdScriptableObject {
 		return sb.toString();
 	}
 
-	static Object isFinite(Object val) {
-		double d = ScriptRuntime.toNumber(val);
+	static Object isFinite(Context cx, Object val) {
+		double d = ScriptRuntime.toNumber(cx, val);
 		Double nd = d;
 		return ScriptRuntime.wrapBoolean(!nd.isInfinite() && !nd.isNaN());
 	}

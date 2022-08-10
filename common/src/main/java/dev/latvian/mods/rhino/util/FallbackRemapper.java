@@ -1,15 +1,15 @@
 package dev.latvian.mods.rhino.util;
 
 import dev.latvian.mods.rhino.SharedContextData;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import dev.latvian.mods.rhino.classdata.FieldInfo;
+import dev.latvian.mods.rhino.classdata.MethodInfo;
+import dev.latvian.mods.rhino.classdata.PublicClassData;
 
 public record FallbackRemapper(Remapper main, Remapper fallback) implements Remapper {
 	@Override
-	public String remapClass(SharedContextData data, Class<?> from, String className) {
-		String s = main.remapClass(data, from, className);
-		return s.isEmpty() ? fallback.remapClass(data, from, className) : s;
+	public String remapClass(SharedContextData data, PublicClassData from) {
+		String s = main.remapClass(data, from);
+		return s.isEmpty() ? fallback.remapClass(data, from) : s;
 	}
 
 	@Override
@@ -19,14 +19,14 @@ public record FallbackRemapper(Remapper main, Remapper fallback) implements Rema
 	}
 
 	@Override
-	public String remapField(SharedContextData data, Class<?> from, Field field, String fieldName) {
-		String s = main.remapField(data, from, field, fieldName);
-		return s.isEmpty() ? fallback.remapField(data, from, field, fieldName) : s;
+	public String remapField(SharedContextData data, PublicClassData from, FieldInfo field) {
+		String s = main.remapField(data, from, field);
+		return s.isEmpty() ? fallback.remapField(data, from, field) : s;
 	}
 
 	@Override
-	public String remapMethod(SharedContextData data, Class<?> from, Method method, String methodString) {
-		String s = main.remapMethod(data, from, method, methodString);
-		return s.isEmpty() ? fallback.remapMethod(data, from, method, methodString) : s;
+	public String remapMethod(SharedContextData data, PublicClassData from, MethodInfo method) {
+		String s = main.remapMethod(data, from, method);
+		return s.isEmpty() ? fallback.remapMethod(data, from, method) : s;
 	}
 }

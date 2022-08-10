@@ -36,5 +36,5 @@ public interface SymbolScriptable {
 	/**
 	 * Delete a property with the specified key.
 	 */
-	void delete(Context cx, Symbol key);
+	void delete(Context cx, Scriptable scope, Symbol key);
 }

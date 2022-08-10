@@ -221,7 +221,7 @@ public interface Scriptable extends IdEnumerationIterator {
 	 * @see Scriptable#get(Context, String, Scriptable)
 	 * @see ScriptableObject#deleteProperty(Scriptable, String)
 	 */
-	void delete(Context cx, String name);
+	void delete(Context cx, Scriptable scope, String name);
 
 	/**
 	 * Removes a property from this object.
@@ -239,7 +239,7 @@ public interface Scriptable extends IdEnumerationIterator {
 	 * @see Scriptable#get(Context, int, Scriptable)
 	 * @see ScriptableObject#deleteProperty(Scriptable, int)
 	 */
-	void delete(Context cx, int index);
+	void delete(Context cx, Scriptable scope, int index);
 
 	/**
 	 * Get the prototype of the object.
@@ -328,11 +328,11 @@ public interface Scriptable extends IdEnumerationIterator {
 		}
 
 		Scriptable scope = getParentScope();
-		Object r = f.call(cx, scope, this, ScriptRuntime.EMPTY_ARGS);
+		Object r = f.call(cx, scope, this, ScriptRuntime.EMPTY_OBJECTS);
 		Scriptable iteratorResult = ScriptRuntime.toObject(cx, scope, r);
 		currentId.accept(ScriptableObject.getProperty(cx, iteratorResult, ES6Iterator.VALUE_PROPERTY));
 		Object done = ScriptableObject.getProperty(cx, iteratorResult, ES6Iterator.DONE_PROPERTY);
-		return done == Scriptable.NOT_FOUND || !ScriptRuntime.toBoolean(done);
+		return done == Scriptable.NOT_FOUND || !ScriptRuntime.toBoolean(cx, done);
 	}
 
 	@Override
@@ -344,7 +344,7 @@ public interface Scriptable extends IdEnumerationIterator {
 		}
 
 		Scriptable scope = getParentScope();
-		currentId.accept(f.call(cx, scope, this, ScriptRuntime.EMPTY_ARGS));
+		currentId.accept(f.call(cx, scope, this, ScriptRuntime.EMPTY_OBJECTS));
 		return true;
 	}
 

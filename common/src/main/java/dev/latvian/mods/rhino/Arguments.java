@@ -139,11 +139,11 @@ final class Arguments extends IdScriptableObject {
 	}
 
 	@Override
-	public void delete(Context cx, int index) {
+	public void delete(Context cx, Scriptable scope, int index) {
 		if (0 <= index && index < args.length) {
 			removeArg(index);
 		}
-		super.delete(cx, index);
+		super.delete(cx, scope, index);
 	}
 
 	// #string_id_map#
@@ -296,7 +296,7 @@ final class Arguments extends IdScriptableObject {
 			return super.getOwnPropertyDescriptor(cx, id);
 		}
 
-		double d = ScriptRuntime.toNumber(id);
+		double d = ScriptRuntime.toNumber(cx, id);
 		int index = (int) d;
 		if (d != index) {
 			return super.getOwnPropertyDescriptor(cx, id);
@@ -327,7 +327,7 @@ final class Arguments extends IdScriptableObject {
 			return;
 		}
 
-		double d = ScriptRuntime.toNumber(id);
+		double d = ScriptRuntime.toNumber(cx, id);
 		int index = (int) d;
 		if (d != index) {
 			return;
@@ -350,7 +350,7 @@ final class Arguments extends IdScriptableObject {
 
 		replaceArg(cx, index, newValue);
 
-		if (isFalse(getProperty(cx, desc, "writable"))) {
+		if (isFalse(cx, getProperty(cx, desc, "writable"))) {
 			removeArg(index);
 		}
 	}

@@ -20,18 +20,18 @@ public class BaseFunction extends IdScriptableObject implements Function {
 	private static final String FUNCTION_CLASS = "Function";
 	static final String GENERATOR_FUNCTION_CLASS = "__GeneratorFunction";
 
-	static void init(Context cx, Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope) {
 		BaseFunction obj = new BaseFunction();
 		// Function.prototype attributes: see ECMA 15.3.3.1
 		obj.prototypePropertyAttributes = DONTENUM | READONLY | PERMANENT;
-		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, sealed);
+		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope);
 	}
 
-	static Object initAsGeneratorFunction(Context cx, Scriptable scope, boolean sealed) {
+	static Object initAsGeneratorFunction(Context cx, Scriptable scope) {
 		BaseFunction obj = new BaseFunction(true);
 		// Function.prototype attributes: see ECMA 15.3.3.1
 		obj.prototypePropertyAttributes = READONLY | PERMANENT;
-		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, sealed);
+		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope);
 		// The "GeneratorFunction" name actually never appears in the global scope.
 		// Return it here so it can be cached as a "builtin"
 		return getProperty(cx, scope, GENERATOR_FUNCTION_CLASS);
@@ -292,7 +292,7 @@ public class BaseFunction extends IdScriptableObject implements Function {
 					System.arraycopy(args, 1, boundArgs, 0, argc - 1);
 				} else {
 					boundThis = null;
-					boundArgs = ScriptRuntime.EMPTY_ARGS;
+					boundArgs = ScriptRuntime.EMPTY_OBJECTS;
 				}
 				return new BoundFunction(cx, scope, targetFunction, boundThis, boundArgs);
 		}
@@ -476,12 +476,12 @@ public class BaseFunction extends IdScriptableObject implements Function {
 			if (i > 0) {
 				sourceBuf.append(',');
 			}
-			sourceBuf.append(ScriptRuntime.toString(args[i]));
+			sourceBuf.append(ScriptRuntime.toString(cx, args[i]));
 		}
 		sourceBuf.append(") {");
 		if (arglen != 0) {
 			// append function body
-			String funBody = ScriptRuntime.toString(args[arglen - 1]);
+			String funBody = ScriptRuntime.toString(cx, args[arglen - 1]);
 			sourceBuf.append(funBody);
 		}
 		sourceBuf.append("\n}");

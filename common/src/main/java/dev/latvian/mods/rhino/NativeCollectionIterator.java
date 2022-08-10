@@ -13,8 +13,8 @@ public class NativeCollectionIterator extends ES6Iterator {
 		KEYS, VALUES, BOTH
 	}
 
-	static void init(Context cx, ScriptableObject scope, String tag, boolean sealed) {
-		init(cx, scope, sealed, new NativeCollectionIterator(tag), tag);
+	static void init(Context cx, ScriptableObject scope, String tag) {
+		init(cx, scope, new NativeCollectionIterator(tag), tag);
 	}
 
 	public NativeCollectionIterator(String tag) {

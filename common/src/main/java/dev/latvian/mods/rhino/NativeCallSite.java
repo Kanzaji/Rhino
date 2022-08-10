@@ -16,9 +16,9 @@ public class NativeCallSite extends IdScriptableObject {
 	private static final String CALLSITE_TAG = "CallSite";
 	private ScriptStackElement element;
 
-	static void init(Context cx, Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope) {
 		NativeCallSite cs = new NativeCallSite();
-		cs.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, sealed);
+		cs.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope);
 	}
 
 	static NativeCallSite make(Context cx, Scriptable scope, Scriptable ctorObj) {

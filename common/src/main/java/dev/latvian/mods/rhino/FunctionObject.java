@@ -8,10 +8,9 @@
 
 package dev.latvian.mods.rhino;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Member;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
+import dev.latvian.mods.rhino.classdata.BaseMember;
+import dev.latvian.mods.rhino.classdata.MethodInfo;
+import dev.latvian.mods.rhino.classdata.MethodSignature;
 
 public class FunctionObject extends BaseFunction {
 	/**
@@ -72,23 +71,16 @@ public class FunctionObject extends BaseFunction {
 	 * constructor, when called as a function,
 	 * will convert to boolean rather than creating a new object.)<p>
 	 *
-	 * @param name                the name of the function
-	 * @param methodOrConstructor a java.lang.reflect.Method or a java.lang.reflect.Constructor
-	 *                            that defines the object
-	 * @param scope               enclosing scope of function
+	 * @param name  the name of the function
+	 * @param scope enclosing scope of function
 	 * @see Scriptable
 	 */
-	public FunctionObject(Context cx, String name, Member methodOrConstructor, Scriptable scope) {
-		if (methodOrConstructor instanceof Constructor) {
-			member = new MemberBox((Constructor<?>) methodOrConstructor);
-			isStatic = true; // well, doesn't take a 'this'
-		} else {
-			member = new MemberBox((Method) methodOrConstructor);
-			isStatic = member.isStatic();
-		}
+	public FunctionObject(Context cx, String name, BaseMember info, Scriptable scope) {
+		member = info;
+		isStatic = info.isStatic();
 		String methodName = member.getName();
 		this.functionName = name;
-		Class<?>[] types = member.argTypes;
+		Class<?>[] types = member.getSignature().types;
 		int arity = types.length;
 		if (arity == 4 && (types[1].isArray() || types[2].isArray())) {
 			// Either variable args or an error.
@@ -118,8 +110,7 @@ public class FunctionObject extends BaseFunction {
 		}
 
 		if (member.isMethod()) {
-			Method method = member.method();
-			Class<?> returnType = method.getReturnType();
+			Class<?> returnType = member.getType();
 			if (returnType == Void.TYPE) {
 				hasVoidReturn = true;
 			} else {
@@ -172,22 +163,22 @@ public class FunctionObject extends BaseFunction {
 				if (arg instanceof String) {
 					return arg;
 				}
-				return ScriptRuntime.toString(arg);
+				return ScriptRuntime.toString(cx, arg);
 			case JAVA_INT_TYPE:
 				if (arg instanceof Integer) {
 					return arg;
 				}
-				return ScriptRuntime.toInt32(arg);
+				return ScriptRuntime.toInt32(cx, arg);
 			case JAVA_BOOLEAN_TYPE:
 				if (arg instanceof Boolean) {
 					return arg;
 				}
-				return ScriptRuntime.toBoolean(arg) ? Boolean.TRUE : Boolean.FALSE;
+				return ScriptRuntime.toBoolean(cx, arg) ? Boolean.TRUE : Boolean.FALSE;
 			case JAVA_DOUBLE_TYPE:
 				if (arg instanceof Double) {
 					return arg;
 				}
-				return ScriptRuntime.toNumber(arg);
+				return ScriptRuntime.toNumber(cx, arg);
 			case JAVA_SCRIPTABLE_TYPE:
 				return ScriptRuntime.toObjectOrNull(cx, arg, scope);
 			case JAVA_OBJECT_TYPE:
@@ -220,21 +211,10 @@ public class FunctionObject extends BaseFunction {
 		return (functionName == null) ? "" : functionName;
 	}
 
-	/**
-	 * Get Java method or constructor this function represent.
-	 */
-	public Member getMethodOrConstructor() {
-		if (member.isMethod()) {
-			return member.method();
-		} else {
-			return member.ctor();
-		}
-	}
-
-	static Method findSingleMethod(Context cx, Method[] methods, String name) {
-		Method found = null;
+	static MethodInfo findSingleMethod(Context cx, MethodInfo[] methods, String name) {
+		MethodInfo found = null;
 		for (int i = 0, N = methods.length; i != N; ++i) {
-			Method method = methods[i];
+			MethodInfo method = methods[i];
 			if (method != null && name.equals(method.getName())) {
 				if (found != null) {
 					throw Context.reportRuntimeError2(cx, "msg.no.overload", name, method.getDeclaringClass().getName());
@@ -243,47 +223,6 @@ public class FunctionObject extends BaseFunction {
 			}
 		}
 		return found;
-	}
-
-	/**
-	 * Returns all public methods declared by the specified class. This excludes
-	 * inherited methods.
-	 *
-	 * @param clazz the class from which to pull public declared methods
-	 * @return the public methods declared in the specified class
-	 * @see Class#getDeclaredMethods()
-	 */
-	static Method[] getMethodList(Class<?> clazz) {
-		Method[] methods = null;
-		try {
-			// getDeclaredMethods may be rejected by the security manager
-			// but getMethods is more expensive
-			if (!sawSecurityException) {
-				methods = clazz.getDeclaredMethods();
-			}
-		} catch (SecurityException e) {
-			// If we get an exception once, give up on getDeclaredMethods
-			sawSecurityException = true;
-		}
-		if (methods == null) {
-			methods = clazz.getMethods();
-		}
-		int count = 0;
-		for (int i = 0; i < methods.length; i++) {
-			if (sawSecurityException ? methods[i].getDeclaringClass() != clazz : !Modifier.isPublic(methods[i].getModifiers())) {
-				methods[i] = null;
-			} else {
-				count++;
-			}
-		}
-		Method[] result = new Method[count];
-		int j = 0;
-		for (int i = 0; i < methods.length; i++) {
-			if (methods[i] != null) {
-				result[j++] = methods[i];
-			}
-		}
-		return result;
 	}
 
 	/**
@@ -342,13 +281,13 @@ public class FunctionObject extends BaseFunction {
 		if (parmsLength < 0) {
 			if (parmsLength == VARARGS_METHOD) {
 				Object[] invokeArgs = {cx, thisObj, args, this};
-				result = member.invoke(null, invokeArgs);
+				result = member.actuallyInvoke(cx, scope, null, invokeArgs, MethodSignature.ofArgs(invokeArgs));
 				checkMethodResult = true;
 			} else {
 				boolean inNewExpr = (thisObj == null);
 				Boolean b = inNewExpr ? Boolean.TRUE : Boolean.FALSE;
 				Object[] invokeArgs = {cx, args, this, b};
-				result = (member.isCtor()) ? member.newInstance(invokeArgs) : member.invoke(null, invokeArgs);
+				result = member.actuallyInvoke(cx, scope, null, invokeArgs, MethodSignature.ofArgs(invokeArgs));
 			}
 
 		} else {
@@ -390,7 +329,7 @@ public class FunctionObject extends BaseFunction {
 					}
 				}
 			} else if (parmsLength == 0) {
-				invokeArgs = ScriptRuntime.EMPTY_ARGS;
+				invokeArgs = ScriptRuntime.EMPTY_OBJECTS;
 			} else {
 				invokeArgs = new Object[parmsLength];
 				for (int i = 0; i != parmsLength; ++i) {
@@ -398,12 +337,10 @@ public class FunctionObject extends BaseFunction {
 					invokeArgs[i] = convertArg(cx, scope, arg, typeTags[i]);
 				}
 			}
+			result = member.actuallyInvoke(cx, scope, thisObj, invokeArgs, MethodSignature.ofArgs(invokeArgs));
 
 			if (member.isMethod()) {
-				result = member.invoke(thisObj, invokeArgs);
 				checkMethodResult = true;
-			} else {
-				result = member.newInstance(invokeArgs);
 			}
 
 		}
@@ -431,7 +368,7 @@ public class FunctionObject extends BaseFunction {
 	 */
 	@Override
 	public Scriptable createObject(Context cx, Scriptable scope) {
-		if (member.isCtor() || parmsLength == VARARGS_CTOR) {
+		if (!member.isMethod() || parmsLength == VARARGS_CTOR) {
 			return null;
 		}
 		Scriptable result;
@@ -467,7 +404,7 @@ public class FunctionObject extends BaseFunction {
 	public static final int JAVA_SCRIPTABLE_TYPE = 5;
 	public static final int JAVA_OBJECT_TYPE = 6;
 
-	MemberBox member;
+	BaseMember member;
 	private final String functionName;
 	private transient byte[] typeTags;
 	private final int parmsLength;

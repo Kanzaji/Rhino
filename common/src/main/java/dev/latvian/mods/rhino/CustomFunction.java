@@ -3,16 +3,16 @@ package dev.latvian.mods.rhino;
 public class CustomFunction extends BaseFunction {
 	@FunctionalInterface
 	public interface Func {
-		Object call(Object[] args);
+		Object call(Context cx, Scriptable scope, Object[] args);
 	}
 
 	@FunctionalInterface
 	public interface NoArgFunc extends Func {
-		Object call();
+		Object call(Context cx, Scriptable scope);
 
 		@Override
-		default Object call(Object[] args) {
-			return call();
+		default Object call(Context cx, Scriptable scope, Object[] args) {
+			return call(cx, scope);
 		}
 	}
 
@@ -49,7 +49,7 @@ public class CustomFunction extends BaseFunction {
 			}
 		}
 
-		Object retval = func.call(args);
+		Object retval = func.call(cx, scope, args);
 
 		if (retval == null) {
 			return Undefined.instance;

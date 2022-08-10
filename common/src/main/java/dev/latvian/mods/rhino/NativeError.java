@@ -6,7 +6,8 @@
 
 package dev.latvian.mods.rhino;
 
-import java.lang.reflect.Method;
+import dev.latvian.mods.rhino.classdata.BaseMember;
+import dev.latvian.mods.rhino.classdata.CallbackMethodMember;
 
 /**
  * The class of error objects
@@ -16,18 +17,11 @@ import java.lang.reflect.Method;
 final class NativeError extends IdScriptableObject {
 	private static final Object ERROR_TAG = "Error";
 
-	private static final Method ERROR_DELEGATE_GET_STACK;
-	private static final Method ERROR_DELEGATE_SET_STACK;
-
-	static {
-		try {
-			// Pre-cache methods to be called via reflection
-			ERROR_DELEGATE_GET_STACK = NativeError.class.getMethod("getStackDelegated", Context.class, Scriptable.class);
-			ERROR_DELEGATE_SET_STACK = NativeError.class.getMethod("setStackDelegated", Context.class, Scriptable.class, Object.class);
-		} catch (NoSuchMethodException nsm) {
-			throw new RuntimeException(nsm);
-		}
-	}
+	private static final BaseMember ERROR_DELEGATE_GET_STACK = new CallbackMethodMember<NativeError>((cx, scope, self, args) -> self.getStackDelegated((Context) args[0], (Scriptable) args[1]));
+	private static final BaseMember ERROR_DELEGATE_SET_STACK = new CallbackMethodMember<NativeError>((cx, scope, self, args) -> {
+		self.setStackDelegated((Context) args[0], (Scriptable) args[1], args[2]);
+		return null;
+	});
 
 	/**
 	 * Default stack limit is set to "Infinity", here represented as a negative int
@@ -39,7 +33,7 @@ final class NativeError extends IdScriptableObject {
 
 	private RhinoException stackProvider;
 
-	static void init(Context cx, Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope) {
 		NativeError obj = new NativeError();
 		putProperty(cx, obj, "name", "Error");
 		putProperty(cx, obj, "message", "");
@@ -47,8 +41,8 @@ final class NativeError extends IdScriptableObject {
 		putProperty(cx, obj, "lineNumber", 0);
 		obj.setAttributes(cx, "name", DONTENUM);
 		obj.setAttributes(cx, "message", DONTENUM);
-		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, sealed);
-		NativeCallSite.init(cx, obj, sealed);
+		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope);
+		NativeCallSite.init(cx, obj);
 	}
 
 	static NativeError make(Context cx, Scriptable scope, IdFunctionObject ctorObj, Object[] args) {
@@ -61,12 +55,12 @@ final class NativeError extends IdScriptableObject {
 		int arglen = args.length;
 		if (arglen >= 1) {
 			if (args[0] != Undefined.instance) {
-				putProperty(cx, obj, "message", ScriptRuntime.toString(args[0]));
+				putProperty(cx, obj, "message", ScriptRuntime.toString(cx, args[0]));
 			}
 			if (arglen >= 2) {
 				putProperty(cx, obj, "fileName", args[1]);
 				if (arglen >= 3) {
-					int line = ScriptRuntime.toInt32(args[2]);
+					int line = ScriptRuntime.toInt32(cx, args[2]);
 					putProperty(cx, obj, "lineNumber", line);
 				}
 			}
@@ -85,8 +79,8 @@ final class NativeError extends IdScriptableObject {
 		associateValue(ProtoProps.KEY, protoProps);
 
 		// Define constructor properties that delegate to the ProtoProps object.
-		ctor.defineProperty("stackTraceLimit", protoProps, ProtoProps.GET_STACK_LIMIT, ProtoProps.SET_STACK_LIMIT, 0);
-		ctor.defineProperty("prepareStackTrace", protoProps, ProtoProps.GET_PREPARE_STACK, ProtoProps.SET_PREPARE_STACK, 0);
+		ctor.defineProperty(cx, "stackTraceLimit", protoProps, ProtoProps.GET_STACK_LIMIT, ProtoProps.SET_STACK_LIMIT, 0);
+		ctor.defineProperty(cx, "prepareStackTrace", protoProps, ProtoProps.GET_PREPARE_STACK, ProtoProps.SET_PREPARE_STACK, 0);
 
 		super.fillConstructorProperties(cx, ctor);
 	}
@@ -148,14 +142,14 @@ final class NativeError extends IdScriptableObject {
 		throw new IllegalArgumentException(String.valueOf(id));
 	}
 
-	public void setStackProvider(RhinoException re) {
+	public void setStackProvider(Context cx, RhinoException re) {
 		// We go some extra miles to make sure the stack property is only
 		// generated on demand, is cached after the first access, and is
 		// overwritable like an ordinary property. Hence this setup with
 		// the getter and setter below.
 		if (stackProvider == null) {
 			stackProvider = re;
-			defineProperty("stack", this, ERROR_DELEGATE_GET_STACK, ERROR_DELEGATE_SET_STACK, DONTENUM);
+			defineProperty(cx, "stack", this, ERROR_DELEGATE_GET_STACK, ERROR_DELEGATE_SET_STACK, DONTENUM);
 		}
 	}
 
@@ -182,9 +176,9 @@ final class NativeError extends IdScriptableObject {
 		// Determine whether to format the stack trace ourselves, or call the user's code to do it
 		Object value;
 		if (prepare == null) {
-			value = RhinoException.formatStackTrace(stack, stackProvider.details());
+			value = RhinoException.formatStackTrace(stack, stackProvider.details(cx));
 		} else {
-			value = callPrepareStack(prepare, stack);
+			value = callPrepareStack(cx, prepare, stack);
 		}
 
 		// We store the stack as local property both to cache it
@@ -194,13 +188,12 @@ final class NativeError extends IdScriptableObject {
 	}
 
 	public void setStackDelegated(Context cx, Scriptable target, Object value) {
-		target.delete(cx, "stack");
+		target.delete(cx, target, "stack");
 		stackProvider = null;
 		target.put(cx, "stack", target, value);
 	}
 
-	private Object callPrepareStack(Function prepare, ScriptStackElement[] stack) {
-		Context cx = Context.getCurrentContext();
+	private Object callPrepareStack(Context cx, Function prepare, ScriptStackElement[] stack) {
 		Object[] elts = new Object[stack.length];
 
 		// The "prepareStackTrace" function takes an array of CallSite objects.
@@ -219,13 +212,13 @@ final class NativeError extends IdScriptableObject {
 		if (name == NOT_FOUND || name == Undefined.instance) {
 			name = "Error";
 		} else {
-			name = ScriptRuntime.toString(name);
+			name = ScriptRuntime.toString(cx, name);
 		}
 		Object msg = getProperty(cx, thisObj, "message");
 		if (msg == NOT_FOUND || msg == Undefined.instance) {
 			msg = "";
 		} else {
-			msg = ScriptRuntime.toString(msg);
+			msg = ScriptRuntime.toString(cx, msg);
 		}
 		if (name.toString().length() == 0) {
 			return msg;
@@ -246,20 +239,20 @@ final class NativeError extends IdScriptableObject {
 		// Create a new error that will have the correct prototype so we can re-use "getStackTrace"
 		NativeError err = (NativeError) cx.newObject(thisObj, "Error");
 		// Wire it up so that it will have an actual exception with a stack trace
-		err.setStackProvider(new EvaluatorException("[object Object]"));
+		err.setStackProvider(cx, new EvaluatorException("[object Object]"));
 
 		// Figure out if they passed a function used to hide part of the stack
 		if (func != null) {
 			Object funcName = func.get(cx, "name", func);
 			if ((funcName != null) && !Undefined.instance.equals(funcName)) {
-				err.associateValue(STACK_HIDE_KEY, Context.toString(funcName));
+				err.associateValue(STACK_HIDE_KEY, ScriptRuntime.toString(cx, funcName));
 			}
 		}
 
 		// Define a property on the specified object to get that stack
 		// that delegates to our new error. Build the stack trace lazily
 		// using the "getStack" code from NativeError.
-		obj.defineProperty("stack", err, ERROR_DELEGATE_GET_STACK, ERROR_DELEGATE_SET_STACK, 0);
+		obj.defineProperty(cx, "stack", err, ERROR_DELEGATE_GET_STACK, ERROR_DELEGATE_SET_STACK, 0);
 	}
 
 	@Override
@@ -288,21 +281,16 @@ final class NativeError extends IdScriptableObject {
 	private static final class ProtoProps {
 		static final String KEY = "_ErrorPrototypeProps";
 
-		static final Method GET_STACK_LIMIT;
-		static final Method SET_STACK_LIMIT;
-		static final Method GET_PREPARE_STACK;
-		static final Method SET_PREPARE_STACK;
-
-		static {
-			try {
-				GET_STACK_LIMIT = ProtoProps.class.getMethod("getStackTraceLimit", Scriptable.class);
-				SET_STACK_LIMIT = ProtoProps.class.getMethod("setStackTraceLimit", Scriptable.class, Object.class);
-				GET_PREPARE_STACK = ProtoProps.class.getMethod("getPrepareStackTrace", Scriptable.class);
-				SET_PREPARE_STACK = ProtoProps.class.getMethod("setPrepareStackTrace", Scriptable.class, Object.class);
-			} catch (NoSuchMethodException nsm) {
-				throw new RuntimeException(nsm);
-			}
-		}
+		static final BaseMember GET_STACK_LIMIT = new CallbackMethodMember<ProtoProps>((cx, scope, obj, args) -> obj.getStackTraceLimit((Scriptable) args[0]));
+		static final BaseMember SET_STACK_LIMIT = new CallbackMethodMember<ProtoProps>((cx, scope, obj, args) -> {
+			obj.setStackTraceLimit(cx, (Scriptable) args[0], args[1]);
+			return null;
+		});
+		static final BaseMember GET_PREPARE_STACK = new CallbackMethodMember<ProtoProps>((cx, scope, obj, args) -> obj.getPrepareStackTrace((Scriptable) args[0]));
+		static final BaseMember SET_PREPARE_STACK = new CallbackMethodMember<ProtoProps>((cx, scope, obj, args) -> {
+			obj.setPrepareStackTrace((Scriptable) args[0], args[1]);
+			return null;
+		});
 
 		private int stackTraceLimit = DEFAULT_STACK_LIMIT;
 		private Function prepareStackTrace;
@@ -318,8 +306,8 @@ final class NativeError extends IdScriptableObject {
 			return stackTraceLimit;
 		}
 
-		public void setStackTraceLimit(Scriptable thisObj, Object value) {
-			double limit = Context.toNumber(value);
+		public void setStackTraceLimit(Context cx, Scriptable thisObj, Object value) {
+			double limit = ScriptRuntime.toNumber(cx, value);
 			if (Double.isNaN(limit) || Double.isInfinite(limit)) {
 				stackTraceLimit = -1;
 			} else {

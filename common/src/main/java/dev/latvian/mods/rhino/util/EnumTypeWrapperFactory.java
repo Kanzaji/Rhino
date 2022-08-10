@@ -1,9 +1,9 @@
 package dev.latvian.mods.rhino.util;
 
 import dev.latvian.mods.rhino.SharedContextData;
+import dev.latvian.mods.rhino.classdata.PublicClassData;
 import dev.latvian.mods.rhino.util.wrap.TypeWrapperFactory;
 
-import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -21,12 +21,16 @@ public class EnumTypeWrapperFactory<T> implements TypeWrapperFactory<T> {
 		}
 
 		try {
-			Field field = enumType.getDeclaredField(name);
-			field.setAccessible(true);
-			String s = data.getRemapper().remapField(data, enumType, field, name);
+			var classData = PublicClassData.of(enumType);
 
-			if (!s.isEmpty()) {
-				return s;
+			for (var field : classData.getFields()) {
+				if (field.getName().equals(name)) {
+					String s = data.getRemapper().remapField(data, classData, field);
+
+					if (!s.isEmpty()) {
+						return s;
+					}
+				}
 			}
 		} catch (Exception ex) {
 		}

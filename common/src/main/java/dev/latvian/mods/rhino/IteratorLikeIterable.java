@@ -39,7 +39,7 @@ public class IteratorLikeIterable implements Iterable<Object>, Closeable {
 		// We only care about "return" if it is not null or undefined
 		if ((retObj != null) && !Undefined.isUndefined(retObj)) {
 			if (!(retObj instanceof Callable)) {
-				throw ScriptRuntime.notFunctionError(target, retObj, ES6Iterator.RETURN_PROPERTY);
+				throw ScriptRuntime.notFunctionError(cx, target, retObj, ES6Iterator.RETURN_PROPERTY);
 			}
 			returnFunc = (Callable) retObj;
 		} else {
@@ -52,7 +52,7 @@ public class IteratorLikeIterable implements Iterable<Object>, Closeable {
 		if (!closed) {
 			closed = true;
 			if (returnFunc != null) {
-				returnFunc.call(cx, scope, iterator, ScriptRuntime.EMPTY_ARGS);
+				returnFunc.call(cx, scope, iterator, ScriptRuntime.EMPTY_OBJECTS);
 			}
 		}
 	}
@@ -68,7 +68,7 @@ public class IteratorLikeIterable implements Iterable<Object>, Closeable {
 
 		@Override
 		public boolean hasNext() {
-			Object val = next.call(cx, scope, iterator, ScriptRuntime.EMPTY_ARGS);
+			Object val = next.call(cx, scope, iterator, ScriptRuntime.EMPTY_OBJECTS);
 			// This will throw if "val" is not an object. 
 			// "getObjectPropNoWarn" won't, so do this as follows.
 			Object doneval = ScriptableObject.getProperty(cx, ScriptableObject.ensureScriptable(val), ES6Iterator.DONE_PROPERTY);
@@ -76,7 +76,7 @@ public class IteratorLikeIterable implements Iterable<Object>, Closeable {
 				doneval = Undefined.instance;
 			}
 			// It's OK if done is undefined.
-			if (ScriptRuntime.toBoolean(doneval)) {
+			if (ScriptRuntime.toBoolean(cx, doneval)) {
 				isDone = true;
 				return false;
 			}

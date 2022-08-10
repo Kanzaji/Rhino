@@ -1,6 +1,9 @@
 package dev.latvian.mods.rhino.mod.util;
 
 import dev.latvian.mods.rhino.SharedContextData;
+import dev.latvian.mods.rhino.classdata.FieldInfo;
+import dev.latvian.mods.rhino.classdata.MethodInfo;
+import dev.latvian.mods.rhino.classdata.PublicClassData;
 import dev.latvian.mods.rhino.util.Remapper;
 import net.minecraft.SharedConstants;
 import net.minecraft.Util;
@@ -9,8 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.InterruptedIOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -29,7 +30,7 @@ import java.util.regex.Pattern;
 
 public abstract class MinecraftRemapper implements Remapper {
 
-	protected static final Logger LOGGER = LoggerFactory.getLogger("Rhino Script Remapper");
+	public static final Logger LOGGER = LoggerFactory.getLogger("Rhino Script Remapper");
 
 	public static final int MM_VERSION = 1;
 	public static final int VERSION = 1;
@@ -363,8 +364,8 @@ public abstract class MinecraftRemapper implements Remapper {
 	public abstract Path getLocalRhinoDir();
 
 	@Override
-	public String remapClass(SharedContextData data, Class<?> from, String className) {
-		RemappedClass c = empty ? null : classMap.get(className);
+	public String remapClass(SharedContextData data, PublicClassData from) {
+		RemappedClass c = empty ? null : classMap.get(from.toString());
 		return c == null ? "" : c.mappedName;
 	}
 
@@ -384,14 +385,14 @@ public abstract class MinecraftRemapper implements Remapper {
 	}
 
 	@Override
-	public String remapField(SharedContextData data, Class<?> from, Field field, String fieldName) {
-		RemappedClass c = empty ? null : classMap.get(from.getName());
-		return c == null ? "" : c.getChild(fieldName);
+	public String remapField(SharedContextData data, PublicClassData from, FieldInfo field) {
+		RemappedClass c = empty ? null : classMap.get(from.toString());
+		return c == null ? "" : c.getChild(field.toString());
 	}
 
 	@Override
-	public String remapMethod(SharedContextData data, Class<?> from, Method method, String methodString) {
-		RemappedClass c = empty ? null : classMap.get(from.getName());
-		return c == null ? "" : c.getChild(methodString);
+	public String remapMethod(SharedContextData data, PublicClassData from, MethodInfo method) {
+		RemappedClass c = empty ? null : classMap.get(from.toString());
+		return c == null ? "" : c.getChild(method.toString());
 	}
 }

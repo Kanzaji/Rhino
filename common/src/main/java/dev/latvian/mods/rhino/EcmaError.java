@@ -36,7 +36,7 @@ public class EcmaError extends RhinoException {
 	}
 
 	@Override
-	public String details() {
+	public String details(Context cx) {
 		return errorName + ": " + errorMessage;
 	}
 

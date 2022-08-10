@@ -52,176 +52,6 @@ import java.util.Map;
 
 @SuppressWarnings("ThrowableNotThrown")
 public class Context {
-	/**
-	 * Control if member expression as function name extension is available.
-	 * If <code>hasFeature(FEATURE_MEMBER_EXPR_AS_FUNCTION_NAME)</code> returns
-	 * true, allow <code>function memberExpression(args) { body }</code> to be
-	 * syntax sugar for <code>memberExpression = function(args) { body }</code>,
-	 * when memberExpression is not a simple identifier.
-	 * See ECMAScript-262, section 11.2 for definition of memberExpression.
-	 * By default {@link #hasFeature(int)} returns false.
-	 */
-	public static final int FEATURE_MEMBER_EXPR_AS_FUNCTION_NAME = 2;
-
-	/**
-	 * Control if reserved keywords are treated as identifiers.
-	 * If <code>hasFeature(RESERVED_KEYWORD_AS_IDENTIFIER)</code> returns true,
-	 * treat future reserved keyword (see  Ecma-262, section 7.5.3) as ordinary
-	 * identifiers but warn about this usage.
-	 * <p>
-	 * By default {@link #hasFeature(int)} returns false.
-	 */
-	public static final int FEATURE_RESERVED_KEYWORD_AS_IDENTIFIER = 3;
-
-	/**
-	 * Control if properties <code>__proto__</code> and <code>__parent__</code>
-	 * are treated specially.
-	 * If <code>hasFeature(FEATURE_PARENT_PROTO_PROPERTIES)</code> returns true,
-	 * treat <code>__parent__</code> and <code>__proto__</code> as special properties.
-	 * <p>
-	 * The properties allow to query and set scope and prototype chains for the
-	 * objects. The special meaning of the properties is available
-	 * only when they are used as the right hand side of the dot operator.
-	 * For example, while <code>x.__proto__ = y</code> changes the prototype
-	 * chain of the object <code>x</code> to point to <code>y</code>,
-	 * <code>x["__proto__"] = y</code> simply assigns a new value to the property
-	 * <code>__proto__</code> in <code>x</code> even when the feature is on.
-	 * <p>
-	 * By default {@link #hasFeature(int)} returns true.
-	 */
-	public static final int FEATURE_PARENT_PROTO_PROPERTIES = 5;
-
-	/**
-	 * Control if dynamic scope should be used for name access.
-	 * If hasFeature(FEATURE_DYNAMIC_SCOPE) returns true, then the name lookup
-	 * during name resolution will use the top scope of the script or function
-	 * which is at the top of JS execution stack instead of the top scope of the
-	 * script or function from the current stack frame if the top scope of
-	 * the top stack frame contains the top scope of the current stack frame
-	 * on its prototype chain.
-	 * <p>
-	 * This is useful to define shared scope containing functions that can
-	 * be called from scripts and functions using private scopes.
-	 * <p>
-	 * By default {@link #hasFeature(int)} returns false.
-	 *
-	 * @since 1.6 Release 1
-	 */
-	public static final int FEATURE_DYNAMIC_SCOPE = 7;
-
-	/**
-	 * Control if strict variable mode is enabled.
-	 * When the feature is on Rhino reports runtime errors if assignment
-	 * to a global variable that does not exist is executed. When the feature
-	 * is off such assignments create a new variable in the global scope as
-	 * required by ECMA 262.
-	 * <p>
-	 * By default {@link #hasFeature(int)} returns false.
-	 *
-	 * @since 1.6 Release 1
-	 */
-	public static final int FEATURE_STRICT_VARS = 8;
-
-	/**
-	 * Control if strict eval mode is enabled.
-	 * When the feature is on Rhino reports runtime errors if non-string
-	 * argument is passed to the eval function. When the feature is off
-	 * eval simply return non-string argument as is without performing any
-	 * evaluation as required by ECMA 262.
-	 * <p>
-	 * By default {@link #hasFeature(int)} returns false.
-	 *
-	 * @since 1.6 Release 1
-	 */
-	public static final int FEATURE_STRICT_EVAL = 9;
-
-	/**
-	 * When the feature is on Rhino will add a "fileName" and "lineNumber"
-	 * properties to Error objects automatically. When the feature is off, you
-	 * have to explicitly pass them as the second and third argument to the
-	 * Error constructor. Note that neither behavior is fully ECMA 262
-	 * compliant (as 262 doesn't specify a three-arg constructor), but keeping
-	 * the feature off results in Error objects that don't have
-	 * additional non-ECMA properties when constructed using the ECMA-defined
-	 * single-arg constructor and is thus desirable if a stricter ECMA
-	 * compliance is desired, specifically adherence to the point 15.11.5. of
-	 * the standard.
-	 * <p>
-	 * By default {@link #hasFeature(int)} returns false.
-	 *
-	 * @since 1.6 Release 6
-	 */
-	public static final int FEATURE_LOCATION_INFORMATION_IN_ERROR = 10;
-
-	/**
-	 * Controls whether JS 1.5 'strict mode' is enabled.
-	 * When the feature is on, Rhino reports more than a dozen different
-	 * warnings.  When the feature is off, these warnings are not generated.
-	 * FEATURE_STRICT_MODE implies FEATURE_STRICT_VARS and FEATURE_STRICT_EVAL.
-	 * <p>
-	 * By default {@link #hasFeature(int)} returns false.
-	 *
-	 * @since 1.6 Release 6
-	 */
-	public static final int FEATURE_STRICT_MODE = 11;
-
-	/**
-	 * Controls whether a warning should be treated as an error.
-	 *
-	 * @since 1.6 Release 6
-	 */
-	public static final int FEATURE_WARNING_AS_ERROR = 12;
-
-	/**
-	 * Enables enhanced access to Java.
-	 * Specifically, controls whether private and protected members can be
-	 * accessed, and whether scripts can catch all Java exceptions.
-	 * <p>
-	 * Note that this feature should only be enabled for trusted scripts.
-	 * <p>
-	 * By default {@link #hasFeature(int)} returns false.
-	 *
-	 * @since 1.7 Release 1
-	 */
-	public static final int FEATURE_ENHANCED_JAVA_ACCESS = 13;
-
-	/**
-	 * Enables access to JavaScript features from ECMAscript 6 that are present in
-	 * JavaScript engines that do not yet support version 6, such as V8.
-	 * This includes support for typed arrays. Default is true.
-	 *
-	 * @since 1.7 Release 3
-	 */
-	public static final int FEATURE_V8_EXTENSIONS = 14;
-
-	/**
-	 * If set, then all objects will have a thread-safe property map. (Note that this doesn't make
-	 * everything else that they do thread-safe -- that depends on the specific implementation.
-	 * If not set, users should not share Rhino objects between threads, unless the "sync"
-	 * function is used to wrap them with an explicit synchronizer. The default
-	 * is false, which means that by default, individual objects are not thread-safe.
-	 *
-	 * @since 1.7.8
-	 */
-	public static final int FEATURE_THREAD_SAFE_OBJECTS = 17;
-
-	/**
-	 * If set, then all integer numbers will be returned without decimal place. For instance
-	 * assume there is a function like this:
-	 * <code>function foo() {return 5;}</code>
-	 * 5 will be returned if feature is set, 5.0 otherwise.
-	 */
-	public static final int FEATURE_INTEGER_WITHOUT_DECIMAL_PLACE = 18;
-
-	/**
-	 * TypedArray buffer uses little/big endian depending on the platform.
-	 * The default is big endian for Rhino.
-	 *
-	 * @since 1.7 Release 11
-	 */
-	public static final int FEATURE_LITTLE_ENDIAN = 19;
-
-	public static final String languageVersionProperty = "language version";
 	public static final String errorReporterProperty = "error reporter";
 
 	/**
@@ -229,8 +59,6 @@ public class Context {
 	 */
 
 	private final ContextFactory factory;
-	private boolean sealed;
-	private Object sealKey;
 
 	Scriptable topCallScope;
 	boolean isContinuationsTopCall;
@@ -247,7 +75,6 @@ public class Context {
 	private ErrorReporter errorReporter;
 	RegExp regExp;
 	private Locale locale;
-	boolean useDynamicScope;
 	private int maximumInterpreterStackDepth;
 	private WrapFactory wrapFactory;
 	private int enterCount;
@@ -340,9 +167,6 @@ public class Context {
 					throw new IllegalStateException("factory.makeContext() returned Context instance already associated with some thread");
 				}
 				factory.onContextCreated(cx);
-				if (factory.isSealed() && !cx.isSealed()) {
-					cx.seal(null);
-				}
 			} else {
 				if (cx.enterCount != 0) {
 					throw new IllegalStateException("can not use Context instance already associated with some thread");
@@ -401,73 +225,6 @@ public class Context {
 	}
 
 	/**
-	 * Checks if this is a sealed Context. A sealed Context instance does not
-	 * allow to modify any of its properties and will throw an exception
-	 * on any such attempt.
-	 *
-	 * @see #seal(Object sealKey)
-	 */
-	public final boolean isSealed() {
-		return sealed;
-	}
-
-	/**
-	 * Seal this Context object so any attempt to modify any of its properties
-	 * including calling {@link #enter()} and {@link #exit()} methods will
-	 * throw an exception.
-	 * <p>
-	 * If <code>sealKey</code> is not null, calling
-	 * {@link #unseal(Object sealKey)} with the same key unseals
-	 * the object. If <code>sealKey</code> is null, unsealing is no longer possible.
-	 *
-	 * @see #isSealed()
-	 * @see #unseal(Object)
-	 */
-	public final void seal(Object sealKey) {
-		if (sealed) {
-			onSealedMutation();
-		}
-		sealed = true;
-		this.sealKey = sealKey;
-	}
-
-	/**
-	 * Unseal previously sealed Context object.
-	 * The <code>sealKey</code> argument should not be null and should match
-	 * <code>sealKey</code> suplied with the last call to
-	 * {@link #seal(Object)} or an exception will be thrown.
-	 *
-	 * @see #isSealed()
-	 * @see #seal(Object sealKey)
-	 */
-	public final void unseal(Object sealKey) {
-		if (sealKey == null) {
-			throw new IllegalArgumentException();
-		}
-		if (this.sealKey != sealKey) {
-			throw new IllegalArgumentException();
-		}
-		if (!sealed) {
-			throw new IllegalStateException();
-		}
-		sealed = false;
-		this.sealKey = null;
-	}
-
-	static void onSealedMutation() {
-		throw new IllegalStateException();
-	}
-
-	@Deprecated
-	public void setLanguageVersion(int version) {
-		if (sealed) {
-			onSealedMutation();
-		}
-
-		System.out.println("Context#setLanguageVersion(v) is deprecated!");
-	}
-
-	/**
 	 * Get the implementation version.
 	 *
 	 * <p>
@@ -506,9 +263,6 @@ public class Context {
 	 * @see ErrorReporter
 	 */
 	public final ErrorReporter setErrorReporter(ErrorReporter reporter) {
-		if (sealed) {
-			onSealedMutation();
-		}
 		if (reporter == null) {
 			throw new IllegalArgumentException();
 		}
@@ -544,9 +298,6 @@ public class Context {
 	 * @see java.util.Locale
 	 */
 	public final Locale setLocale(Locale loc) {
-		if (sealed) {
-			onSealedMutation();
-		}
 		Locale result = locale;
 		locale = loc;
 		return result;
@@ -561,9 +312,6 @@ public class Context {
 	 * @see #removePropertyChangeListener(java.beans.PropertyChangeListener)
 	 */
 	public final void addPropertyChangeListener(PropertyChangeListener l) {
-		if (sealed) {
-			onSealedMutation();
-		}
 		propertyListeners = Kit.addListener(propertyListeners, l);
 	}
 
@@ -576,9 +324,6 @@ public class Context {
 	 * @see #addPropertyChangeListener(java.beans.PropertyChangeListener)
 	 */
 	public final void removePropertyChangeListener(PropertyChangeListener l) {
-		if (sealed) {
-			onSealedMutation();
-		}
 		propertyListeners = Kit.removeListener(propertyListeners, l);
 	}
 
@@ -623,11 +368,7 @@ public class Context {
 	 * @see ErrorReporter
 	 */
 	public static void reportWarning(Context cx, String message, String sourceName, int lineno, String lineSource, int lineOffset) {
-		if (cx.hasFeature(FEATURE_WARNING_AS_ERROR)) {
-			reportError(cx, message, sourceName, lineno, lineSource, lineOffset);
-		} else {
-			cx.getErrorReporter().warning(message, sourceName, lineno, lineSource, lineOffset);
-		}
+		cx.getErrorReporter().warning(message, sourceName, lineno, lineSource, lineOffset);
 	}
 
 	/**
@@ -754,85 +495,7 @@ public class Context {
 	 * @return the initialized scope
 	 */
 	public final ScriptableObject initStandardObjects() {
-		return initStandardObjects(null, false);
-	}
-
-	/**
-	 * Initialize the standard objects, leaving out those that offer access directly
-	 * to Java classes. This sets up "scope" to have access to all the standard
-	 * JavaScript classes, but does not create global objects for any top-level
-	 * Java packages. In addition, the "Packages," "JavaAdapter," and
-	 * "JavaImporter" classes, and the "getClass" function, are not
-	 * initialized.
-	 * <p>
-	 * The result of this function is a scope that may be safely used in a "sandbox"
-	 * environment where it is not desirable to give access to Java code from JavaScript.
-	 * <p>
-	 * Creates instances of the standard objects and their constructors
-	 * (Object, String, Number, Date, etc.), setting up 'scope' to act
-	 * as a global object as in ECMA 15.1.<p>
-	 * <p>
-	 * This method must be called to initialize a scope before scripts
-	 * can be evaluated in that scope.<p>
-	 * <p>
-	 * This method does not affect the Context it is called upon.
-	 *
-	 * @return the initialized scope
-	 */
-	public final ScriptableObject initSafeStandardObjects() {
-		return initSafeStandardObjects(null, false);
-	}
-
-	/**
-	 * Initialize the standard objects.
-	 * <p>
-	 * Creates instances of the standard objects and their constructors
-	 * (Object, String, Number, Date, etc.), setting up 'scope' to act
-	 * as a global object as in ECMA 15.1.<p>
-	 * <p>
-	 * This method must be called to initialize a scope before scripts
-	 * can be evaluated in that scope.<p>
-	 * <p>
-	 * This method does not affect the Context it is called upon.
-	 *
-	 * @param scope the scope to initialize, or null, in which case a new
-	 *              object will be created to serve as the scope
-	 * @return the initialized scope. The method returns the value of the scope
-	 * argument if it is not null or newly allocated scope object which
-	 * is an instance {@link ScriptableObject}.
-	 */
-	public final Scriptable initStandardObjects(ScriptableObject scope) {
-		return initStandardObjects(scope, false);
-	}
-
-	/**
-	 * Initialize the standard objects, leaving out those that offer access directly
-	 * to Java classes. This sets up "scope" to have access to all the standard
-	 * JavaScript classes, but does not create global objects for any top-level
-	 * Java packages. In addition, the "Packages," "JavaAdapter," and
-	 * "JavaImporter" classes, and the "getClass" function, are not
-	 * initialized.
-	 * <p>
-	 * The result of this function is a scope that may be safely used in a "sandbox"
-	 * environment where it is not desirable to give access to Java code from JavaScript.
-	 * <p>
-	 * Creates instances of the standard objects and their constructors
-	 * (Object, String, Number, Date, etc.), setting up 'scope' to act
-	 * as a global object as in ECMA 15.1.<p>
-	 * <p>
-	 * This method must be called to initialize a scope before scripts
-	 * can be evaluated in that scope.<p>
-	 * <p>
-	 * This method does not affect the Context it is called upon.
-	 *
-	 * @param scope the scope to initialize, or null, in which case a new
-	 *              object will be created to serve as the scope
-	 * @return the initialized scope. The method returns the value of the scope
-	 * argument if it is not null or newly allocated scope object which
-	 * is an instance {@link ScriptableObject}.
-	 */
-	public final Scriptable initSafeStandardObjects(ScriptableObject scope) {
-		return initSafeStandardObjects(scope, false);
+		return initStandardObjects(null);
 	}
 
 	/**
@@ -854,55 +517,14 @@ public class Context {
 	 * the current ECMA/ISO language specification, but is likely for
 	 * the next version.
 	 *
-	 * @param scope  the scope to initialize, or null, in which case a new
-	 *               object will be created to serve as the scope
-	 * @param sealed whether or not to create sealed standard objects that
-	 *               cannot be modified.
+	 * @param scope the scope to initialize, or null, in which case a new
+	 *              object will be created to serve as the scope
 	 * @return the initialized scope. The method returns the value of the scope
 	 * argument if it is not null or newly allocated scope object.
 	 * @since 1.4R3
 	 */
-	public ScriptableObject initStandardObjects(ScriptableObject scope, boolean sealed) {
-		return ScriptRuntime.initStandardObjects(this, scope, sealed);
-	}
-
-	/**
-	 * Initialize the standard objects, leaving out those that offer access directly
-	 * to Java classes. This sets up "scope" to have access to all the standard
-	 * JavaScript classes, but does not create global objects for any top-level
-	 * Java packages. In addition, the "Packages," "JavaAdapter," and
-	 * "JavaImporter" classes, and the "getClass" function, are not
-	 * initialized.
-	 * <p>
-	 * The result of this function is a scope that may be safely used in a "sandbox"
-	 * environment where it is not desirable to give access to Java code from JavaScript.
-	 * <p>
-	 * Creates instances of the standard objects and their constructors
-	 * (Object, String, Number, Date, etc.), setting up 'scope' to act
-	 * as a global object as in ECMA 15.1.<p>
-	 * <p>
-	 * This method must be called to initialize a scope before scripts
-	 * can be evaluated in that scope.<p>
-	 * <p>
-	 * This method does not affect the Context it is called upon.<p>
-	 * <p>
-	 * This form of the method also allows for creating "sealed" standard
-	 * objects. An object that is sealed cannot have properties added, changed,
-	 * or removed. This is useful to create a "superglobal" that can be shared
-	 * among several top-level objects. Note that sealing is not allowed in
-	 * the current ECMA/ISO language specification, but is likely for
-	 * the next version.
-	 *
-	 * @param scope  the scope to initialize, or null, in which case a new
-	 *               object will be created to serve as the scope
-	 * @param sealed whether or not to create sealed standard objects that
-	 *               cannot be modified.
-	 * @return the initialized scope. The method returns the value of the scope
-	 * argument if it is not null or newly allocated scope object.
-	 * @since 1.7.6
-	 */
-	public ScriptableObject initSafeStandardObjects(ScriptableObject scope, boolean sealed) {
-		return ScriptRuntime.initSafeStandardObjects(this, scope, sealed);
+	public ScriptableObject initStandardObjects(ScriptableObject scope) {
+		return ScriptRuntime.initStandardObjects(this, scope);
 	}
 
 	/**
@@ -1110,7 +732,7 @@ public class Context {
 	 * @return the new object
 	 */
 	public Scriptable newObject(Scriptable scope, String constructorName) {
-		return newObject(scope, constructorName, ScriptRuntime.EMPTY_ARGS);
+		return newObject(scope, constructorName, ScriptRuntime.EMPTY_OBJECTS);
 	}
 
 	/**
@@ -1180,91 +802,6 @@ public class Context {
 	}
 
 	/**
-	 * Get the elements of a JavaScript array.
-	 * <p>
-	 * If the object defines a length property convertible to double number,
-	 * then the number is converted Uint32 value as defined in Ecma 9.6
-	 * and Java array of that size is allocated.
-	 * The array is initialized with the values obtained by
-	 * calling get() on object for each value of i in [0,length-1]. If
-	 * there is not a defined value for a property the Undefined value
-	 * is used to initialize the corresponding element in the array. The
-	 * Java array is then returned.
-	 * If the object doesn't define a length property or it is not a number,
-	 * empty array is returned.
-	 *
-	 * @param object the JavaScript array or array-like object
-	 * @return a Java array of objects
-	 * @since 1.4 release 2
-	 */
-	public final Object[] getElements(Scriptable object) {
-		return ScriptRuntime.getArrayElements(object);
-	}
-
-	/**
-	 * Convert the value to a JavaScript boolean value.
-	 * <p>
-	 * See ECMA 9.2.
-	 *
-	 * @param value a JavaScript value
-	 * @return the corresponding boolean value converted using
-	 * the ECMA rules
-	 */
-	public static boolean toBoolean(Object value) {
-		return ScriptRuntime.toBoolean(value);
-	}
-
-	/**
-	 * Convert the value to a JavaScript Number value.
-	 * <p>
-	 * Returns a Java double for the JavaScript Number.
-	 * <p>
-	 * See ECMA 9.3.
-	 *
-	 * @param value a JavaScript value
-	 * @return the corresponding double value converted using
-	 * the ECMA rules
-	 */
-	public static double toNumber(Object value) {
-		return ScriptRuntime.toNumber(value);
-	}
-
-	/**
-	 * Convert the value to a JavaScript String value.
-	 * <p>
-	 * See ECMA 9.8.
-	 * <p>
-	 *
-	 * @param value a JavaScript value
-	 * @return the corresponding String value converted using
-	 * the ECMA rules
-	 */
-	public static String toString(Object value) {
-		return ScriptRuntime.toString(value);
-	}
-
-	/**
-	 * Convert the value to an JavaScript object value.
-	 * <p>
-	 * Note that a scope must be provided to look up the constructors
-	 * for Number, Boolean, and String.
-	 * <p>
-	 * See ECMA 9.9.
-	 * <p>
-	 * Additionally, arbitrary Java objects and classes will be
-	 * wrapped in a Scriptable object with its Java fields and methods
-	 * reflected as JavaScript properties of the object.
-	 *
-	 * @param value any Java object
-	 * @param scope global scope containing constructors for Number,
-	 *              Boolean, and String
-	 * @return new JavaScript object
-	 */
-	public static Scriptable toObject(Object value, Scriptable scope) {
-		return ScriptRuntime.toObject(scope, value);
-	}
-
-	/**
 	 * Convenient method to convert java value to its closest representation
 	 * in JavaScript.
 	 * <p>
@@ -1317,7 +854,7 @@ public class Context {
 	 */
 	public static Object jsToJava(Context cx, Object value, Class<?> desiredType) throws EvaluatorException {
 		if (desiredType == null) {
-			return value;
+			return Wrapper.unwrapped(value);
 		}
 
 		return NativeJavaObject.coerceTypeImpl(cx, desiredType, value);
@@ -1347,10 +884,7 @@ public class Context {
 		}
 		// special handling of Error so scripts would not catch them
 		if (e instanceof Error) {
-			Context cx = getContext();
-			if (cx == null || !cx.hasFeature(Context.FEATURE_ENHANCED_JAVA_ACCESS)) {
-				throw (Error) e;
-			}
+			throw (Error) e;
 		}
 		if (e instanceof RhinoException) {
 			throw (RhinoException) e;
@@ -1394,9 +928,6 @@ public class Context {
 	 * @throws IllegalArgumentException if the new depth is not at least 1
 	 */
 	public final void setMaximumInterpreterStackDepth(int max) {
-		if (sealed) {
-			onSealedMutation();
-		}
 		if (max < 1) {
 			throw new IllegalArgumentException("Cannot set maximumInterpreterStackDepth to less than 1");
 		}
@@ -1413,9 +944,6 @@ public class Context {
 	 *                           object for this Context
 	 */
 	public synchronized final void setClassShutter(ClassShutter shutter) {
-		if (sealed) {
-			onSealedMutation();
-		}
 		if (shutter == null) {
 			throw new IllegalArgumentException();
 		}
@@ -1486,9 +1014,6 @@ public class Context {
 	 * @param value the value to save
 	 */
 	public synchronized final void putThreadLocal(Object key, Object value) {
-		if (sealed) {
-			onSealedMutation();
-		}
 		if (threadLocalMap == null) {
 			threadLocalMap = new HashMap<>();
 		}
@@ -1502,9 +1027,6 @@ public class Context {
 	 * @since 1.5 release 2
 	 */
 	public final void removeThreadLocal(Object key) {
-		if (sealed) {
-			onSealedMutation();
-		}
 		if (threadLocalMap == null) {
 			return;
 		}
@@ -1521,9 +1043,6 @@ public class Context {
 	 * @since 1.5 Release 4
 	 */
 	public final void setWrapFactory(WrapFactory wrapFactory) {
-		if (sealed) {
-			onSealedMutation();
-		}
 		if (wrapFactory == null) {
 			throw new IllegalArgumentException();
 		}
@@ -1541,34 +1060,6 @@ public class Context {
 			wrapFactory = new WrapFactory();
 		}
 		return wrapFactory;
-	}
-
-	/**
-	 * Controls certain aspects of script semantics.
-	 * Should be overwritten to alter default behavior.
-	 * <p>
-	 * The default implementation calls
-	 * {@link ContextFactory#hasFeature(Context cx, int featureIndex)}
-	 * that allows to customize Context behavior without introducing
-	 * Context subclasses.  {@link ContextFactory} documentation gives
-	 * an example of hasFeature implementation.
-	 *
-	 * @param featureIndex feature index to check
-	 * @return true if the <code>featureIndex</code> feature is turned on
-	 * @see #FEATURE_MEMBER_EXPR_AS_FUNCTION_NAME
-	 * @see #FEATURE_RESERVED_KEYWORD_AS_IDENTIFIER
-	 * @see #FEATURE_PARENT_PROTO_PROPERTIES
-	 * @see #FEATURE_DYNAMIC_SCOPE
-	 * @see #FEATURE_STRICT_VARS
-	 * @see #FEATURE_STRICT_EVAL
-	 * @see #FEATURE_LOCATION_INFORMATION_IN_ERROR
-	 * @see #FEATURE_STRICT_MODE
-	 * @see #FEATURE_WARNING_AS_ERROR
-	 * @see #FEATURE_ENHANCED_JAVA_ACCESS
-	 */
-	public boolean hasFeature(int featureIndex) {
-		ContextFactory f = getFactory();
-		return f.hasFeature(this, featureIndex);
 	}
 
 	/**
@@ -1600,9 +1091,6 @@ public class Context {
 	 * @param threshold The instruction threshold
 	 */
 	public final void setInstructionObserverThreshold(int threshold) {
-		if (sealed) {
-			onSealedMutation();
-		}
 		if (threshold < 0) {
 			throw new IllegalArgumentException();
 		}
@@ -1688,9 +1176,6 @@ public class Context {
 	}
 
 	public final void setApplicationClassLoader(ClassLoader loader) {
-		if (sealed) {
-			onSealedMutation();
-		}
 		if (loader == null) {
 			// restore default behaviour
 			applicationClassLoader = null;
@@ -1784,7 +1269,7 @@ public class Context {
 			}
 		}
 
-		return new IRFactory(compilerEnv, compilationErrorReporter).transformTree(ast);
+		return new IRFactory(compilerEnv, compilationErrorReporter).transformTree(cx, ast);
 	}
 
 	private Evaluator createCompiler() {
@@ -1802,9 +1287,7 @@ public class Context {
 		}
 		if (cx.lastInterpreterFrame != null) {
 			Evaluator evaluator = createInterpreter();
-			if (evaluator != null) {
-				return evaluator.getSourcePositionFromStack(cx, linep);
-			}
+			return evaluator.getSourcePositionFromStack(cx, linep);
 		}
 		/**
 		 * A bit of a hack, but the only way to get filename and line
@@ -1838,5 +1321,9 @@ public class Context {
 
 	public SharedContextData getSharedData() {
 		return factory.getSharedData();
+	}
+
+	public SharedContextData getSharedData(Scriptable scope) {
+		return factory.getSharedData(scope);
 	}
 }

@@ -25,7 +25,7 @@ public class JavaScriptException extends RhinoException {
 		this.value = value;
 		// Fill in fileName and lineNumber automatically when not specified
 		// explicitly, see Bugzilla issue #342807
-		if (value instanceof NativeError error && Context.getContext().hasFeature(Context.FEATURE_LOCATION_INFORMATION_IN_ERROR)) {
+		if (value instanceof NativeError error) {
 			if (!error.has(cx, "fileName", error)) {
 				error.put(cx, "fileName", error, sourceName);
 			}
@@ -33,19 +33,19 @@ public class JavaScriptException extends RhinoException {
 				error.put(cx, "lineNumber", error, lineNumber);
 			}
 			// set stack property, see bug #549604
-			error.setStackProvider(this);
+			error.setStackProvider(cx, this);
 		}
 	}
 
 	@Override
-	public String details() {
+	public String details(Context cx) {
 		if (value == null) {
 			return "null";
 		} else if (value instanceof NativeError) {
 			return value.toString();
 		}
 		try {
-			return ScriptRuntime.toString(value);
+			return ScriptRuntime.toString(cx, value);
 		} catch (RuntimeException rte) {
 			// ScriptRuntime.toString may throw a RuntimeException
 			if (value instanceof Scriptable) {

@@ -14,14 +14,6 @@ public class ObjArray {
 	public ObjArray() {
 	}
 
-	public final boolean isSealed() {
-		return sealed;
-	}
-
-	public final void seal() {
-		sealed = true;
-	}
-
 	public final boolean isEmpty() {
 		return size == 0;
 	}
@@ -33,9 +25,6 @@ public class ObjArray {
 	public final void setSize(int newSize) {
 		if (newSize < 0) {
 			throw new IllegalArgumentException();
-		}
-		if (sealed) {
-			throw onSeledMutation();
 		}
 		int N = size;
 		if (newSize < N) {
@@ -60,9 +49,6 @@ public class ObjArray {
 	public final void set(int index, Object value) {
 		if (!(0 <= index && index < size)) {
 			throw onInvalidIndex(index, size);
-		}
-		if (sealed) {
-			throw onSeledMutation();
 		}
 		setImpl(index, value);
 	}
@@ -121,9 +107,6 @@ public class ObjArray {
 	}
 
 	public final Object pop() {
-		if (sealed) {
-			throw onSeledMutation();
-		}
 		int N = size;
 		--N;
 		Object top;
@@ -163,9 +146,6 @@ public class ObjArray {
 	}
 
 	public final void add(Object value) {
-		if (sealed) {
-			throw onSeledMutation();
-		}
 		int N = size;
 		if (N >= FIELDS_STORE_SIZE) {
 			ensureCapacity(N + 1);
@@ -178,9 +158,6 @@ public class ObjArray {
 		int N = size;
 		if (!(0 <= index && index <= N)) {
 			throw onInvalidIndex(index, N + 1);
-		}
-		if (sealed) {
-			throw onSeledMutation();
 		}
 		Object tmp;
 		switch (index) {
@@ -246,9 +223,6 @@ public class ObjArray {
 		if (!(0 <= index && index < N)) {
 			throw onInvalidIndex(index, N);
 		}
-		if (sealed) {
-			throw onSeledMutation();
-		}
 		--N;
 		switch (index) {
 			case 0:
@@ -298,9 +272,6 @@ public class ObjArray {
 	}
 
 	public final void clear() {
-		if (sealed) {
-			throw onSeledMutation();
-		}
 		int N = size;
 		for (int i = 0; i != N; ++i) {
 			setImpl(i, null);
@@ -385,14 +356,8 @@ public class ObjArray {
 		throw new RuntimeException("Empty stack");
 	}
 
-	private static RuntimeException onSeledMutation() {
-		throw new IllegalStateException("Attempt to modify sealed array");
-	}
-
 	// Number of data elements
 	private int size;
-
-	private boolean sealed;
 
 	private static final int FIELDS_STORE_SIZE = 5;
 	private transient Object f0, f1, f2, f3, f4;

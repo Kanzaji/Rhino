@@ -140,7 +140,7 @@ public class TopLevel extends IdScriptableObject {
 	 * called by the embedding if a top-level scope is not initialized through
 	 * <code>initStandardObjects()</code>.
 	 */
-	public void cacheBuiltins(Context cx, Scriptable scope, boolean sealed) {
+	public void cacheBuiltins(Context cx, Scriptable scope) {
 		ctors = new EnumMap<>(Builtins.class);
 		for (Builtins builtin : Builtins.values()) {
 			Object value = getProperty(cx, this, builtin.name());
@@ -149,7 +149,7 @@ public class TopLevel extends IdScriptableObject {
 			} else if (builtin == Builtins.GeneratorFunction) {
 				// Handle weird situation of "GeneratorFunction" being a real constructor
 				// which is never registered in the top-level scope
-				ctors.put(builtin, (BaseFunction) BaseFunction.initAsGeneratorFunction(cx, scope, sealed));
+				ctors.put(builtin, (BaseFunction) BaseFunction.initAsGeneratorFunction(cx, scope));
 			}
 		}
 		errors = new EnumMap<>(NativeErrors.class);

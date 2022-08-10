@@ -17,21 +17,18 @@ import java.util.Iterator;
 public final class NativeIterator extends IdScriptableObject {
 	private static final Object ITERATOR_TAG = "Iterator";
 
-	static void init(Context cx, ScriptableObject scope, boolean sealed) {
+	static void init(Context cx, ScriptableObject scope) {
 		// Iterator
 		NativeIterator iterator = new NativeIterator();
-		iterator.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, sealed);
+		iterator.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope);
 
 		// Generator
-		ES6Generator.init(cx, scope, sealed);
+		ES6Generator.init(cx, scope);
 
 		// StopIteration
 		NativeObject obj = new StopIteration();
 		obj.setPrototype(cx, getObjectPrototype(cx, scope));
 		obj.setParentScope(scope);
-		if (sealed) {
-			obj.sealObject(cx);
-		}
 		defineProperty(cx, scope, STOP_ITERATION, obj, DONTENUM);
 		// Use "associateValue" so that generators can continue to
 		// throw StopIteration even if the property of the global
@@ -149,10 +146,10 @@ public final class NativeIterator extends IdScriptableObject {
 	private static Object jsConstructor(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
 		if (args.length == 0 || args[0] == null || args[0] == Undefined.instance) {
 			Object argument = args.length == 0 ? Undefined.instance : args[0];
-			throw ScriptRuntime.typeError1("msg.no.properties", ScriptRuntime.toString(argument));
+			throw ScriptRuntime.typeError1("msg.no.properties", ScriptRuntime.toString(cx, argument));
 		}
 		Scriptable obj = ScriptRuntime.toObject(cx, scope, args[0]);
-		boolean keyOnly = args.length > 1 && ScriptRuntime.toBoolean(args[1]);
+		boolean keyOnly = args.length > 1 && ScriptRuntime.toBoolean(cx, args[1]);
 		if (thisObj != null) {
 			// Called as a function. Convert to iterator if possible.
 

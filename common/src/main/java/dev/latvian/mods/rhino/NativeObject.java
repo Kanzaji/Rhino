@@ -19,9 +19,9 @@ import java.util.Map;
 public class NativeObject extends IdScriptableObject {
 	private static final Object OBJECT_TAG = "Object";
 
-	static void init(Context cx, Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope) {
 		NativeObject obj = new NativeObject();
-		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, sealed);
+		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope);
 	}
 
 	@Override
@@ -162,7 +162,7 @@ public class NativeObject extends IdScriptableObject {
 				if (!(toString instanceof Callable fun)) {
 					throw ScriptRuntime.notFunctionError(toString);
 				}
-				return fun.call(cx, scope, thisObj, ScriptRuntime.EMPTY_ARGS);
+				return fun.call(cx, scope, thisObj, ScriptRuntime.EMPTY_OBJECTS);
 			}
 
 			case Id_toString: {
@@ -345,7 +345,7 @@ public class NativeObject extends IdScriptableObject {
 				Scriptable obj = getCompatibleObject(cx, scope, arg);
 				Object[] ids = obj.getIds(cx);
 				for (int i = 0; i < ids.length; i++) {
-					ids[i] = ScriptRuntime.toString(ids[i]);
+					ids[i] = ScriptRuntime.toString(cx, ids[i]);
 				}
 				return cx.newArray(scope, ids);
 			}
@@ -356,7 +356,7 @@ public class NativeObject extends IdScriptableObject {
 				Object[] entries = new Object[ids.length];
 				for (int i = 0; i < ids.length; i++) {
 					Object[] entry = new Object[2];
-					entry[0] = ScriptRuntime.toString(ids[i]);
+					entry[0] = ScriptRuntime.toString(cx, ids[i]);
 					entry[1] = obj.get(cx, entry[0].toString(), scope);
 					entries[i] = cx.newArray(scope, entry);
 				}
@@ -368,7 +368,7 @@ public class NativeObject extends IdScriptableObject {
 				Object[] ids = obj.getIds(cx);
 				Object[] values = new Object[ids.length];
 				for (int i = 0; i < ids.length; i++) {
-					values[i] = obj.get(cx, ScriptRuntime.toString(ids[i]), scope);
+					values[i] = obj.get(cx, ScriptRuntime.toString(cx, ids[i]), scope);
 				}
 				return cx.newArray(scope, values);
 			}
@@ -378,7 +378,7 @@ public class NativeObject extends IdScriptableObject {
 				ScriptableObject obj = ensureScriptableObject(s);
 				Object[] ids = obj.getIds(cx, true, false);
 				for (int i = 0; i < ids.length; i++) {
-					ids[i] = ScriptRuntime.toString(ids[i]);
+					ids[i] = ScriptRuntime.toString(cx, ids[i]);
 				}
 				return cx.newArray(scope, ids);
 			}
@@ -438,8 +438,8 @@ public class NativeObject extends IdScriptableObject {
 				Object arg = args.length < 1 ? Undefined.instance : args[0];
 				ScriptableObject obj = ensureScriptableObject(arg);
 				Object propsObj = args.length < 2 ? Undefined.instance : args[1];
-				Scriptable props = Context.toObject(propsObj, scope);
-				obj.defineOwnProperties(cx, ensureScriptableObject(props));
+				Scriptable props = ScriptRuntime.toObject(cx, scope, propsObj);
+				obj.defineOwnProperties(cx, scope, ensureScriptableObject(props));
 				return obj;
 			}
 			case ConstructorId_create: {
@@ -451,8 +451,8 @@ public class NativeObject extends IdScriptableObject {
 				newObject.setPrototype(cx, obj);
 
 				if (args.length > 1 && !Undefined.isUndefined(args[1])) {
-					Scriptable props = Context.toObject(args[1], scope);
-					newObject.defineOwnProperties(cx, ensureScriptableObject(props));
+					Scriptable props = ScriptRuntime.toObject(cx, scope, args[1]);
+					newObject.defineOwnProperties(cx, scope, ensureScriptableObject(props));
 				}
 
 				return newObject;
@@ -562,7 +562,7 @@ public class NativeObject extends IdScriptableObject {
 								targetObj.put(cx, (String) key, targetObj, val);
 							}
 						} else if (key instanceof Number) {
-							int ii = ScriptRuntime.toInt32(key);
+							int ii = ScriptRuntime.toInt32(cx, key);
 							Object val = sourceObj.get(cx, ii, sourceObj);
 							if ((val != NOT_FOUND) && !Undefined.isUndefined(val)) {
 								targetObj.put(cx, ii, targetObj, val);

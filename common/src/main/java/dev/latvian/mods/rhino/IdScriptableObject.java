@@ -426,9 +426,6 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 	public void put(Context cx, String name, Scriptable start, Object value) {
 		int info = findInstanceIdInfo(name);
 		if (info != 0) {
-			if (start == this && isSealed()) {
-				throw Context.reportRuntimeError1(Context.getCurrentContext(), "msg.modify.sealed", name);
-			}
 			int attr = (info >>> 16);
 			if ((attr & READONLY) == 0) {
 				if (start == this) {
@@ -443,9 +440,6 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 		if (prototypeValues != null) {
 			int id = prototypeValues.findId(cx, name);
 			if (id != 0) {
-				if (start == this && isSealed()) {
-					throw Context.reportRuntimeError1(Context.getCurrentContext(), "msg.modify.sealed", name);
-				}
 				prototypeValues.set(cx, id, start, value);
 				return;
 			}
@@ -457,9 +451,6 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 	public void put(Context cx, Symbol key, Scriptable start, Object value) {
 		int info = findInstanceIdInfo(key);
 		if (info != 0) {
-			if (start == this && isSealed()) {
-				throw Context.reportRuntimeError0(Context.getCurrentContext(), "msg.modify.sealed");
-			}
 			int attr = (info >>> 16);
 			if ((attr & READONLY) == 0) {
 				if (start == this) {
@@ -474,9 +465,6 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 		if (prototypeValues != null) {
 			int id = prototypeValues.findId(cx, key);
 			if (id != 0) {
-				if (start == this && isSealed()) {
-					throw Context.reportRuntimeError0(Context.getCurrentContext(), "msg.modify.sealed");
-				}
 				prototypeValues.set(cx, id, start, value);
 				return;
 			}
@@ -485,65 +473,57 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 	}
 
 	@Override
-	public void delete(Context cx, String name) {
+	public void delete(Context cx, Scriptable scope, String name) {
 		int info = findInstanceIdInfo(name);
 		if (info != 0) {
 			// Let the super class to throw exceptions for sealed objects
-			if (!isSealed()) {
-				int attr = (info >>> 16);
-				// non-configurable
-				if ((attr & PERMANENT) != 0) {
-					if (cx.isStrictMode()) {
-						throw ScriptRuntime.typeError1("msg.delete.property.with.configurable.false", name);
-					}
-				} else {
-					int id = (info & 0xFFFF);
-					setInstanceIdValue(cx, id, NOT_FOUND);
+			int attr = (info >>> 16);
+			// non-configurable
+			if ((attr & PERMANENT) != 0) {
+				if (cx.isStrictMode()) {
+					throw ScriptRuntime.typeError1("msg.delete.property.with.configurable.false", name);
 				}
-				return;
+			} else {
+				int id = (info & 0xFFFF);
+				setInstanceIdValue(cx, id, NOT_FOUND);
 			}
+			return;
 		}
 		if (prototypeValues != null) {
 			int id = prototypeValues.findId(cx, name);
 			if (id != 0) {
-				if (!isSealed()) {
-					prototypeValues.delete(cx, id);
-				}
+				prototypeValues.delete(cx, id);
 				return;
 			}
 		}
-		super.delete(cx, name);
+		super.delete(cx, scope, name);
 	}
 
 	@Override
-	public void delete(Context cx, Symbol key) {
+	public void delete(Context cx, Scriptable scope, Symbol key) {
 		int info = findInstanceIdInfo(key);
 		if (info != 0) {
 			// Let the super class to throw exceptions for sealed objects
-			if (!isSealed()) {
-				int attr = (info >>> 16);
-				// non-configurable
-				if ((attr & PERMANENT) != 0) {
-					if (cx.isStrictMode()) {
-						throw ScriptRuntime.typeError0("msg.delete.property.with.configurable.false");
-					}
-				} else {
-					int id = (info & 0xFFFF);
-					setInstanceIdValue(cx, id, NOT_FOUND);
+			int attr = (info >>> 16);
+			// non-configurable
+			if ((attr & PERMANENT) != 0) {
+				if (cx.isStrictMode()) {
+					throw ScriptRuntime.typeError0("msg.delete.property.with.configurable.false");
 				}
-				return;
+			} else {
+				int id = (info & 0xFFFF);
+				setInstanceIdValue(cx, id, NOT_FOUND);
 			}
+			return;
 		}
 		if (prototypeValues != null) {
 			int id = prototypeValues.findId(cx, key);
 			if (id != 0) {
-				if (!isSealed()) {
-					prototypeValues.delete(cx, id);
-				}
+				prototypeValues.delete(cx, id);
 				return;
 			}
 		}
-		super.delete(cx, key);
+		super.delete(cx, scope, key);
 	}
 
 	@Override
@@ -723,7 +703,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 		throw f.unknown();
 	}
 
-	public final IdFunctionObject exportAsJSClass(Context cx, int maxPrototypeId, Scriptable scope, boolean sealed) {
+	public final IdFunctionObject exportAsJSClass(Context cx, int maxPrototypeId, Scriptable scope) {
 		// Set scope and prototype unless this is top level scope itself
 		if (scope != this && scope != null) {
 			setParentScope(scope);
@@ -732,13 +712,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 
 		activatePrototypeMap(maxPrototypeId);
 		IdFunctionObject ctor = prototypeValues.createPrecachedConstructor(cx);
-		if (sealed) {
-			sealObject(cx);
-		}
 		fillConstructorProperties(cx, ctor);
-		if (sealed) {
-			ctor.sealObject(cx);
-		}
 		ctor.exportAsScopeProperty(cx);
 		return ctor;
 	}
@@ -782,9 +756,6 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 		}
 		if (f.methodId() != id) {
 			throw new IllegalArgumentException();
-		}
-		if (isSealed()) {
-			f.sealObject(cx);
 		}
 		prototypeValues.initValue(id, "constructor", f, DONTENUM);
 	}
@@ -845,12 +816,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 	}
 
 	private IdFunctionObject newIdFunction(Context cx, Object tag, int id, String name, int arity, Scriptable scope) {
-		IdFunctionObject function = new IdFunctionObjectES6(this, tag, id, name, arity, scope);
-
-		if (isSealed()) {
-			function.sealObject(cx);
-		}
-		return function;
+		return new IdFunctionObjectES6(this, tag, id, name, arity, scope);
 	}
 
 	@Override
@@ -860,7 +826,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 			if (info != 0) {
 				int id = (info & 0xFFFF);
 				if (isAccessorDescriptor(cx, desc)) {
-					delete(cx, id); // it will be replaced with a slot
+					delete(cx, this, id); // it will be replaced with a slot
 				} else {
 					checkPropertyDefinition(cx, desc);
 					ScriptableObject current = getOwnPropertyDescriptor(cx, key);
@@ -899,7 +865,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 						// Handle the regular slot that was created if this property was previously replaced
 						// with an accessor descriptor.
 						if (super.has(cx, name, this)) {
-							super.delete(cx, name);
+							super.delete(cx, this, name);
 						}
 
 						return;

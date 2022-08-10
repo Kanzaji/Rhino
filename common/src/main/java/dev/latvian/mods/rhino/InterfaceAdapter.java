@@ -116,7 +116,7 @@ public class InterfaceAdapter {
 		}
 		WrapFactory wf = cx.getWrapFactory();
 		if (args == null) {
-			args = ScriptRuntime.EMPTY_ARGS;
+			args = ScriptRuntime.EMPTY_OBJECTS;
 		} else {
 			for (int i = 0, N = args.length; i != N; ++i) {
 				Object arg = args[i];

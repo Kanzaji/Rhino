@@ -16,19 +16,15 @@ public class NativeMap extends IdScriptableObject implements Wrapper {
 
 	private boolean instanceOfMap = false;
 
-	static void init(Context cx, Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope) {
 		NativeMap obj = new NativeMap();
-		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, false);
+		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope);
 
 		var desc = cx.newObject(scope);
 		desc.put(cx, "enumerable", desc, Boolean.FALSE);
 		desc.put(cx, "configurable", desc, Boolean.TRUE);
 		desc.put(cx, "get", desc, obj.get(cx, NativeSet.GETSIZE, obj));
 		obj.defineOwnProperty(cx, "size", desc);
-
-		if (sealed) {
-			obj.sealObject(cx);
-		}
 	}
 
 	@Override

@@ -23,9 +23,9 @@ package dev.latvian.mods.rhino;
 class NativeScript extends BaseFunction {
 	private static final Object SCRIPT_TAG = "Script";
 
-	static void init(Context cx, Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope) {
 		NativeScript obj = new NativeScript(null);
-		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, sealed);
+		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope);
 	}
 
 	private NativeScript(Script script) {
@@ -97,7 +97,7 @@ class NativeScript extends BaseFunction {
 		int id = f.methodId();
 		switch (id) {
 			case Id_constructor -> {
-				String source = (args.length == 0) ? "" : ScriptRuntime.toString(args[0]);
+				String source = (args.length == 0) ? "" : ScriptRuntime.toString(cx, args[0]);
 				Script script = compile(cx, source);
 				NativeScript nscript = new NativeScript(script);
 				ScriptRuntime.setObjectProtoAndParent(cx, nscript, scope);
@@ -111,7 +111,7 @@ class NativeScript extends BaseFunction {
 			}
 			case Id_compile -> {
 				NativeScript real = realThis(thisObj, f);
-				String source = ScriptRuntime.toString(args, 0);
+				String source = ScriptRuntime.toString(cx, args, 0);
 				real.script = compile(cx, source);
 				return real;
 			}

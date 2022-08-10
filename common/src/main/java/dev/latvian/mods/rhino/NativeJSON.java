@@ -13,14 +13,12 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.internal.Streams;
 import com.google.gson.stream.JsonWriter;
+import dev.latvian.mods.rhino.classdata.ConstructorInfo;
+import dev.latvian.mods.rhino.classdata.MethodSignature;
+import dev.latvian.mods.rhino.classdata.PublicClassData;
 import dev.latvian.mods.rhino.json.JsonParser;
-import dev.latvian.mods.rhino.util.HideFromJS;
 
 import java.io.StringWriter;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
@@ -50,14 +48,11 @@ public final class NativeJSON extends IdScriptableObject {
 		IGNORED_METHODS.add("native void notifyAll()");
 	}
 
-	static void init(Context cx, Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope) {
 		NativeJSON obj = new NativeJSON();
 		obj.activatePrototypeMap(MAX_ID);
 		obj.setPrototype(cx, getObjectPrototype(cx, scope));
 		obj.setParentScope(scope);
-		if (sealed) {
-			obj.sealObject(cx);
-		}
 		defineProperty(cx, scope, "JSON", obj, DONTENUM);
 	}
 
@@ -106,7 +101,7 @@ public final class NativeJSON extends IdScriptableObject {
 				return "JSON";
 
 			case Id_parse: {
-				String jtext = ScriptRuntime.toString(args, 0);
+				String jtext = ScriptRuntime.toString(cx, args, 0);
 				Object reviver = null;
 				if (args.length > 1) {
 					reviver = args[1];
@@ -133,7 +128,7 @@ public final class NativeJSON extends IdScriptableObject {
 						/* fall through */
 					default:
 				}
-				return stringify(cx.getFactory().getSharedData(), value, replacer, space);
+				return stringify(cx, scope, value, replacer, space);
 			}
 
 			default:
@@ -170,9 +165,9 @@ public final class NativeJSON extends IdScriptableObject {
 				Object newElement = walk(cx, scope, reviver, val, p);
 				if (newElement == Undefined.instance) {
 					if (p instanceof Number) {
-						val.delete(cx, ((Number) p).intValue());
+						val.delete(cx, scope, ((Number) p).intValue());
 					} else {
-						val.delete(cx, (String) p);
+						val.delete(cx, scope, (String) p);
 					}
 				} else {
 					if (p instanceof Number) {
@@ -193,8 +188,9 @@ public final class NativeJSON extends IdScriptableObject {
 		return new String(chars);
 	}
 
-	public static String stringify(SharedContextData data, Object value, Object replacer, Object space) {
-		JsonElement e = stringify0(data, value);
+	public static String stringify(Context cx, Scriptable scope, Object value, Object replacer, Object space) {
+		SharedContextData data = cx.getSharedData(scope);
+		JsonElement e = stringify0(cx, data, value);
 
 		StringWriter stringWriter = new StringWriter();
 		JsonWriter writer = new JsonWriter(stringWriter);
@@ -202,13 +198,13 @@ public final class NativeJSON extends IdScriptableObject {
 		String indent = null;
 
 		if (space instanceof NativeNumber) {
-			space = ScriptRuntime.toNumber(space);
+			space = ScriptRuntime.toNumber(cx, space);
 		} else if (space instanceof NativeString) {
-			space = ScriptRuntime.toString(space);
+			space = ScriptRuntime.toString(cx, space);
 		}
 
 		if (space instanceof Number) {
-			int gapLength = (int) ScriptRuntime.toInteger(space);
+			int gapLength = (int) ScriptRuntime.toInteger(cx, space);
 			gapLength = Math.min(MAX_STRINGIFY_GAP_LENGTH, gapLength);
 			indent = (gapLength > 0) ? repeat(' ', gapLength) : "";
 		} else if (space instanceof String) {
@@ -236,7 +232,7 @@ public final class NativeJSON extends IdScriptableObject {
 	}
 
 	private static void type(SharedContextData data, StringBuilder builder, Class<?> type) {
-		String s = data.getRemapper().getMappedClass(data, type);
+		String s = data.getRemapper().getMappedClass(data, PublicClassData.of(type));
 
 		if (s.startsWith("java.lang.") || s.startsWith("java.util.")) {
 			builder.append(s.substring(10));
@@ -245,21 +241,21 @@ public final class NativeJSON extends IdScriptableObject {
 		}
 	}
 
-	private static void params(SharedContextData data, StringBuilder builder, Class<?>[] params) {
+	private static void params(SharedContextData data, StringBuilder builder, MethodSignature params) {
 		builder.append('(');
 
-		for (int i = 0; i < params.length; i++) {
+		for (int i = 0; i < params.types.length; i++) {
 			if (i > 0) {
 				builder.append(", ");
 			}
 
-			type(data, builder, params[i]);
+			type(data, builder, params.types[i]);
 		}
 
 		builder.append(')');
 	}
 
-	public static JsonElement stringify0(SharedContextData data, Object v) {
+	public static JsonElement stringify0(Context cx, SharedContextData data, Object v) {
 		if (v == null) {
 			return JsonNull.INSTANCE;
 		} else if (v instanceof Boolean) {
@@ -269,14 +265,14 @@ public final class NativeJSON extends IdScriptableObject {
 		} else if (v instanceof Number) {
 			return new JsonPrimitive((Number) v);
 		} else if (v instanceof NativeString) {
-			return new JsonPrimitive(ScriptRuntime.toString(v));
+			return new JsonPrimitive(ScriptRuntime.toString(cx, v));
 		} else if (v instanceof NativeNumber) {
-			return new JsonPrimitive(ScriptRuntime.toNumber(v));
+			return new JsonPrimitive(ScriptRuntime.toNumber(cx, v));
 		} else if (v instanceof Map) {
 			JsonObject json = new JsonObject();
 
 			for (Map.Entry<?, ?> entry : ((Map<?, ?>) v).entrySet()) {
-				json.add(entry.getKey().toString(), stringify0(data, entry.getValue()));
+				json.add(entry.getKey().toString(), stringify0(cx, data, entry.getValue()));
 			}
 
 			return json;
@@ -284,7 +280,7 @@ public final class NativeJSON extends IdScriptableObject {
 			JsonArray json = new JsonArray();
 
 			for (Object o : (Iterable<?>) v) {
-				json.add(stringify0(data, o));
+				json.add(stringify0(cx, data, o));
 
 				return json;
 			}
@@ -302,7 +298,9 @@ public final class NativeJSON extends IdScriptableObject {
 			array++;
 		}
 
-		StringBuilder clName = new StringBuilder(data.getRemapper().getMappedClass(data, cl));
+		PublicClassData classData = PublicClassData.of(cl);
+
+		StringBuilder clName = new StringBuilder(data.getRemapper().getMappedClass(data, classData));
 
 		if (array > 0) {
 			clName.append("[]".repeat(array));
@@ -322,67 +320,51 @@ public final class NativeJSON extends IdScriptableObject {
 
 		list.add(clName.toString());
 
-		for (Constructor<?> constructor : cl.getConstructors()) {
-			if (constructor.isAnnotationPresent(HideFromJS.class)) {
-				continue;
-			}
-
+		for (ConstructorInfo constructor : classData.getConstructors()) {
 			StringBuilder builder = new StringBuilder("new ");
-			String s = data.getRemapper().getMappedClass(data, constructor.getDeclaringClass());
+			String s = data.getRemapper().getMappedClass(data, PublicClassData.of(constructor.getDeclaringClass()));
 			int si = s.lastIndexOf('.');
 			builder.append(si == -1 || si >= s.length() ? s : s.substring(si + 1));
-			params(data, builder, constructor.getParameterTypes());
+			params(data, builder, constructor.signature);
 			list.add(builder.toString());
 		}
 
-		for (Field field : cl.getFields()) {
-			int mod = field.getModifiers();
-
-			if (Modifier.isTransient(mod) || field.isAnnotationPresent(HideFromJS.class)) {
-				continue;
-			}
-
+		for (var field : classData.getFields()) {
 			StringBuilder builder = new StringBuilder();
 
-			if (Modifier.isStatic(mod)) {
+			if (field.isStatic()) {
 				builder.append("static ");
 			}
 
-			if (Modifier.isFinal(mod)) {
+			if (field.isFinal()) {
 				builder.append("final ");
 			}
 
-			if (Modifier.isNative(mod)) {
+			if (field.isNative()) {
 				builder.append("native ");
 			}
 
 			type(data, builder, field.getType());
 			builder.append(' ');
-			builder.append(data.getRemapper().getMappedField(data, cl, field));
+			builder.append(data.getRemapper().getMappedField(data, classData, field));
 			list.add(builder.toString());
 		}
 
-		for (Method method : cl.getMethods()) {
-			if (method.isAnnotationPresent(HideFromJS.class)) {
-				continue;
-			}
-
-			int mod = method.getModifiers();
-
+		for (var method : classData.getMethods()) {
 			StringBuilder builder = new StringBuilder();
 
-			if (Modifier.isStatic(mod)) {
+			if (method.isStatic()) {
 				builder.append("static ");
 			}
 
-			if (Modifier.isNative(mod)) {
+			if (method.isNative()) {
 				builder.append("native ");
 			}
 
-			type(data, builder, method.getReturnType());
+			type(data, builder, method.getType());
 			builder.append(' ');
-			builder.append(data.getRemapper().getMappedMethod(data, cl, method));
-			params(data, builder, method.getParameterTypes());
+			builder.append(data.getRemapper().getMappedMethod(data, classData, method));
+			params(data, builder, method.signature);
 
 			String s = builder.toString();
 

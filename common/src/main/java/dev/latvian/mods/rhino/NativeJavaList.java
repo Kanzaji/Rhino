@@ -105,7 +105,7 @@ public class NativeJavaList extends NativeJavaObject {
 	}
 
 	@Override
-	public void delete(Context cx, int index) {
+	public void delete(Context cx, Scriptable scope, int index) {
 		if (isWithValidIndex(index)) {
 			Deletable.deleteObject(list.remove(index));
 		}
@@ -134,15 +134,17 @@ public class NativeJavaList extends NativeJavaObject {
 		addCustomFunction("findIndex", this::findIndex, Predicate.class);
 		addCustomFunction("findLast", this::findLast, Predicate.class);
 		addCustomFunction("findLastIndex", this::findLastIndex, Predicate.class);
+		addCustomFunction("flatMap", this::flatMap, Object.class);
+		addCustomFunction("copyWithin", this::copyWithin, Object.class);
+		addCustomFunction("includes", this::includes, Object.class);
+		addCustomFunction("fill", this::fill, Object.class);
 	}
 
 	public int getLength() {
 		return list.size();
 	}
 
-	private int push(Object[] args) {
-		Context cx = Context.getCurrentContext();
-
+	private int push(Context cx, Scriptable scope, Object[] args) {
 		if (args.length == 1) {
 			list.add(Context.jsToJava(cx, args[0], listType));
 		} else if (args.length > 1) {
@@ -158,7 +160,7 @@ public class NativeJavaList extends NativeJavaObject {
 		return list.size();
 	}
 
-	private Object pop() {
+	private Object pop(Context cx, Scriptable scope) {
 		if (list.isEmpty()) {
 			return Undefined.instance;
 		}
@@ -166,7 +168,7 @@ public class NativeJavaList extends NativeJavaObject {
 		return list.remove(list.size() - 1);
 	}
 
-	private Object shift() {
+	private Object shift(Context cx, Scriptable scope) {
 		if (list.isEmpty()) {
 			return Undefined.instance;
 		}
@@ -174,9 +176,7 @@ public class NativeJavaList extends NativeJavaObject {
 		return list.remove(0);
 	}
 
-	private int unshift(Object[] args) {
-		Context cx = Context.getCurrentContext();
-
+	private int unshift(Context cx, Scriptable scope, Object[] args) {
 		for (int i = args.length - 1; i >= 0; i--) {
 			list.add(0, Context.jsToJava(cx, args[i], listType));
 		}
@@ -184,7 +184,7 @@ public class NativeJavaList extends NativeJavaObject {
 		return list.size();
 	}
 
-	private Object concat(Object[] args) {
+	private Object concat(Context cx, Scriptable scope, Object[] args) {
 		List<Object> list1 = new ArrayList<>(list);
 
 		if (args.length > 0 && args[0] instanceof List<?>) {
@@ -194,14 +194,14 @@ public class NativeJavaList extends NativeJavaObject {
 		return list1;
 	}
 
-	private String join(Object[] args) {
+	private String join(Context cx, Scriptable scope, Object[] args) {
 		if (list.isEmpty()) {
 			return "";
 		} else if (list.size() == 1) {
-			return ScriptRuntime.toString(list.get(0));
+			return ScriptRuntime.toString(cx, list.get(0));
 		}
 
-		String j = ScriptRuntime.toString(args[0]);
+		String j = ScriptRuntime.toString(cx, args[0]);
 		StringBuilder sb = new StringBuilder();
 
 		for (int i = 0; i < list.size(); i++) {
@@ -209,13 +209,13 @@ public class NativeJavaList extends NativeJavaObject {
 				sb.append(j);
 			}
 
-			sb.append(ScriptRuntime.toString(list.get(i)));
+			sb.append(ScriptRuntime.toString(cx, list.get(i)));
 		}
 
 		return sb.toString();
 	}
 
-	private NativeJavaList reverse() {
+	private NativeJavaList reverse(Context cx, Scriptable scope) {
 		if (list.size() > 1) {
 			Collections.reverse(list);
 		}
@@ -223,15 +223,17 @@ public class NativeJavaList extends NativeJavaObject {
 		return this;
 	}
 
-	private Object slice(Object[] args) {
+	private Object slice(Context cx, Scriptable scope, Object[] args) {
+		// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice
 		throw new IllegalStateException("Not implemented yet!");
 	}
 
-	private Object splice(Object[] args) {
+	private Object splice(Context cx, Scriptable scope, Object[] args) {
+		// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/splice
 		throw new IllegalStateException("Not implemented yet!");
 	}
 
-	private Object every(Object[] args) {
+	private Object every(Context cx, Scriptable scope, Object[] args) {
 		Predicate predicate = (Predicate) args[0];
 
 		for (Object o : list) {
@@ -243,7 +245,7 @@ public class NativeJavaList extends NativeJavaObject {
 		return Boolean.TRUE;
 	}
 
-	private Object some(Object[] args) {
+	private Object some(Context cx, Scriptable scope, Object[] args) {
 		Predicate predicate = (Predicate) args[0];
 
 		for (Object o : list) {
@@ -255,7 +257,7 @@ public class NativeJavaList extends NativeJavaObject {
 		return Boolean.FALSE;
 	}
 
-	private Object filter(Object[] args) {
+	private Object filter(Context cx, Scriptable scope, Object[] args) {
 		if (list.isEmpty()) {
 			return this;
 		}
@@ -272,7 +274,7 @@ public class NativeJavaList extends NativeJavaObject {
 		return list1;
 	}
 
-	private Object map(Object[] args) {
+	private Object map(Context cx, Scriptable scope, Object[] args) {
 		if (list.isEmpty()) {
 			return this;
 		}
@@ -288,7 +290,7 @@ public class NativeJavaList extends NativeJavaObject {
 		return list1;
 	}
 
-	private Object reduce(Object[] args) {
+	private Object reduce(Context cx, Scriptable scope, Object[] args) {
 		if (list.isEmpty()) {
 			return Undefined.instance;
 		} else if (list.size() == 1) {
@@ -305,7 +307,7 @@ public class NativeJavaList extends NativeJavaObject {
 		return o;
 	}
 
-	private Object reduceRight(Object[] args) {
+	private Object reduceRight(Context cx, Scriptable scope, Object[] args) {
 		if (list.isEmpty()) {
 			return Undefined.instance;
 		} else if (list.size() == 1) {
@@ -322,7 +324,7 @@ public class NativeJavaList extends NativeJavaObject {
 		return o;
 	}
 
-	private Object find(Object[] args) {
+	private Object find(Context cx, Scriptable scope, Object[] args) {
 		if (list.isEmpty()) {
 			return Undefined.instance;
 		}
@@ -338,7 +340,7 @@ public class NativeJavaList extends NativeJavaObject {
 		return Undefined.instance;
 	}
 
-	private Object findIndex(Object[] args) {
+	private Object findIndex(Context cx, Scriptable scope, Object[] args) {
 		if (list.isEmpty()) {
 			return -1;
 		}
@@ -354,7 +356,7 @@ public class NativeJavaList extends NativeJavaObject {
 		return -1;
 	}
 
-	private Object findLast(Object[] args) {
+	private Object findLast(Context cx, Scriptable scope, Object[] args) {
 		if (list.isEmpty()) {
 			return Undefined.instance;
 		}
@@ -372,7 +374,7 @@ public class NativeJavaList extends NativeJavaObject {
 		return Undefined.instance;
 	}
 
-	private Object findLastIndex(Object[] args) {
+	private Object findLastIndex(Context cx, Scriptable scope, Object[] args) {
 		if (list.isEmpty()) {
 			return -1;
 		}
@@ -386,6 +388,26 @@ public class NativeJavaList extends NativeJavaObject {
 		}
 
 		return -1;
+	}
+
+	private Object flatMap(Context cx, Scriptable scope, Object[] args) {
+		// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flatMap
+		throw new IllegalStateException("Not implemented yet!");
+	}
+
+	private Object copyWithin(Context cx, Scriptable scope, Object[] args) {
+		// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin
+		throw new IllegalStateException("Not implemented yet!");
+	}
+
+	private Object includes(Context cx, Scriptable scope, Object[] args) {
+		// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/includes
+		throw new IllegalStateException("Not implemented yet!");
+	}
+
+	private Object fill(Context cx, Scriptable scope, Object[] args) {
+		// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill
+		throw new IllegalStateException("Not implemented yet!");
 	}
 
 	@Override

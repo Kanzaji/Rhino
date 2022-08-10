@@ -9,7 +9,7 @@ package dev.latvian.mods.rhino;
 public final class ES6Generator extends IdScriptableObject {
 	private static final Object GENERATOR_TAG = "Generator";
 
-	static ES6Generator init(Context cx, ScriptableObject scope, boolean sealed) {
+	static ES6Generator init(Context cx, ScriptableObject scope) {
 
 		ES6Generator prototype = new ES6Generator();
 		if (scope != null) {
@@ -17,9 +17,6 @@ public final class ES6Generator extends IdScriptableObject {
 			prototype.setPrototype(cx, getObjectPrototype(cx, scope));
 		}
 		prototype.activatePrototypeMap(MAX_PROTOTYPE_ID);
-		if (sealed) {
-			prototype.sealObject(cx);
-		}
 
 		// Need to access Generator prototype when constructing
 		// Generator instances, but don't have a generator constructor
@@ -121,7 +118,7 @@ public final class ES6Generator extends IdScriptableObject {
 	private Scriptable resumeDelegee(Context cx, Scriptable scope, Object value) {
 		try {
 			// Be super-careful and only pass an arg to next if it expects one
-			Object[] nextArgs = Undefined.instance.equals(value) ? ScriptRuntime.EMPTY_ARGS : new Object[]{value};
+			Object[] nextArgs = Undefined.instance.equals(value) ? ScriptRuntime.EMPTY_OBJECTS : new Object[]{value};
 
 			Callable nextFn = ScriptRuntime.getPropFunctionAndThis(delegee, ES6Iterator.NEXT_METHOD, cx, scope);
 			Scriptable nextThis = ScriptRuntime.lastStoredScriptable(cx);
@@ -350,7 +347,7 @@ public final class ES6Generator extends IdScriptableObject {
 	}
 
 	private Object callReturnOptionally(Context cx, Scriptable scope, Object value) {
-		Object[] retArgs = Undefined.instance.equals(value) ? ScriptRuntime.EMPTY_ARGS : new Object[]{value};
+		Object[] retArgs = Undefined.instance.equals(value) ? ScriptRuntime.EMPTY_OBJECTS : new Object[]{value};
 		// Delegate to "return" method. If it's not defined we ignore it
 		Object retFnObj = ScriptRuntime.getObjectPropNoWarn(cx, delegee, ES6Iterator.RETURN_METHOD, scope);
 		if (!Undefined.instance.equals(retFnObj)) {

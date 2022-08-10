@@ -1,9 +1,6 @@
 package dev.latvian.mods.rhino.mod.util;
 
 import com.google.common.base.Suppliers;
-import dev.architectury.injectables.annotations.ExpectPlatform;
-import dev.latvian.mods.rhino.util.DefaultRemapper;
-import dev.latvian.mods.rhino.util.FallbackRemapper;
 import dev.latvian.mods.rhino.util.Remapper;
 
 import java.util.ServiceLoader;
@@ -21,6 +18,6 @@ public class RemappingHelper {
 	}
 
 	public static Remapper createModRemapper() {
-		return new FallbackRemapper(DefaultRemapper.INSTANCE, getMinecraftRemapper());
+		return getMinecraftRemapper();
 	}
 }

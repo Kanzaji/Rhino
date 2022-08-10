@@ -6,7 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
@@ -26,52 +25,16 @@ final class MemberBox {
 	transient Object delegateTo;
 	transient boolean vararg;
 
-	MemberBox(Method method) {
-		init(method);
-	}
-
-	MemberBox(Constructor<?> constructor) {
-		init(constructor);
-	}
-
-	private void init(Method method) {
-		this.memberObject = method;
-		this.argTypes = method.getParameterTypes();
-		this.vararg = method.isVarArgs();
-	}
-
-	private void init(Constructor<?> constructor) {
-		this.memberObject = constructor;
-		this.argTypes = constructor.getParameterTypes();
-		this.vararg = constructor.isVarArgs();
-	}
-
 	Method method() {
 		return (Method) memberObject;
-	}
-
-	Constructor<?> ctor() {
-		return (Constructor<?>) memberObject;
-	}
-
-	Member member() {
-		return memberObject;
 	}
 
 	boolean isMethod() {
 		return memberObject instanceof Method;
 	}
 
-	boolean isCtor() {
-		return memberObject instanceof Constructor;
-	}
-
 	boolean isStatic() {
 		return Modifier.isStatic(memberObject.getModifiers());
-	}
-
-	boolean isPublic() {
-		return Modifier.isPublic(memberObject.getModifiers());
 	}
 
 	String getName() {
@@ -82,26 +45,6 @@ final class MemberBox {
 		return memberObject.getDeclaringClass();
 	}
 
-	String toJavaDeclaration() {
-		StringBuilder sb = new StringBuilder();
-		if (isMethod()) {
-			Method method = method();
-			sb.append(method.getReturnType());
-			sb.append(' ');
-			sb.append(method.getName());
-		} else {
-			Constructor<?> ctor = ctor();
-			String name = ctor.getDeclaringClass().getName();
-			int lastDot = name.lastIndexOf('.');
-			if (lastDot >= 0) {
-				name = name.substring(lastDot + 1);
-			}
-			sb.append(name);
-		}
-		sb.append(JavaMembers.liveConnectSignature(argTypes));
-		return sb.toString();
-	}
-
 	@Override
 	public String toString() {
 		return memberObject.toString();
@@ -110,21 +53,7 @@ final class MemberBox {
 	Object invoke(Object target, Object[] args) {
 		Method method = method();
 		try {
-			try {
-				return method.invoke(target, args);
-			} catch (IllegalAccessException ex) {
-				Method accessible = searchAccessibleMethod(method, argTypes);
-				if (accessible != null) {
-					memberObject = accessible;
-					method = accessible;
-				} else {
-					if (!VMBridge.tryToMakeAccessible(target, method)) {
-						throw Context.throwAsScriptRuntimeEx(ex);
-					}
-				}
-				// Retry after recovery
-				return method.invoke(target, args);
-			}
+			return method.invoke(target, args);
 		} catch (InvocationTargetException ite) {
 			// Must allow ContinuationPending exceptions to propagate unhindered
 			Throwable e = ite;
@@ -135,61 +64,6 @@ final class MemberBox {
 		} catch (Exception ex) {
 			throw Context.throwAsScriptRuntimeEx(ex);
 		}
-	}
-
-	Object newInstance(Object[] args) {
-		Constructor<?> ctor = ctor();
-		try {
-			try {
-				return ctor.newInstance(args);
-			} catch (IllegalAccessException ex) {
-				if (!VMBridge.tryToMakeAccessible(null, ctor)) {
-					throw Context.throwAsScriptRuntimeEx(ex);
-				}
-			}
-			return ctor.newInstance(args);
-		} catch (Exception ex) {
-			throw Context.throwAsScriptRuntimeEx(ex);
-		}
-	}
-
-	private static Method searchAccessibleMethod(Method method, Class<?>[] params) {
-		int modifiers = method.getModifiers();
-		if (Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers)) {
-			Class<?> c = method.getDeclaringClass();
-			if (!Modifier.isPublic(c.getModifiers())) {
-				String name = method.getName();
-				Class<?>[] intfs = c.getInterfaces();
-				for (int i = 0, N = intfs.length; i != N; ++i) {
-					Class<?> intf = intfs[i];
-					if (Modifier.isPublic(intf.getModifiers())) {
-						try {
-							return intf.getMethod(name, params);
-						} catch (NoSuchMethodException ex) {
-						} catch (SecurityException ex) {
-						}
-					}
-				}
-				for (; ; ) {
-					c = c.getSuperclass();
-					if (c == null) {
-						break;
-					}
-					if (Modifier.isPublic(c.getModifiers())) {
-						try {
-							Method m = c.getMethod(name, params);
-							int mModifiers = m.getModifiers();
-							if (Modifier.isPublic(mModifiers) && !Modifier.isStatic(mModifiers)) {
-								return m;
-							}
-						} catch (NoSuchMethodException ex) {
-						} catch (SecurityException ex) {
-						}
-					}
-				}
-			}
-		}
-		return null;
 	}
 }
 

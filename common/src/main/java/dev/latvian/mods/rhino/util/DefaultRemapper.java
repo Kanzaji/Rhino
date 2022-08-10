@@ -1,9 +1,9 @@
 package dev.latvian.mods.rhino.util;
 
 import dev.latvian.mods.rhino.SharedContextData;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import dev.latvian.mods.rhino.classdata.FieldInfo;
+import dev.latvian.mods.rhino.classdata.MethodInfo;
+import dev.latvian.mods.rhino.classdata.PublicClassData;
 
 public class DefaultRemapper implements Remapper {
 	public static final DefaultRemapper INSTANCE = new DefaultRemapper();
@@ -12,7 +12,7 @@ public class DefaultRemapper implements Remapper {
 	}
 
 	@Override
-	public String remapClass(SharedContextData data, Class<?> from, String className) {
+	public String remapClass(SharedContextData data, PublicClassData from) {
 		return "";
 	}
 
@@ -22,42 +22,12 @@ public class DefaultRemapper implements Remapper {
 	}
 
 	@Override
-	public String remapField(SharedContextData data, Class<?> from, Field field, String fieldName) {
-		RemapForJS remap = field.getAnnotation(RemapForJS.class);
-
-		if (remap != null) {
-			return remap.value();
-		}
-
-		for (RemapPrefixForJS prefix : from.getAnnotationsByType(RemapPrefixForJS.class)) {
-			String p = prefix.value();
-
-			if (fieldName.length() > p.length() && fieldName.startsWith(p)) {
-				return fieldName.substring(p.length());
-			}
-		}
-
+	public String remapField(SharedContextData data, PublicClassData from, FieldInfo field) {
 		return "";
 	}
 
 	@Override
-	public String remapMethod(SharedContextData data, Class<?> from, Method method, String methodString) {
-		RemapForJS remap = method.getAnnotation(RemapForJS.class);
-
-		if (remap != null) {
-			return remap.value();
-		}
-
-		String methodName = method.getName();
-
-		for (RemapPrefixForJS prefix : from.getAnnotationsByType(RemapPrefixForJS.class)) {
-			String p = prefix.value();
-
-			if (methodName.length() > p.length() && methodName.startsWith(p)) {
-				return methodName.substring(p.length());
-			}
-		}
-
+	public String remapMethod(SharedContextData data, PublicClassData from, MethodInfo method) {
 		return "";
 	}
 }

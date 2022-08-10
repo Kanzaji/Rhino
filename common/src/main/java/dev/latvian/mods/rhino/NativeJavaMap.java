@@ -83,19 +83,19 @@ public class NativeJavaMap extends NativeJavaObject {
 			if (key instanceof Integer) {
 				ids.add(key);
 			} else {
-				ids.add(ScriptRuntime.toString(key));
+				ids.add(ScriptRuntime.toString(cx, key));
 			}
 		}
 		return ids.toArray();
 	}
 
 	@Override
-	public void delete(Context cx, String name) {
+	public void delete(Context cx, Scriptable scope, String name) {
 		Deletable.deleteObject(map.remove(name));
 	}
 
 	@Override
-	public void delete(Context cx, int index) {
+	public void delete(Context cx, Scriptable scope, int index) {
 		Deletable.deleteObject(map.remove(index));
 	}
 
@@ -105,8 +105,8 @@ public class NativeJavaMap extends NativeJavaObject {
 		addCustomFunction("hasOwnProperty", this::hasOwnProperty, String.class);
 	}
 
-	private boolean hasOwnProperty(Object[] args) {
-		return map.containsKey(ScriptRuntime.toString(args[0]));
+	private boolean hasOwnProperty(Context cx, Scriptable scope, Object[] args) {
+		return map.containsKey(ScriptRuntime.toString(cx, args[0]));
 	}
 
 	@Override

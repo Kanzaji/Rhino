@@ -178,9 +178,6 @@ public class Parser {
 	}
 
 	void addStrictWarning(String messageId, String messageArg, int position, int length) {
-		if (compilerEnv.isStrictMode()) {
-			addWarning(messageId, messageArg, position, length);
-		}
 	}
 
 	void addWarning(String messageId, String messageArg) {
@@ -198,9 +195,7 @@ public class Parser {
 
 	void addWarning(String messageId, String messageArg, int position, int length) {
 		String message = lookupMessage(messageId, messageArg);
-		if (compilerEnv.reportWarningAsError()) {
-			addError(messageId, messageArg, position, length);
-		} else if (errorCollector != null) {
+		if (errorCollector != null) {
 			errorCollector.warning(message, sourceURI, position, length);
 		} else {
 			errorReporter.warning(message, sourceURI, ts.getLineno(), ts.getLine(), ts.getOffset());
@@ -242,16 +237,11 @@ public class Parser {
 	}
 
 	private void addStrictWarning(String messageId, String messageArg, int position, int length, int line, String lineSource, int lineOffset) {
-		if (compilerEnv.isStrictMode()) {
-			addWarning(messageId, messageArg, position, length, line, lineSource, lineOffset);
-		}
 	}
 
 	private void addWarning(String messageId, String messageArg, int position, int length, int line, String lineSource, int lineOffset) {
 		String message = lookupMessage(messageId, messageArg);
-		if (compilerEnv.reportWarningAsError()) {
-			addError(messageId, messageArg, position, length, line, lineSource, lineOffset);
-		} else if (errorCollector != null) {
+		if (errorCollector != null) {
 			errorCollector.warning(message, sourceURI, position, length);
 		} else {
 			errorReporter.warning(message, sourceURI, line, lineSource, lineOffset);
@@ -763,11 +753,6 @@ public class Parser {
 				}
 			}
 			if (!matchToken(Token.LP, true)) {
-				if (compilerEnv.isAllowMemberExprAsFunctionName()) {
-					AstNode memberExprHead = name;
-					name = null;
-					memberExprNode = memberExprTail(false, memberExprHead);
-				}
 				mustMatchToken(Token.LP, "msg.no.paren.parms", true);
 			}
 		} else if (matchToken(Token.LP, true)) {
@@ -776,12 +761,6 @@ public class Parser {
 			// ES6 generator function
 			return function(type, true);
 		} else {
-			if (compilerEnv.isAllowMemberExprAsFunctionName()) {
-				// Note that memberExpr can not start with '(' like
-				// in function (1+2).toString(), because 'function (' already
-				// processed as anonymous function
-				memberExprNode = memberExpr(false);
-			}
 			mustMatchToken(Token.LP, "msg.no.paren.parms", true);
 		}
 		int lpPos = currentToken == Token.LP ? ts.tokenBeg : -1;
@@ -811,11 +790,6 @@ public class Parser {
 			parseFunctionParams(fnNode);
 			fnNode.setBody(parseFunctionBody(type, fnNode));
 			fnNode.setLength(ts.tokenEnd - functionSourceStart);
-
-			if (compilerEnv.isStrictMode() && !fnNode.getBody().hasConsistentReturnUsage()) {
-				String msg = (name != null && name.length() > 0) ? "msg.no.return.value" : "msg.anon.no.return.value";
-				addStrictWarning(msg, name == null ? "" : name.getIdentifier());
-			}
 		} finally {
 			savedVars.restore();
 		}
@@ -988,10 +962,6 @@ public class Parser {
 		try {
 			AstNode pn = statementHelper();
 			if (pn != null) {
-				if (compilerEnv.isStrictMode() && !pn.hasSideEffects()) {
-					int beg = pn.getPosition();
-					addStrictWarning(pn instanceof EmptyStatement ? "msg.extra.trailing.semi" : "msg.no.side.effects", "", beg, nodeEnd(pn) - beg);
-				}
 				int ntt = peekToken();
 				if (ntt == Token.COMMENT && pn.getLineno() == scannedComments.get(scannedComments.size() - 1).getLineno()) {
 					pn.setInlineComment(scannedComments.get(scannedComments.size() - 1));
@@ -2174,9 +2144,6 @@ public class Parser {
 		int pos = pn.getPosition();
 		while (matchToken(Token.COMMA, true)) {
 			int opPos = ts.tokenBeg;
-			if (compilerEnv.isStrictMode() && !pn.hasSideEffects()) {
-				addStrictWarning("msg.no.side.effects", "", pos, nodeEnd(pn) - pos);
-			}
 			if (peekToken() == Token.YIELD) {
 				reportError("msg.yield.parenthesized");
 			}
@@ -2668,7 +2635,7 @@ public class Parser {
 		consumeToken();
 
 		int maybeName = nextToken();
-		if (maybeName != Token.NAME && !(compilerEnv.isReservedKeywordAsIdentifier() && TokenStream.isKeyword(ts.getString(), inUseStrictDirective))) {
+		if (maybeName != Token.NAME && !(TokenStream.isKeyword(ts.getString(), inUseStrictDirective))) {
 			reportError("msg.no.name.after.dot");
 		}
 
@@ -3233,7 +3200,7 @@ public class Parser {
 			case Token.STRING -> pname = createStringLiteral();
 			case Token.NUMBER -> pname = new NumberLiteral(ts.tokenBeg, ts.getString(), ts.getNumber());
 			default -> {
-				if (compilerEnv.isReservedKeywordAsIdentifier() && TokenStream.isKeyword(ts.getString(), inUseStrictDirective)) {
+				if (TokenStream.isKeyword(ts.getString(), inUseStrictDirective)) {
 					// convert keyword to property name, e.g. ({if: 1})
 					pname = createNameNode();
 					break;
@@ -3433,16 +3400,6 @@ public class Parser {
 		// Should probably change this to be a CompilerEnvirons setting,
 		// with an enum Never, Always, Permissive, where Permissive means
 		// don't warn for 1-line functions like function (s) {return x+2}
-		if (compilerEnv.isStrictMode()) {
-			int[] linep = new int[2];
-			String line = ts.getLine(end, linep);
-			if (line != null) {
-				addStrictWarning("msg.missing.semi", "", pos, end - pos, linep[0], line, linep[1]);
-			} else {
-				// no line information available, report warning at current line
-				addStrictWarning("msg.missing.semi", "", pos, end - pos);
-			}
-		}
 	}
 
 	private void warnTrailingComma(int pos, List<?> elems, int commaPos) {

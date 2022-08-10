@@ -18,14 +18,11 @@ final class NativeMath extends IdScriptableObject {
 	private static final double LOG2E = 1.4426950408889634;
 	private static final Double Double32 = 32d;
 
-	static void init(Context cx, Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope) {
 		NativeMath obj = new NativeMath();
 		obj.activatePrototypeMap(MAX_ID);
 		obj.setPrototype(cx, getObjectPrototype(cx, scope));
 		obj.setParentScope(scope);
-		if (sealed) {
-			obj.sealObject(cx);
-		}
 		defineProperty(cx, scope, "Math", obj, DONTENUM);
 	}
 
@@ -244,14 +241,14 @@ final class NativeMath extends IdScriptableObject {
 				return "Math";
 
 			case Id_abs:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				// abs(-0.0) should be 0.0, but -0.0 < 0.0 == false
 				x = (x == 0.0) ? 0.0 : (x < 0.0) ? -x : x;
 				break;
 
 			case Id_acos:
 			case Id_asin:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				if (!Double.isNaN(x) && -1.0 <= x && x <= 1.0) {
 					x = (methodId == Id_acos) ? Math.acos(x) : Math.asin(x);
 				} else {
@@ -260,14 +257,14 @@ final class NativeMath extends IdScriptableObject {
 				break;
 
 			case Id_acosh:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				if (!Double.isNaN(x)) {
 					return Math.log(x + Math.sqrt(x * x - 1.0));
 				}
 				return ScriptRuntime.NaNobj;
 
 			case Id_asinh:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				if (Double.isInfinite(x)) {
 					return x;
 				}
@@ -283,12 +280,12 @@ final class NativeMath extends IdScriptableObject {
 				return ScriptRuntime.NaNobj;
 
 			case Id_atan:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				x = Math.atan(x);
 				break;
 
 			case Id_atanh:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				if (!Double.isNaN(x) && -1.0 <= x && x <= 1.0) {
 					if (x == 0) {
 						if (1 / x > 0) {
@@ -301,22 +298,22 @@ final class NativeMath extends IdScriptableObject {
 				return ScriptRuntime.NaNobj;
 
 			case Id_atan2:
-				x = ScriptRuntime.toNumber(args, 0);
-				x = Math.atan2(x, ScriptRuntime.toNumber(args, 1));
+				x = ScriptRuntime.toNumber(cx, args, 0);
+				x = Math.atan2(x, ScriptRuntime.toNumber(cx, args, 1));
 				break;
 
 			case Id_cbrt:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				x = Math.cbrt(x);
 				break;
 
 			case Id_ceil:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				x = Math.ceil(x);
 				break;
 
 			case Id_clz32:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				if (x == 0 || Double.isNaN(x) || Double.isInfinite(x)) {
 					return Double32;
 				}
@@ -327,62 +324,62 @@ final class NativeMath extends IdScriptableObject {
 				return 31 - Math.floor(Math.log(n >>> 0) * LOG2E);
 
 			case Id_cos:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				x = Double.isInfinite(x) ? Double.NaN : Math.cos(x);
 				break;
 
 			case Id_cosh:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				x = Math.cosh(x);
 				break;
 
 			case Id_hypot:
-				x = js_hypot(args);
+				x = js_hypot(cx, args);
 				break;
 
 			case Id_exp:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				x = (x == Double.POSITIVE_INFINITY) ? x : (x == Double.NEGATIVE_INFINITY) ? 0.0 : Math.exp(x);
 				break;
 
 			case Id_expm1:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				x = Math.expm1(x);
 				break;
 
 			case Id_floor:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				x = Math.floor(x);
 				break;
 
 			case Id_fround:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				// Rely on Java to truncate down to a "float" here"
 				x = (float) x;
 				break;
 
 			case Id_imul:
-				x = js_imul(args);
+				x = js_imul(cx, args);
 				break;
 
 			case Id_log:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				// Java's log(<0) = -Infinity; we need NaN
 				x = (x < 0) ? Double.NaN : Math.log(x);
 				break;
 
 			case Id_log1p:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				x = Math.log1p(x);
 				break;
 
 			case Id_log10:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				x = Math.log10(x);
 				break;
 
 			case Id_log2:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				// Java's log(<0) = -Infinity; we need NaN
 				x = (x < 0) ? Double.NaN : Math.log(x) * LOG2E;
 				break;
@@ -391,7 +388,7 @@ final class NativeMath extends IdScriptableObject {
 			case Id_min:
 				x = (methodId == Id_max) ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY;
 				for (int i = 0; i != args.length; ++i) {
-					double d = ScriptRuntime.toNumber(args[i]);
+					double d = ScriptRuntime.toNumber(cx, args[i]);
 					if (Double.isNaN(d)) {
 						x = d; // NaN
 						break;
@@ -406,8 +403,8 @@ final class NativeMath extends IdScriptableObject {
 				break;
 
 			case Id_pow:
-				x = ScriptRuntime.toNumber(args, 0);
-				x = js_pow(x, ScriptRuntime.toNumber(args, 1));
+				x = ScriptRuntime.toNumber(cx, args, 0);
+				x = js_pow(x, ScriptRuntime.toNumber(cx, args, 1));
 				break;
 
 			case Id_random:
@@ -415,7 +412,7 @@ final class NativeMath extends IdScriptableObject {
 				break;
 
 			case Id_round:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				if (!Double.isNaN(x) && !Double.isInfinite(x)) {
 					// Round only finite x
 					long l = Math.round(x);
@@ -433,7 +430,7 @@ final class NativeMath extends IdScriptableObject {
 				break;
 
 			case Id_sign:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				if (!Double.isNaN(x)) {
 					if (x == 0) {
 						if (1 / x > 0) {
@@ -446,32 +443,32 @@ final class NativeMath extends IdScriptableObject {
 				return ScriptRuntime.NaNobj;
 
 			case Id_sin:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				x = Double.isInfinite(x) ? Double.NaN : Math.sin(x);
 				break;
 
 			case Id_sinh:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				x = Math.sinh(x);
 				break;
 
 			case Id_sqrt:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				x = Math.sqrt(x);
 				break;
 
 			case Id_tan:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				x = Math.tan(x);
 				break;
 
 			case Id_tanh:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				x = Math.tanh(x);
 				break;
 
 			case Id_trunc:
-				x = ScriptRuntime.toNumber(args, 0);
+				x = ScriptRuntime.toNumber(cx, args, 0);
 				x = js_trunc(x);
 				break;
 
@@ -537,7 +534,7 @@ final class NativeMath extends IdScriptableObject {
 	}
 
 	// Based on code from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/hypot
-	private static double js_hypot(Object[] args) {
+	private static double js_hypot(Context cx, Object[] args) {
 		if (args == null) {
 			return 0.0;
 		}
@@ -548,7 +545,7 @@ final class NativeMath extends IdScriptableObject {
 		boolean hasInfinity = false;
 
 		for (Object o : args) {
-			double d = ScriptRuntime.toNumber(o);
+			double d = ScriptRuntime.toNumber(cx, o);
 			if (Double.isNaN(d)) {
 				hasNaN = true;
 			} else if (Double.isInfinite(d)) {
@@ -572,13 +569,13 @@ final class NativeMath extends IdScriptableObject {
 	}
 
 	// From EcmaScript 6 section 20.2.2.19
-	private static int js_imul(Object[] args) {
+	private static int js_imul(Context cx, Object[] args) {
 		if (args == null) {
 			return 0;
 		}
 
-		int x = ScriptRuntime.toInt32(args, 0);
-		int y = ScriptRuntime.toInt32(args, 1);
+		int x = ScriptRuntime.toInt32(cx, args, 0);
+		int y = ScriptRuntime.toInt32(cx, args, 1);
 		return x * y;
 	}
 

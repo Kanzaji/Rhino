@@ -1,6 +1,12 @@
 package dev.latvian.mods.rhino.classdata;
 
+import dev.latvian.mods.rhino.Context;
+import dev.latvian.mods.rhino.Function;
+import dev.latvian.mods.rhino.ScriptRuntime;
+import dev.latvian.mods.rhino.Scriptable;
 import dev.latvian.mods.rhino.SharedContextData;
+import dev.latvian.mods.rhino.Undefined;
+import dev.latvian.mods.rhino.Wrapper;
 import org.jetbrains.annotations.Nullable;
 
 public class MethodSignature {
@@ -144,6 +150,10 @@ public class MethodSignature {
 		return hashCode;
 	}
 
+	public boolean isEmpty() {
+		return types.length == 0;
+	}
+
 	public int matches(SharedContextData data, Object[] args, MethodSignature argsSig) {
 		if (this == argsSig) {
 			return args.length;
@@ -172,5 +182,105 @@ public class MethodSignature {
 		}
 
 		return exactMatches;
+	}
+
+	public static Object[] unwrapArgs(Context cx, Object[] args, Class<?>[] types) {
+		if (args.length == 0) {
+			return ScriptRuntime.EMPTY_OBJECTS;
+		}
+
+		Object[] origArgs = args;
+
+		for (int i = 0; i < args.length; i++) {
+			Object o = Context.jsToJava(cx, args[i], types[i]);
+
+			if (args[i] != o) {
+				if (args == origArgs) {
+					args = args.clone();
+				}
+
+				args[i] = o;
+			}
+		}
+
+		return args;
+	}
+
+	public static String javaSignature(Class<?> type) {
+		if (!type.isArray()) {
+			return type.getName();
+		}
+		int arrayDimension = 0;
+		do {
+			++arrayDimension;
+			type = type.getComponentType();
+		} while (type.isArray());
+		String name = type.getName();
+		String suffix = "[]";
+		if (arrayDimension == 1) {
+			return name.concat(suffix);
+		}
+		int length = name.length() + arrayDimension * suffix.length();
+		StringBuilder sb = new StringBuilder(length);
+		sb.append(name);
+		while (arrayDimension != 0) {
+			--arrayDimension;
+			sb.append(suffix);
+		}
+		return sb.toString();
+	}
+
+	public static String liveConnectSignature(Class<?>[] argTypes) {
+		int N = argTypes.length;
+		if (N == 0) {
+			return "()";
+		}
+		StringBuilder sb = new StringBuilder();
+		sb.append('(');
+		for (int i = 0; i != N; ++i) {
+			if (i != 0) {
+				sb.append(',');
+			}
+			sb.append(javaSignature(argTypes[i]));
+		}
+		sb.append(')');
+		return sb.toString();
+	}
+
+	public static String scriptSignature(Object[] values) {
+		StringBuilder sig = new StringBuilder();
+		for (int i = 0; i != values.length; ++i) {
+			Object value = values[i];
+
+			String s;
+			if (value == null) {
+				s = "null";
+			} else if (value instanceof Boolean) {
+				s = "boolean";
+			} else if (value instanceof String) {
+				s = "string";
+			} else if (value instanceof Number) {
+				s = "number";
+			} else if (value instanceof Scriptable) {
+				if (value instanceof Undefined) {
+					s = "undefined";
+				} else if (value instanceof Wrapper) {
+					Object wrapped = ((Wrapper) value).unwrap();
+					s = wrapped.getClass().getName();
+				} else if (value instanceof Function) {
+					s = "function";
+				} else {
+					s = "object";
+				}
+			} else {
+				s = javaSignature(value.getClass());
+			}
+
+			if (i != 0) {
+				sig.append(',');
+			}
+			sig.append(s);
+		}
+		return sig.toString();
 	}
 }

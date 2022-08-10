@@ -24,7 +24,7 @@ class SpecialRef extends Ref {
 	static Ref createSpecial(Context cx, Scriptable scope, Object object, String name) {
 		Scriptable target = ScriptRuntime.toObjectOrNull(cx, object, scope);
 		if (target == null) {
-			throw ScriptRuntime.undefReadError(object, name);
+			throw ScriptRuntime.undefReadError(cx, object, name);
 		}
 
 		int type;
@@ -34,11 +34,6 @@ class SpecialRef extends Ref {
 			type = SPECIAL_PARENT;
 		} else {
 			throw new IllegalArgumentException(name);
-		}
-
-		if (!cx.hasFeature(Context.FEATURE_PARENT_PROTO_PROPERTIES)) {
-			// Clear special after checking for valid name!
-			type = SPECIAL_NONE;
 		}
 
 		return new SpecialRef(target, type, name);

@@ -6,6 +6,8 @@
 
 package dev.latvian.mods.rhino;
 
+import dev.latvian.mods.rhino.classdata.ClassData;
+import dev.latvian.mods.rhino.classdata.MethodSignature;
 import dev.latvian.mods.rhino.util.Deletable;
 import dev.latvian.mods.rhino.util.JavaIteratorWrapper;
 import dev.latvian.mods.rhino.util.wrap.TypeWrapperFactory;
@@ -41,37 +43,18 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 
 	protected transient Object javaObject;
 
-	protected transient Class<?> staticType;
-	protected transient JavaMembers members;
-	protected transient Map<String, FieldAndMethods> fieldAndMethods;
+	protected transient ClassData classData;
 	protected transient Map<String, Object> customMembers;
-	protected transient boolean isAdapter;
 
-	public NativeJavaObject() {
-	}
-
-	public NativeJavaObject(Context cx, Scriptable scope, Object javaObject, Class<?> staticType) {
-		this(cx, scope, javaObject, staticType, false);
-	}
-
-	public NativeJavaObject(Context cx, Scriptable scope, Object javaObject, Class<?> staticType, boolean isAdapter) {
+	public NativeJavaObject(Context cx, Scriptable scope, Object javaObject, Class<?> type) {
 		this.parent = scope;
 		this.javaObject = javaObject;
-		this.staticType = staticType;
-		this.isAdapter = isAdapter;
+		this.classData = ClassData.of(cx, scope, type);
+		this.customMembers = null;
 		initMembers(cx);
 	}
 
 	protected void initMembers(Context cx) {
-		Class<?> dynamicType;
-		if (javaObject != null) {
-			dynamicType = javaObject.getClass();
-		} else {
-			dynamicType = staticType;
-		}
-		members = JavaMembers.lookupClass(ClassCache.get(cx, parent), dynamicType, staticType, isAdapter);
-		fieldAndMethods = members.getFieldAndMethodsObjects(cx, this, javaObject, false);
-		customMembers = null;
 	}
 
 	protected void addCustomMember(String name, Object fm) {
@@ -96,7 +79,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 
 	@Override
 	public boolean has(Context cx, String name, Scriptable start) {
-		return members.has(name, false) || customMembers != null && customMembers.containsKey(name);
+		return customMembers != null && customMembers.containsKey(name) || classData.getMember(name, false) != null;
 	}
 
 	@Override
@@ -111,13 +94,6 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 
 	@Override
 	public Object get(Context cx, String name, Scriptable start) {
-		if (fieldAndMethods != null) {
-			Object result = fieldAndMethods.get(name);
-			if (result != null) {
-				return result;
-			}
-		}
-
 		if (customMembers != null) {
 			Object result = customMembers.get(name);
 
@@ -142,9 +118,8 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 			}
 		}
 
-		// TODO: passing 'this' as the scope is bogus since it has
-		//  no parent scope
-		return members.get(cx, this, name, javaObject, false);
+		var m = classData.getMember(name, false);
+		return m == null ? Scriptable.NOT_FOUND : m.actuallyGet(cx, start, javaObject, m.getType());
 	}
 
 	@Override
@@ -159,18 +134,22 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 
 	@Override
 	public Object get(Context cx, int index, Scriptable start) {
-		throw members.reportMemberNotFound(Integer.toString(index));
+		throw classData.reportMemberNotFound(cx, Integer.toString(index));
 	}
 
 	@Override
 	public void put(Context cx, String name, Scriptable start, Object value) {
+		var m = classData.getMember(name, false);
+
 		// We could be asked to modify the value of a property in the
 		// prototype. Since we can't add a property to a Java object,
 		// we modify it in the prototype rather than copy it down.
-		if (prototype == null || members.has(name, false)) {
-			members.put(this, name, javaObject, value, false);
-		} else {
+		if (m != null) {
+			m.actuallySet(cx, start, javaObject, value);
+		} else if (prototype != null) {
 			prototype.put(cx, name, prototype, value);
+		} else {
+			addCustomMember(name, value);
 		}
 	}
 
@@ -180,16 +159,20 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 		// prototype. Since we can't add a property to a Java object,
 		// we modify it in the prototype rather than copy it down.
 		String name = symbol.toString();
-		if (prototype == null || members.has(name, false)) {
-			members.put(this, name, javaObject, value, false);
+		var m = classData.getMember(name, false);
+
+		if (m != null) {
+			m.actuallySet(cx, start, javaObject, value);
 		} else if (prototype instanceof SymbolScriptable) {
 			((SymbolScriptable) prototype).put(cx, symbol, prototype, value);
+		} else {
+			addCustomMember(name, value);
 		}
 	}
 
 	@Override
 	public void put(Context cx, int index, Scriptable start, Object value) {
-		throw members.reportMemberNotFound(Integer.toString(index));
+		throw classData.reportMemberNotFound(cx, Integer.toString(index));
 	}
 
 	@Override
@@ -199,15 +182,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 	}
 
 	@Override
-	public void delete(Context cx, String name) {
-		if (fieldAndMethods != null) {
-			Object result = fieldAndMethods.get(name);
-			if (result != null) {
-				Deletable.deleteObject(result);
-				return;
-			}
-		}
-
+	public void delete(Context cx, Scriptable scope, String name) {
 		if (customMembers != null) {
 			Object result = customMembers.get(name);
 			if (result != null) {
@@ -216,15 +191,19 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 			}
 		}
 
-		Deletable.deleteObject(members.get(cx, this, name, javaObject, false));
+		var m = classData.getMember(name, false);
+
+		if (m != null) {
+			Deletable.deleteObject(m.actuallyGet(cx, scope, name, null));
+		}
 	}
 
 	@Override
-	public void delete(Context cx, Symbol key) {
+	public void delete(Context cx, Scriptable scope, Symbol key) {
 	}
 
 	@Override
-	public void delete(Context cx, int index) {
+	public void delete(Context cx, Scriptable scope, int index) {
 	}
 
 	@Override
@@ -262,15 +241,15 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 	@Override
 	public Object[] getIds(Context cx) {
 		if (customMembers != null) {
-			Object[] c = customMembers.keySet().toArray(ScriptRuntime.EMPTY_ARGS);
-			Object[] m = members.getIds(false);
+			Object[] c = customMembers.keySet().toArray();
+			Object[] m = classData.getMembers(false).keySet().toArray();
 			Object[] result = new Object[c.length + m.length];
 			System.arraycopy(c, 0, result, 0, c.length);
 			System.arraycopy(m, 0, result, c.length, m.length);
 			return result;
 		}
 
-		return members.getIds(false);
+		return classData.getMembers(false).keySet().toArray(ScriptRuntime.EMPTY_OBJECTS);
 	}
 
 	@Override
@@ -303,11 +282,11 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 			} else if (hint == ScriptRuntime.NumberClass) {
 				converterName = "doubleValue";
 			} else {
-				throw Context.reportRuntimeError0(Context.getCurrentContext(), "msg.default.value");
+				throw Context.reportRuntimeError0(cx, "msg.default.value");
 			}
 			Object converterObject = get(cx, converterName, this);
 			if (converterObject instanceof Function f) {
-				value = f.call(Context.getContext(), f.getParentScope(), this, ScriptRuntime.EMPTY_ARGS);
+				value = f.call(Context.getContext(), f.getParentScope(), this, ScriptRuntime.EMPTY_OBJECTS);
 			} else {
 				if (hint == ScriptRuntime.NumberClass && javaObject instanceof Boolean) {
 					boolean b = (Boolean) javaObject;
@@ -585,15 +564,8 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 				}
 			case JSTYPE_NUMBER:
 				if (type == ScriptRuntime.StringClass) {
-					return ScriptRuntime.toString(value);
+					return ScriptRuntime.toString(cx, value);
 				} else if (type == ScriptRuntime.ObjectClass) {
-					if (cx.hasFeature(Context.FEATURE_INTEGER_WITHOUT_DECIMAL_PLACE)) {
-						//to process numbers like 2.0 as 2 without decimal place
-						long roundedValue = Math.round(toDouble(cx, value));
-						if (roundedValue == toDouble(cx, value)) {
-							return coerceToNumber(cx, Long.TYPE, value);
-						}
-					}
 					return coerceToNumber(cx, Double.TYPE, value);
 				} else if ((type.isPrimitive() && type != Boolean.TYPE) || ScriptRuntime.NumberClass.isAssignableFrom(type)) {
 					return coerceToNumber(cx, type, value);
@@ -645,7 +617,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 				return reportConversionError(cx, unwrappedValue, type);
 			case JSTYPE_OBJECT:
 				if (type == ScriptRuntime.StringClass) {
-					return ScriptRuntime.toString(value);
+					return ScriptRuntime.toString(cx, value);
 				} else if (type.isPrimitive()) {
 					if (type == Boolean.TYPE) {
 						return reportConversionError(cx, value, type);
@@ -790,13 +762,13 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 		if (value instanceof Number) {
 			return ((Number) value).doubleValue();
 		} else if (value instanceof String) {
-			return ScriptRuntime.toNumber((String) value);
+			return ScriptRuntime.toNumber(cx, (String) value);
 		} else if (value instanceof Scriptable) {
 			if (value instanceof Wrapper) {
 				// XXX: optimize tail-recursion?
 				return toDouble(cx, ((Wrapper) value).unwrap());
 			}
-			return ScriptRuntime.toNumber(value);
+			return ScriptRuntime.toNumber(cx, value);
 		} else {
 			Method meth;
 			try {
@@ -817,7 +789,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 					reportConversionError(cx, value, Double.TYPE);
 				}
 			}
-			return ScriptRuntime.toNumber(value.toString());
+			return ScriptRuntime.toNumber(cx, value.toString());
 		}
 	}
 
@@ -826,7 +798,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 
 		if (Double.isInfinite(d) || Double.isNaN(d)) {
 			// Convert to string first, for more readable message
-			reportConversionError(cx, ScriptRuntime.toString(value), type);
+			reportConversionError(cx, ScriptRuntime.toString(cx, value), type);
 		}
 
 		if (d > 0.0) {
@@ -837,7 +809,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 
 		if (d < min || d > max) {
 			// Convert to string first, for more readable message
-			reportConversionError(cx, ScriptRuntime.toString(value), type);
+			reportConversionError(cx, ScriptRuntime.toString(cx, value), type);
 		}
 		return (long) d;
 	}
@@ -849,7 +821,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 	static Object reportConversionError(Context cx, Object value, Class<?> type, Object stringValue) {
 		// It uses String.valueOf(value), not value.toString() since
 		// value can be null, bug 282447.
-		throw Context.reportRuntimeError2(cx, "msg.conversion.not.allowed", String.valueOf(stringValue), JavaMembers.javaSignature(type));
+		throw Context.reportRuntimeError2(cx, "msg.conversion.not.allowed", String.valueOf(stringValue), MethodSignature.javaSignature(type));
 	}
 
 	@Override

@@ -107,7 +107,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 	private static final int ANCHOR_BOL = -2;
 
 
-	public static void init(Context cx, Scriptable scope, boolean sealed) {
+	public static void init(Context cx, Scriptable scope) {
 
 		NativeRegExp proto = new NativeRegExp();
 		proto.re = compileRE(cx, "", null, false);
@@ -123,11 +123,6 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 		ScriptRuntime.setFunctionProtoAndParent(cx, ctor, scope);
 
 		ctor.setImmunePrototypeProperty(proto);
-
-		if (sealed) {
-			proto.sealObject(cx);
-			ctor.sealObject(cx);
-		}
 
 		defineProperty(cx, scope, "RegExp", ctor, ScriptableObject.DONTENUM);
 	}
@@ -174,8 +169,8 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 			setLastIndex(thatObj.lastIndex);
 			return this;
 		}
-		String s = args.length == 0 || args[0] instanceof Undefined ? "" : escapeRegExp(args[0]);
-		String global = args.length > 1 && args[1] != Undefined.instance ? ScriptRuntime.toString(args[1]) : null;
+		String s = args.length == 0 || args[0] instanceof Undefined ? "" : escapeRegExp(cx, args[0]);
+		String global = args.length > 1 && args[1] != Undefined.instance ? ScriptRuntime.toString(cx, args[1]) : null;
 		this.re = compileRE(cx, s, global, false);
 		setLastIndex(ScriptRuntime.zeroObj);
 		return this;
@@ -211,8 +206,8 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 		return ScriptRuntime.getRegExpProxy(cx);
 	}
 
-	private static String escapeRegExp(Object src) {
-		String s = ScriptRuntime.toString(src);
+	private static String escapeRegExp(Context cx, Object src) {
+		String s = ScriptRuntime.toString(cx, src);
 		// Escape any naked slashes in regexp source, see bug #510265
 		StringBuilder sb = null; // instantiated only if necessary
 		int start = 0;
@@ -241,14 +236,14 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 		if (args.length == 0) {
 			str = reImpl.input;
 			if (str == null) {
-				str = ScriptRuntime.toString(Undefined.instance);
+				str = ScriptRuntime.toString(cx, Undefined.instance);
 			}
 		} else {
-			str = ScriptRuntime.toString(args[0]);
+			str = ScriptRuntime.toString(cx, args[0]);
 		}
 		double d = 0;
 		if ((re.flags & JSREG_GLOB) != 0) {
-			d = ScriptRuntime.toInteger(lastIndex);
+			d = ScriptRuntime.toInteger(cx, lastIndex);
 		}
 
 		Object rval;
@@ -2448,10 +2443,6 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 	}
 
 	private static void reportWarning(Context cx, String messageId, String arg) {
-		if (cx.hasFeature(Context.FEATURE_STRICT_MODE)) {
-			String msg = ScriptRuntime.getMessage1(messageId, arg);
-			Context.reportWarning(cx, msg);
-		}
 	}
 
 	private static void reportError(String messageId, String arg) {

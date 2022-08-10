@@ -17,30 +17,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class RhinoTest {
-	private static Context context;
-
-	public static Context getContext() {
-		if (context != null) {
-			return context;
-		}
-
-		context = Context.enterWithNewFactory();
-		// context.setClassShutter((fullClassName, type) -> type != ClassShutter.TYPE_CLASS_IN_PACKAGE || isClassAllowed(fullClassName));
-
-		var typeWrappers = context.getSharedData().getTypeWrappers();
-		typeWrappers.register(CompoundTag.class, NBTUtils::isTagCompound, NBTUtils::toTagCompound);
-		typeWrappers.register(CollectionTag.class, NBTUtils::isTagCollection, NBTUtils::toTagCollection);
-		typeWrappers.register(ListTag.class, NBTUtils::isTagCollection, NBTUtils::toTagList);
-		typeWrappers.register(Tag.class, NBTUtils::toTag);
-
-		context.getSharedData().addCustomJavaToJsWrapper(CompoundTag.class, CompoundTagWrapper::new);
-		context.getSharedData().addCustomJavaToJsWrapper(CollectionTag.class, CollectionTagWrapper::new);
-
-		return context;
-	}
-
 	public final String testName;
 	public final Map<String, Object> include;
+	private boolean shareScope;
 	public Scriptable sharedScope;
 
 	public RhinoTest(String n) {
@@ -56,15 +35,30 @@ public class RhinoTest {
 	}
 
 	public RhinoTest shareScope() {
-		sharedScope = getContext().initStandardObjects();
+		shareScope = true;
 		return this;
 	}
 
 	public void test(String name, String script, String console) {
-		var cx = getContext();
+		var cx = Context.enterWithNewFactory();
 
 		try {
-			var scope = sharedScope == null ? cx.initStandardObjects() : sharedScope;
+			if (shareScope && sharedScope == null) {
+				sharedScope = cx.initStandardObjects();
+			}
+
+			var scope = sharedScope != null ? sharedScope : cx.initStandardObjects();
+			var sharedData = cx.getSharedData(scope);
+			// context.setClassShutter((fullClassName, type) -> type != ClassShutter.TYPE_CLASS_IN_PACKAGE || isClassAllowed(fullClassName));
+
+			var typeWrappers = sharedData.getTypeWrappers();
+			typeWrappers.register(CompoundTag.class, NBTUtils::isTagCompound, NBTUtils::toTagCompound);
+			typeWrappers.register(CollectionTag.class, NBTUtils::isTagCollection, NBTUtils::toTagCollection);
+			typeWrappers.register(ListTag.class, NBTUtils::isTagCollection, NBTUtils::toTagList);
+			typeWrappers.register(Tag.class, NBTUtils::toTag);
+
+			sharedData.addCustomJavaToJsWrapper(CompoundTag.class, CompoundTagWrapper::new);
+			sharedData.addCustomJavaToJsWrapper(CollectionTag.class, CollectionTagWrapper::new);
 
 			for (var entry : include.entrySet()) {
 				if (entry.getValue() instanceof Class<?> c) {
@@ -78,6 +72,8 @@ public class RhinoTest {
 		} catch (Exception ex) {
 			TestConsole.info("Error: " + ex.getMessage());
 			// ex.printStackTrace();
+		} finally {
+			Context.exit();
 		}
 
 		Assertions.assertEquals(console.trim(), TestConsole.getConsoleOutput().trim());

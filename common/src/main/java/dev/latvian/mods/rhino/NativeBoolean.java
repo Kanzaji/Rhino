@@ -15,9 +15,9 @@ package dev.latvian.mods.rhino;
 final class NativeBoolean extends IdScriptableObject {
 	private static final Object BOOLEAN_TAG = "Boolean";
 
-	static void init(Context cx, Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope) {
 		NativeBoolean obj = new NativeBoolean(false);
-		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, sealed);
+		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope);
 	}
 
 	NativeBoolean(boolean b) {
@@ -66,7 +66,7 @@ final class NativeBoolean extends IdScriptableObject {
 				// avoidObjectDetection() is used to implement document.all
 				// see Note on page
 				//   https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean
-				b = (!(args[0] instanceof ScriptableObject) || !((ScriptableObject) args[0]).avoidObjectDetection()) && ScriptRuntime.toBoolean(args[0]);
+				b = (!(args[0] instanceof ScriptableObject) || !((ScriptableObject) args[0]).avoidObjectDetection()) && ScriptRuntime.toBoolean(cx, args[0]);
 			}
 			if (thisObj == null) {
 				// new Boolean(val) creates a new boolean object.

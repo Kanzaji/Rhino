@@ -3,6 +3,9 @@ package dev.latvian.mods.rhino;
 import java.lang.reflect.Field;
 
 public class FieldAndMethods extends NativeJavaMethod {
+	Field field;
+	Object javaObject;
+
 	FieldAndMethods(Context cx, Scriptable scope, MemberBox[] methods, Field field) {
 		super(methods);
 		this.field = field;
@@ -21,15 +24,12 @@ public class FieldAndMethods extends NativeJavaMethod {
 			rval = field.get(javaObject);
 			type = field.getType();
 		} catch (IllegalAccessException accEx) {
-			throw Context.reportRuntimeError1(Context.getCurrentContext(), "msg.java.internal.private", field.getName());
+			throw Context.reportRuntimeError1(cx, "msg.java.internal.private", field.getName());
 		}
 		rval = cx.getWrapFactory().wrap(cx, this, rval, type);
-		if (rval instanceof Scriptable) {
-			rval = ((Scriptable) rval).getDefaultValue(cx, hint);
+		if (rval instanceof Scriptable s) {
+			rval = s.getDefaultValue(cx, hint);
 		}
 		return rval;
 	}
-
-	Field field;
-	Object javaObject;
 }

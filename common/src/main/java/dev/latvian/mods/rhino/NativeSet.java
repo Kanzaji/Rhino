@@ -18,19 +18,15 @@ public class NativeSet extends IdScriptableObject {
 
 	private boolean instanceOfSet = false;
 
-	static void init(Context cx, Scriptable scope, boolean sealed) {
+	static void init(Context cx, Scriptable scope) {
 		NativeSet obj = new NativeSet();
-		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope, false);
+		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope);
 
 		var desc = cx.newObject(scope);
 		desc.put(cx, "enumerable", desc, Boolean.FALSE);
 		desc.put(cx, "configurable", desc, Boolean.TRUE);
 		desc.put(cx, "get", desc, obj.get(cx, GETSIZE, obj));
 		obj.defineOwnProperty(cx, "size", desc);
-
-		if (sealed) {
-			obj.sealObject(cx);
-		}
 	}
 
 	@Override
