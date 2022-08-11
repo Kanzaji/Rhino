@@ -18,17 +18,17 @@ public class ScopeJS {
 		this.parent = parent;
 	}
 
-	public ScopeJS getRoot() {
+	public RootScopeJS getRoot() {
 		ScopeJS scope = this;
 
 		while (scope.parent != null) {
 			scope = scope.parent;
 		}
 
-		return scope;
+		return (RootScopeJS) scope;
 	}
 
-	public void add(String name, ObjectJS value) {
+	public void set(String name, ObjectJS value) {
 		if (objects == null) {
 			objects = new LinkedHashMap<>();
 		}

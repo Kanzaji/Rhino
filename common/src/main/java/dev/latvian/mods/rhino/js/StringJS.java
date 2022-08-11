@@ -21,8 +21,12 @@ public class StringJS extends ObjectJS {
 	public final CharSequence string;
 
 	private StringJS(CharSequence string) {
-		super(PROTOTYPE);
 		this.string = string;
+	}
+
+	@Override
+	public PrototypeJS getPrototype() {
+		return PROTOTYPE;
 	}
 
 	@Override

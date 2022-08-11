@@ -7,12 +7,16 @@ public class SpecialJS extends ObjectJS {
 	private final boolean isNull;
 
 	private SpecialJS(boolean n) {
-		super(PrototypeJS.EMPTY);
 		isNull = n;
 	}
 
 	@Override
 	public boolean isNull() {
 		return isNull;
+	}
+
+	@Override
+	public Object unwrap() {
+		return null;
 	}
 }

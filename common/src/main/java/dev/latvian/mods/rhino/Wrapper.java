@@ -33,4 +33,22 @@ public interface Wrapper {
 
 		return o1;
 	}
+
+	static Object[] unwrappedArray(Object[] args) {
+		Object[] original = args;
+
+		for (int i = 0; i < args.length; i++) {
+			Object o = unwrapped(args[i]);
+
+			if (o != args[i]) {
+				if (original == args) {
+					args = args.clone();
+				}
+
+				args[i] = o;
+			}
+		}
+
+		return args;
+	}
 }

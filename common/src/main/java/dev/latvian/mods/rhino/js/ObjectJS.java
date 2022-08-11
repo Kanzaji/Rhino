@@ -2,45 +2,45 @@ package dev.latvian.mods.rhino.js;
 
 import dev.latvian.mods.rhino.ContextJS;
 import dev.latvian.mods.rhino.Wrapper;
+import dev.latvian.mods.rhino.util.JavaSetWrapper;
+import dev.latvian.mods.rhino.util.NativeArrayWrapper;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
 /**
  * New experimental replacement for {@link dev.latvian.mods.rhino.Scriptable} classes
  */
-public abstract class ObjectJS implements Wrapper {
-	public static ObjectJS wrap(@Nullable Object object) {
+public abstract class ObjectJS implements AsJS, Wrapper {
+	public static ObjectJS wrap(ContextJS cx, @Nullable Object object) {
 		if (object == null) {
 			return SpecialJS.NULL;
-		} else if (object instanceof ObjectJS o) {
-			return o;
+		} else if (object instanceof AsJS o) {
+			return o.asJS(cx);
 		} else if (object instanceof CharSequence o) {
 			return StringJS.of(o);
 		} else if (object instanceof Number o) {
 			return NumberJS.of(o.doubleValue());
 		} else if (object instanceof Boolean o) {
 			return BooleanJS.of(o);
+		} else if (object instanceof Class<?> o) {
+			return new JavaClassJS(o);
+		} else if (object instanceof List<?> o) {
+			return new ArrayJS(o, ArrayJS.MUTABLE);
+		} else if (object instanceof Set<?> o) {
+			return new ArrayJS(new JavaSetWrapper<>(o), ArrayJS.MUTABLE);
+		} else if (object.getClass().isArray()) {
+			return new ArrayJS(NativeArrayWrapper.of(object), ArrayJS.IMMUTABLE_SIZE);
 		} else {
-			return SpecialJS.NOT_FOUND;
+			return new JavaObjectJS(object);
 		}
 	}
 
-	public final PrototypeJS prototype;
-	private int attributes;
-
-	public ObjectJS(PrototypeJS prototype) {
-		this.prototype = prototype;
-		this.attributes = 0;
-	}
-
-	public int getAttributes() {
-		return attributes;
-	}
-
-	public void setAttributes(int attributes) {
-		this.attributes = attributes;
+	public PrototypeJS getPrototype() {
+		return PrototypeJS.EMPTY;
 	}
 
 	public boolean isNull() {
@@ -56,12 +56,17 @@ public abstract class ObjectJS implements Wrapper {
 	}
 
 	@Override
+	public final ObjectJS asJS(ContextJS cx) {
+		return this;
+	}
+
+	@Override
 	public Object unwrap() {
 		throw new RuntimeException("unwrap()");
 	}
 
 	public ObjectJS get(ContextJS cx, String name) throws Exception {
-		var prop = prototype.getProperty(name);
+		var prop = getPrototype().getProperty(name);
 
 		if (prop != null) {
 			return prop.get(cx, this);
@@ -71,27 +76,27 @@ public abstract class ObjectJS implements Wrapper {
 	}
 
 	public void set(ContextJS cx, String name, ObjectJS value) throws Exception {
+		throw new RuntimeException("set(name)");
 	}
 
 	public void delete(ContextJS cx, String name) throws Exception {
+		throw new RuntimeException("delete(name)");
 	}
 
 	public ObjectJS get(ContextJS cx, int index) throws Exception {
-		return SpecialJS.NOT_FOUND;
+		throw new RuntimeException("get(index)");
 	}
 
 	public void set(ContextJS cx, int index, ObjectJS value) throws Exception {
+		throw new RuntimeException("set(index)");
 	}
 
 	public void delete(ContextJS cx, int index) throws Exception {
-	}
-
-	public ObjectJS getProperty(ContextJS cx) throws Exception {
-		return this;
+		throw new RuntimeException("delete(index)");
 	}
 
 	public ObjectJS invoke(ContextJS cx, String name, ObjectJS[] args) throws Exception {
-		var func = prototype.getFunction(name);
+		var func = getPrototype().getFunction(name);
 
 		if (func != null) {
 			return func.invoke(cx, this, args);
@@ -108,7 +113,14 @@ public abstract class ObjectJS implements Wrapper {
 		return Collections.emptyIterator();
 	}
 
+	@SuppressWarnings({"CastCanBeRemovedNarrowingVariableType", "unchecked"})
 	public Iterator<ObjectJS> entryIterator(ContextJS cx) {
-		return Collections.emptyIterator();
+		Iterator<?> keyIterator = keyIterator(cx);
+
+		if (keyIterator == Collections.emptyIterator()) {
+			return Collections.emptyIterator();
+		}
+
+		return new DefaultEntryIteratorJS((Iterator<ObjectJS>) keyIterator, valueIterator(cx));
 	}
 }

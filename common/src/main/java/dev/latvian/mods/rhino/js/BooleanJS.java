@@ -7,7 +7,6 @@ public class BooleanJS extends ObjectJS {
 			.constructor(BooleanJS::construct);
 
 	public static final BooleanJS TRUE = new BooleanJS(true);
-
 	public static final BooleanJS FALSE = new BooleanJS(false);
 
 	public static BooleanJS of(boolean number) {
@@ -33,8 +32,12 @@ public class BooleanJS extends ObjectJS {
 	public final boolean value;
 
 	private BooleanJS(boolean value) {
-		super(PROTOTYPE);
 		this.value = value;
+	}
+
+	@Override
+	public PrototypeJS getPrototype() {
+		return PROTOTYPE;
 	}
 
 	@Override

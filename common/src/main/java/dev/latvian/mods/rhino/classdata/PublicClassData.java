@@ -1,6 +1,10 @@
 package dev.latvian.mods.rhino.classdata;
 
+import dev.latvian.mods.rhino.ContextJS;
 import dev.latvian.mods.rhino.ScriptRuntime;
+import dev.latvian.mods.rhino.js.AsJS;
+import dev.latvian.mods.rhino.js.JavaClassJS;
+import dev.latvian.mods.rhino.js.ObjectJS;
 import dev.latvian.mods.rhino.util.HideFromJS;
 import dev.latvian.mods.rhino.util.RemapPrefixForJS;
 import org.apache.commons.lang3.mutable.MutableBoolean;
@@ -15,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class PublicClassData {
+public class PublicClassData implements AsJS {
 	public static final Set<Class<?>> EXCLUDED_PARENT_CLASSES = Set.of(Object.class, Comparable.class);
 	public static final PublicClassData[] EMPTY_ARRAY = new PublicClassData[0];
 
@@ -194,5 +198,10 @@ public class PublicClassData {
 		}
 
 		return declaredMethods;
+	}
+
+	@Override
+	public ObjectJS asJS(ContextJS cx) {
+		return new JavaClassJS(type);
 	}
 }

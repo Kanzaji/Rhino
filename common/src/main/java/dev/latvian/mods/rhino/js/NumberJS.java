@@ -34,8 +34,12 @@ public class NumberJS extends ObjectJS {
 	public final double number;
 
 	private NumberJS(double number) {
-		super(PROTOTYPE);
 		this.number = number;
+	}
+
+	@Override
+	public PrototypeJS getPrototype() {
+		return PROTOTYPE;
 	}
 
 	@Override
@@ -55,18 +59,20 @@ public class NumberJS extends ObjectJS {
 
 	private static ObjectJS toFixed(ContextJS cx, ObjectJS self, Object[] args) {
 		int precision;
+
 		if (args.length == 0) {
 			precision = 0;
 		} else {
-            /* We allow a larger range of precision than
-               ECMA requires; this is permitted by ECMA. */
-			double p = wrap(args[0]).asNumber();
+			double p = ((Number) Wrapper.unwrapped(args[0])).doubleValue();
+
 			if (p < 0 || p > 100) {
 				String msg = ScriptRuntime.getMessage1("msg.bad.precision", p);
 				throw ScriptRuntime.rangeError(msg);
 			}
+
 			precision = ScriptRuntime.toInt32(p);
 		}
+
 		StringBuilder sb = new StringBuilder();
 		DToA.JS_dtostr(sb, DToA.DTOSTR_FIXED, precision, self.asNumber());
 		return StringJS.of(sb.toString());

@@ -1,15 +1,19 @@
 package dev.latvian.mods.rhino.classdata;
 
 import dev.latvian.mods.rhino.Context;
+import dev.latvian.mods.rhino.ContextJS;
 import dev.latvian.mods.rhino.Scriptable;
 import dev.latvian.mods.rhino.SharedContextData;
+import dev.latvian.mods.rhino.js.AsJS;
+import dev.latvian.mods.rhino.js.JavaClassJS;
+import dev.latvian.mods.rhino.js.ObjectJS;
 import dev.latvian.mods.rhino.util.Possible;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class ClassData {
+public class ClassData implements AsJS {
 	public static ClassData of(Context cx, Scriptable scope, Class<?> type) {
 		return cx.getSharedData(scope).getClassDataCache().of(type);
 	}
@@ -155,5 +159,10 @@ public class ClassData {
 
 	public RuntimeException reportMemberNotFound(Context cx, String memberName) {
 		return Context.reportRuntimeError2(cx, "msg.java.member.not.found", toString(), memberName);
+	}
+
+	@Override
+	public ObjectJS asJS(ContextJS cx) {
+		return new JavaClassJS(publicClassData.type);
 	}
 }
