@@ -14,7 +14,6 @@ public class NumberJS extends ObjectJS {
 
 	public static final NumberJS ONE = new NumberJS(1.0);
 	public static final NumberJS MINUS_ONE = new NumberJS(-1.0);
-	public final double number;
 
 	public static NumberJS of(double number) {
 		if (number == 0.0) {
@@ -31,6 +30,8 @@ public class NumberJS extends ObjectJS {
 	private static NumberJS construct(ContextJS contextJS, Object[] objects) {
 		return of(((Number) Wrapper.unwrapped(objects[0])).doubleValue());
 	}
+
+	public final double number;
 
 	private NumberJS(double number) {
 		super(PROTOTYPE);

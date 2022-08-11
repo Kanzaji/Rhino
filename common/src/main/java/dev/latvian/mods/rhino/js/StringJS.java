@@ -10,8 +10,6 @@ public class StringJS extends ObjectJS {
 
 	public static final StringJS EMPTY = new StringJS("");
 
-	public final CharSequence string;
-
 	public static StringJS of(CharSequence string) {
 		return string.isEmpty() ? EMPTY : new StringJS(string);
 	}
@@ -19,6 +17,8 @@ public class StringJS extends ObjectJS {
 	private static StringJS construct(ContextJS cx, Object[] args) {
 		return args[0] instanceof StringJS s ? s : of(args[0].toString());
 	}
+
+	public final CharSequence string;
 
 	private StringJS(CharSequence string) {
 		super(PROTOTYPE);

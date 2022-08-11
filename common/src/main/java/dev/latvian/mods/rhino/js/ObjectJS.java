@@ -28,11 +28,19 @@ public abstract class ObjectJS implements Wrapper {
 	}
 
 	public final PrototypeJS prototype;
-	public int attributes;
+	private int attributes;
 
 	public ObjectJS(PrototypeJS prototype) {
 		this.prototype = prototype;
 		this.attributes = 0;
+	}
+
+	public int getAttributes() {
+		return attributes;
+	}
+
+	public void setAttributes(int attributes) {
+		this.attributes = attributes;
 	}
 
 	public boolean isNull() {

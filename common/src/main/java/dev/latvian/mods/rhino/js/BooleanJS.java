@@ -9,7 +9,6 @@ public class BooleanJS extends ObjectJS {
 	public static final BooleanJS TRUE = new BooleanJS(true);
 
 	public static final BooleanJS FALSE = new BooleanJS(false);
-	public final boolean value;
 
 	public static BooleanJS of(boolean number) {
 		return number ? TRUE : FALSE;
@@ -30,6 +29,8 @@ public class BooleanJS extends ObjectJS {
 			return TRUE;
 		}
 	}
+
+	public final boolean value;
 
 	private BooleanJS(boolean value) {
 		super(PROTOTYPE);
