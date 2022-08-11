@@ -94,7 +94,8 @@ public class Hashtable implements Iterable<Hashtable.Entry> {
 				return false;
 			}
 			try {
-				return ScriptRuntime.sameZero(Context.getContext(), key, ((Entry) o).key);
+				var cx = Context.getContext();
+				return ScriptRuntime.sameZero(cx, cx.topCallScope, key, ((Entry) o).key);
 			} catch (ClassCastException cce) {
 				return false;
 			}

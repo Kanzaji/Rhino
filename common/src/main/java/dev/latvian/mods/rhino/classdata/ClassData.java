@@ -11,7 +11,7 @@ import java.util.Map;
 
 public class ClassData {
 	public static ClassData of(Context cx, Scriptable scope, Class<?> type) {
-		return cx.getSharedData().getClassDataCache().of(type);
+		return cx.getSharedData(scope).getClassDataCache().of(type);
 	}
 
 	public final ClassDataCache cache;

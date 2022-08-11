@@ -2236,7 +2236,7 @@ public class ScriptRuntime {
 	 * <p>
 	 * See ECMA 11.9
 	 */
-	public static boolean eq(Context cx, Object x, Object y) {
+	public static boolean eq(Context cx, Scriptable scope, Object x, Object y) {
 		if (x == null || x == Undefined.instance) {
 			if (y == null || y == Undefined.instance) {
 				return true;
@@ -2257,9 +2257,9 @@ public class ScriptRuntime {
 
 		if (x1 == y1) {
 			return true;
-		} else if (SpecialEquality.checkSpecialEquality(cx, x1, y1, false)) {
+		} else if (SpecialEquality.checkSpecialEquality(cx, scope, x1, y1, false)) {
 			return true;
-		} else if (SpecialEquality.checkSpecialEquality(cx, y1, x1, false)) {
+		} else if (SpecialEquality.checkSpecialEquality(cx, scope, y1, x1, false)) {
 			return true;
 		} else if (x instanceof Number) {
 			return eqNumber(cx, ((Number) x).doubleValue(), y);
@@ -2294,7 +2294,7 @@ public class ScriptRuntime {
 				if (x instanceof Wrapper && y instanceof Wrapper) {
 					// See bug 413838. Effectively an extension to ECMA for
 					// the LiveConnect case.
-					return x1 == y1 || (isPrimitive(x1) && isPrimitive(y1) && eq(cx, x1, y1));
+					return x1 == y1 || (isPrimitive(x1) && isPrimitive(y1) && eq(cx, scope, x1, y1));
 				}
 				return false;
 			} else if (y instanceof Boolean) {
@@ -2323,7 +2323,7 @@ public class ScriptRuntime {
 	 * Implement "SameValue" as in ECMA 7.2.9. This is not the same as "eq" because it handles
 	 * signed zeroes and NaNs differently.
 	 */
-	public static boolean same(Context cx, Object x, Object y) {
+	public static boolean same(Context cx, Scriptable scope, Object x, Object y) {
 		if (typeof(x) != typeof(y)) {
 			return false;
 		}
@@ -2333,13 +2333,13 @@ public class ScriptRuntime {
 			}
 			return x.equals(y);
 		}
-		return eq(cx, x, y);
+		return eq(cx, scope, x, y);
 	}
 
 	/**
 	 * Implement "SameValueZero" from ECMA 7.2.9
 	 */
-	public static boolean sameZero(Context cx, Object x, Object y) {
+	public static boolean sameZero(Context cx, Scriptable scope, Object x, Object y) {
 		x = Wrapper.unwrapped(x);
 		y = Wrapper.unwrapped(y);
 
@@ -2359,7 +2359,7 @@ public class ScriptRuntime {
 			}
 			return eqNumber(cx, dx, y);
 		}
-		return eq(cx, x, y);
+		return eq(cx, scope, x, y);
 	}
 
 	public static boolean isNaN(Object n) {
@@ -2427,7 +2427,7 @@ public class ScriptRuntime {
 		}
 	}
 
-	public static boolean shallowEq(Context cx, Object x, Object y) {
+	public static boolean shallowEq(Context cx, Scriptable scope, Object x, Object y) {
 		if (x == y) {
 			if (!(x instanceof Number)) {
 				return true;
@@ -2444,9 +2444,9 @@ public class ScriptRuntime {
 
 		if (x1 == y1) {
 			return true;
-		} else if (SpecialEquality.checkSpecialEquality(cx, x1, y1, true)) {
+		} else if (SpecialEquality.checkSpecialEquality(cx, scope, x1, y1, true)) {
 			return true;
-		} else if (SpecialEquality.checkSpecialEquality(cx, y1, x1, true)) {
+		} else if (SpecialEquality.checkSpecialEquality(cx, scope, y1, x1, true)) {
 			return true;
 		} else if (x1 instanceof Number) {
 			if (y1 instanceof Number) {

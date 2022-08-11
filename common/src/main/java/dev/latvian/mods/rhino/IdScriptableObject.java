@@ -821,6 +821,11 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 
 	@Override
 	public void defineOwnProperty(Context cx, Object key, Scriptable desc) {
+		var scope = getParentScope();
+		if (scope == null) {
+			scope = this;
+		}
+
 		if (key instanceof String name) {
 			int info = findInstanceIdInfo(cx, name);
 			if (info != 0) {
@@ -835,7 +840,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 					Object value = getProperty(cx, desc, "value");
 					if (value != NOT_FOUND && (attr & READONLY) == 0) {
 						Object currentValue = getInstanceIdValue(cx, id);
-						if (!sameValue(cx, value, currentValue)) {
+						if (!sameValue(cx, scope, value, currentValue)) {
 							setInstanceIdValue(cx, id, value);
 						}
 					}
@@ -856,7 +861,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 						Object value = getProperty(cx, desc, "value");
 						if (value != NOT_FOUND && (attr & READONLY) == 0) {
 							Object currentValue = prototypeValues.get(cx, id);
-							if (!sameValue(cx, value, currentValue)) {
+							if (!sameValue(cx, scope, value, currentValue)) {
 								prototypeValues.set(cx, id, this, value);
 							}
 						}

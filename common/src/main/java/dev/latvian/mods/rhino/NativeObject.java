@@ -576,9 +576,8 @@ public class NativeObject extends IdScriptableObject {
 			case ConstructorId_is: {
 				Object a1 = args.length < 1 ? Undefined.instance : args[0];
 				Object a2 = args.length < 2 ? Undefined.instance : args[1];
-				return ScriptRuntime.wrapBoolean(ScriptRuntime.same(cx, a1, a2));
+				return ScriptRuntime.wrapBoolean(ScriptRuntime.same(cx, scope, a1, a2));
 			}
-
 
 			default:
 				throw new IllegalArgumentException(String.valueOf(id));

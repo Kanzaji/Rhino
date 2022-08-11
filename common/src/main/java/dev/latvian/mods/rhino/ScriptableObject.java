@@ -1219,16 +1219,16 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 							throw ScriptRuntime.typeError1("msg.change.writable.false.to.true.with.configurable.false", id);
 						}
 
-						if (!sameValue(cx, getProperty(cx, desc, "value"), current.get(cx, "value", current))) {
+						if (!sameValue(cx, current, getProperty(cx, desc, "value"), current.get(cx, "value", current))) {
 							throw ScriptRuntime.typeError1("msg.change.value.with.writable.false", id);
 						}
 					}
 				} else if (isAccessor && isAccessorDescriptor(cx, current)) {
-					if (!sameValue(cx, getProperty(cx, desc, "set"), current.get(cx, "set", current))) {
+					if (!sameValue(cx, current, getProperty(cx, desc, "set"), current.get(cx, "set", current))) {
 						throw ScriptRuntime.typeError1("msg.change.setter.with.configurable.false", id);
 					}
 
-					if (!sameValue(cx, getProperty(cx, desc, "get"), current.get(cx, "get", current))) {
+					if (!sameValue(cx, current, getProperty(cx, desc, "get"), current.get(cx, "get", current))) {
 						throw ScriptRuntime.typeError1("msg.change.getter.with.configurable.false", id);
 					}
 				} else {
@@ -1257,7 +1257,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * @param currentValue the current value
 	 * @return true if values are the same as defined by ES5 9.12
 	 */
-	protected boolean sameValue(Context cx, Object newValue, Object currentValue) {
+	protected boolean sameValue(Context cx, Scriptable scope, Object newValue, Object currentValue) {
 		if (newValue == NOT_FOUND) {
 			return true;
 		}
@@ -1276,7 +1276,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 				return false;
 			}
 		}
-		return ScriptRuntime.shallowEq(cx, currentValue, newValue);
+		return ScriptRuntime.shallowEq(cx, scope, currentValue, newValue);
 	}
 
 	protected int applyDescriptorToAttributeBitset(Context cx, int attributes, Scriptable desc) {

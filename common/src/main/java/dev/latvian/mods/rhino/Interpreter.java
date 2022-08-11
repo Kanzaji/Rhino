@@ -783,7 +783,7 @@ public final class Interpreter extends Icode implements Evaluator {
 							case Token.EQ:
 							case Token.NE: {
 								--stackTop;
-								boolean valBln = doEquals(cx, stack, sDbl, stackTop);
+								boolean valBln = doEquals(cx, frame.scope, stack, sDbl, stackTop);
 								valBln ^= (op == Token.NE);
 								stack[stackTop] = ScriptRuntime.wrapBoolean(valBln);
 								continue;
@@ -791,7 +791,7 @@ public final class Interpreter extends Icode implements Evaluator {
 							case Token.SHEQ:
 							case Token.SHNE: {
 								--stackTop;
-								boolean valBln = doShallowEquals(cx, stack, sDbl, stackTop);
+								boolean valBln = doShallowEquals(cx, frame.scope, stack, sDbl, stackTop);
 								valBln ^= (op == Token.SHNE);
 								stack[stackTop] = ScriptRuntime.wrapBoolean(valBln);
 								continue;
@@ -2007,7 +2007,7 @@ public final class Interpreter extends Icode implements Evaluator {
 		return calleeFrame;
 	}
 
-	private static boolean doEquals(Context cx, Object[] stack, double[] sDbl, int stackTop) {
+	private static boolean doEquals(Context cx, Scriptable scope, Object[] stack, double[] sDbl, int stackTop) {
 		Object rhs = stack[stackTop + 1];
 		Object lhs = stack[stackTop];
 		if (rhs == UniqueTag.DOUBLE_MARK) {
@@ -2019,10 +2019,10 @@ public final class Interpreter extends Icode implements Evaluator {
 		if (lhs == UniqueTag.DOUBLE_MARK) {
 			return ScriptRuntime.eqNumber(cx, sDbl[stackTop], rhs);
 		}
-		return ScriptRuntime.eq(cx, lhs, rhs);
+		return ScriptRuntime.eq(cx, scope, lhs, rhs);
 	}
 
-	private static boolean doShallowEquals(Context cx, Object[] stack, double[] sDbl, int stackTop) {
+	private static boolean doShallowEquals(Context cx, Scriptable scope, Object[] stack, double[] sDbl, int stackTop) {
 		Object rhs = stack[stackTop + 1];
 		Object lhs = stack[stackTop];
 		final Object DBL_MRK = UniqueTag.DOUBLE_MARK;
@@ -2044,7 +2044,7 @@ public final class Interpreter extends Icode implements Evaluator {
 				return false;
 			}
 		} else {
-			return ScriptRuntime.shallowEq(cx, lhs, rhs);
+			return ScriptRuntime.shallowEq(cx, scope, lhs, rhs);
 		}
 		return (ldbl == rdbl);
 	}
