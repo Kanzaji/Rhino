@@ -151,12 +151,12 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 
 	@Override
 	public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
-		throw ScriptRuntime.notFunctionError(thisObj);
+		throw ScriptRuntime.notFunctionError(cx, thisObj);
 	}
 
 	@Override
 	public Scriptable construct(Context cx, Scriptable scope, Object[] args) {
-		throw ScriptRuntime.notFunctionError(this);
+		throw ScriptRuntime.notFunctionError(cx, this);
 	}
 
 	Scriptable compile(Context cx, Scriptable scope, Object[] args) {

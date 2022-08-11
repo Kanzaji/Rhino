@@ -106,7 +106,7 @@ public class NativeSet extends IdScriptableObject {
 
 	private Object js_forEach(Context cx, Scriptable scope, Object arg1, Object arg2) {
 		if (!(arg1 instanceof final Callable f)) {
-			throw ScriptRuntime.notFunctionError(arg1);
+			throw ScriptRuntime.notFunctionError(cx, arg1);
 		}
 
 		boolean isStrict = cx.isStrictMode();
@@ -147,7 +147,7 @@ public class NativeSet extends IdScriptableObject {
 		// Find the "add" function of our own prototype, since it might have
 		// been replaced. Since we're not fully constructed yet, create a dummy instance
 		// so that we can get our own prototype.
-		ScriptableObject dummy = ensureScriptableObject(cx.newObject(scope, set.getClassName()));
+		ScriptableObject dummy = ensureScriptableObject(cx, cx.newObject(scope, set.getClassName()));
 		final Callable add = ScriptRuntime.getPropFunctionAndThis(dummy.getPrototype(cx), "add", cx, scope);
 		// Clean up the value left around by the previous function
 		ScriptRuntime.lastStoredScriptable(cx);

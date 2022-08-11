@@ -160,7 +160,7 @@ public class NativeObject extends IdScriptableObject {
 			case Id_toLocaleString: {
 				Object toString = getProperty(cx, thisObj, "toString");
 				if (!(toString instanceof Callable fun)) {
-					throw ScriptRuntime.notFunctionError(toString);
+					throw ScriptRuntime.notFunctionError(cx, toString);
 				}
 				return fun.call(cx, scope, thisObj, ScriptRuntime.EMPTY_OBJECTS);
 			}
@@ -182,7 +182,7 @@ public class NativeObject extends IdScriptableObject {
 				boolean result;
 				Object arg = args.length < 1 ? Undefined.instance : args[0];
 				if (arg instanceof Symbol) {
-					result = ensureSymbolScriptable(thisObj).has(cx, (Symbol) arg, thisObj);
+					result = ensureSymbolScriptable(cx, thisObj).has(cx, (Symbol) arg, thisObj);
 				} else {
 					ScriptRuntime.StringIdOrIndex s = ScriptRuntime.toStringIdOrIndex(cx, arg);
 					if (s.stringId == null) {
@@ -261,7 +261,7 @@ public class NativeObject extends IdScriptableObject {
 			case Id___defineSetter__: {
 				if (args.length < 2 || !(args[1] instanceof Callable getterOrSetter)) {
 					Object badArg = (args.length >= 2 ? args[1] : Undefined.instance);
-					throw ScriptRuntime.notFunctionError(badArg);
+					throw ScriptRuntime.notFunctionError(cx, badArg);
 				}
 				if (!(thisObj instanceof ScriptableObject so)) {
 					throw Context.reportRuntimeError2(cx, "msg.extend.scriptable", thisObj == null ? "null" : thisObj.getClass().getName(), String.valueOf(args[0]));
@@ -315,9 +315,9 @@ public class NativeObject extends IdScriptableObject {
 				if (args.length < 2) {
 					throw ScriptRuntime.typeError1("msg.incompat.call", "setPrototypeOf");
 				}
-				Scriptable proto = (args[1] == null) ? null : ensureScriptable(args[1]);
+				Scriptable proto = (args[1] == null) ? null : ensureScriptable(cx, args[1]);
 				if (proto instanceof Symbol) {
-					throw ScriptRuntime.typeError1("msg.arg.not.object", ScriptRuntime.typeof(proto));
+					throw ScriptRuntime.typeError1("msg.arg.not.object", ScriptRuntime.typeof(cx, proto));
 				}
 
 				final Object arg0 = args[0];
@@ -375,7 +375,7 @@ public class NativeObject extends IdScriptableObject {
 			case ConstructorId_getOwnPropertyNames: {
 				Object arg = args.length < 1 ? Undefined.instance : args[0];
 				Scriptable s = getCompatibleObject(cx, scope, arg);
-				ScriptableObject obj = ensureScriptableObject(s);
+				ScriptableObject obj = ensureScriptableObject(cx, s);
 				Object[] ids = obj.getIds(cx, true, false);
 				for (int i = 0; i < ids.length; i++) {
 					ids[i] = ScriptRuntime.toString(cx, ids[i]);
@@ -385,7 +385,7 @@ public class NativeObject extends IdScriptableObject {
 			case ConstructorId_getOwnPropertySymbols: {
 				Object arg = args.length < 1 ? Undefined.instance : args[0];
 				Scriptable s = getCompatibleObject(cx, scope, arg);
-				ScriptableObject obj = ensureScriptableObject(s);
+				ScriptableObject obj = ensureScriptableObject(cx, s);
 				Object[] ids = obj.getIds(cx, true, true);
 				ArrayList<Object> syms = new ArrayList<>();
 				for (Object o : ids) {
@@ -401,17 +401,17 @@ public class NativeObject extends IdScriptableObject {
 				// arg instanceof Scriptable. Should we create a new
 				// interface to admit the new ECMAScript 5 operations?
 				Scriptable s = getCompatibleObject(cx, scope, arg);
-				ScriptableObject obj = ensureScriptableObject(s);
+				ScriptableObject obj = ensureScriptableObject(cx, s);
 				Object nameArg = args.length < 2 ? Undefined.instance : args[1];
 				Scriptable desc = obj.getOwnPropertyDescriptor(cx, nameArg);
 				return desc == null ? Undefined.instance : desc;
 			}
 			case ConstructorId_defineProperty: {
 				Object arg = args.length < 1 ? Undefined.instance : args[0];
-				ScriptableObject obj = ensureScriptableObject(arg);
+				ScriptableObject obj = ensureScriptableObject(cx, arg);
 				Object name = args.length < 2 ? Undefined.instance : args[1];
 				Object descArg = args.length < 3 ? Undefined.instance : args[2];
-				ScriptableObject desc = ensureScriptableObject(descArg);
+				ScriptableObject desc = ensureScriptableObject(cx, descArg);
 				obj.defineOwnProperty(cx, name, desc);
 				return obj;
 			}
@@ -421,7 +421,7 @@ public class NativeObject extends IdScriptableObject {
 					return Boolean.FALSE;
 				}
 
-				ScriptableObject obj = ensureScriptableObject(arg);
+				ScriptableObject obj = ensureScriptableObject(cx, arg);
 				return obj.isExtensible();
 			}
 			case ConstructorId_preventExtensions: {
@@ -430,21 +430,21 @@ public class NativeObject extends IdScriptableObject {
 					return arg;
 				}
 
-				ScriptableObject obj = ensureScriptableObject(arg);
+				ScriptableObject obj = ensureScriptableObject(cx, arg);
 				obj.preventExtensions();
 				return obj;
 			}
 			case ConstructorId_defineProperties: {
 				Object arg = args.length < 1 ? Undefined.instance : args[0];
-				ScriptableObject obj = ensureScriptableObject(arg);
+				ScriptableObject obj = ensureScriptableObject(cx, arg);
 				Object propsObj = args.length < 2 ? Undefined.instance : args[1];
 				Scriptable props = ScriptRuntime.toObject(cx, scope, propsObj);
-				obj.defineOwnProperties(cx, scope, ensureScriptableObject(props));
+				obj.defineOwnProperties(cx, scope, ensureScriptableObject(cx, props));
 				return obj;
 			}
 			case ConstructorId_create: {
 				Object arg = args.length < 1 ? Undefined.instance : args[0];
-				Scriptable obj = (arg == null) ? null : ensureScriptable(arg);
+				Scriptable obj = (arg == null) ? null : ensureScriptable(cx, arg);
 
 				ScriptableObject newObject = new NativeObject();
 				newObject.setParentScope(scope);
@@ -452,7 +452,7 @@ public class NativeObject extends IdScriptableObject {
 
 				if (args.length > 1 && !Undefined.isUndefined(args[1])) {
 					Scriptable props = ScriptRuntime.toObject(cx, scope, args[1]);
-					newObject.defineOwnProperties(cx, scope, ensureScriptableObject(props));
+					newObject.defineOwnProperties(cx, scope, ensureScriptableObject(cx, props));
 				}
 
 				return newObject;
@@ -463,7 +463,7 @@ public class NativeObject extends IdScriptableObject {
 					return Boolean.TRUE;
 				}
 
-				ScriptableObject obj = ensureScriptableObject(arg);
+				ScriptableObject obj = ensureScriptableObject(cx, arg);
 
 				if (obj.isExtensible()) {
 					return Boolean.FALSE;
@@ -484,7 +484,7 @@ public class NativeObject extends IdScriptableObject {
 					return Boolean.TRUE;
 				}
 
-				ScriptableObject obj = ensureScriptableObject(arg);
+				ScriptableObject obj = ensureScriptableObject(cx, arg);
 
 				if (obj.isExtensible()) {
 					return Boolean.FALSE;
@@ -508,7 +508,7 @@ public class NativeObject extends IdScriptableObject {
 					return arg;
 				}
 
-				ScriptableObject obj = ensureScriptableObject(arg);
+				ScriptableObject obj = ensureScriptableObject(cx, arg);
 
 				for (Object name : obj.getAllIds(cx)) {
 					ScriptableObject desc = obj.getOwnPropertyDescriptor(cx, name);
@@ -527,7 +527,7 @@ public class NativeObject extends IdScriptableObject {
 					return arg;
 				}
 
-				ScriptableObject obj = ensureScriptableObject(arg);
+				ScriptableObject obj = ensureScriptableObject(cx, arg);
 
 				for (Object name : obj.getIds(cx, true, true)) {
 					ScriptableObject desc = obj.getOwnPropertyDescriptor(cx, name);
@@ -586,7 +586,7 @@ public class NativeObject extends IdScriptableObject {
 
 	private static Scriptable getCompatibleObject(Context cx, Scriptable scope, Object arg) {
 		Scriptable s = ScriptRuntime.toObject(cx, scope, arg);
-		return ensureScriptable(s);
+		return ensureScriptable(cx, s);
 	}
 
 	@Override

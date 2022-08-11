@@ -31,10 +31,10 @@ public class NumberJS extends ObjectJS {
 		return of(((Number) Wrapper.unwrapped(objects[0])).doubleValue());
 	}
 
-	public final double number;
+	public final double value;
 
-	private NumberJS(double number) {
-		this.number = number;
+	private NumberJS(double value) {
+		this.value = value;
 	}
 
 	@Override
@@ -43,18 +43,33 @@ public class NumberJS extends ObjectJS {
 	}
 
 	@Override
+	public TypeJS getType() {
+		return TypeJS.NUMBER;
+	}
+
+	@Override
 	public Object unwrap() {
-		return number;
+		return value;
 	}
 
 	@Override
 	public String asString() {
-		return String.valueOf(number);
+		return String.valueOf(value);
 	}
 
 	@Override
 	public double asNumber() {
-		return number;
+		return value;
+	}
+
+	@Override
+	public Object cast(TypeJS type) {
+		return type == TypeJS.NUMBER ? value : super.cast(type);
+	}
+
+	@Override
+	public ObjectJS castJS(TypeJS type) {
+		return type == TypeJS.NUMBER ? this : super.castJS(type);
 	}
 
 	private static ObjectJS toFixed(ContextJS cx, ObjectJS self, Object[] args) {

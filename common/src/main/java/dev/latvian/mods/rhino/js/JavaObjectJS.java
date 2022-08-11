@@ -29,6 +29,6 @@ public class JavaObjectJS extends ObjectJS {
 	}
 
 	private static ObjectJS getClassJS(ContextJS cx, ObjectJS self) {
-		return ((JavaObjectJS) self).getClassData(cx).asJS(cx);
+		return ((JavaObjectJS) self).getClassData(cx).asJS();
 	}
 }

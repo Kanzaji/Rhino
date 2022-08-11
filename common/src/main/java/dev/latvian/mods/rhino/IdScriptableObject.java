@@ -457,7 +457,7 @@ public abstract class IdScriptableObject extends ScriptableObject implements IdF
 					int id = (info & 0xFFFF);
 					setInstanceIdValue(cx, id, value);
 				} else {
-					ensureSymbolScriptable(start).put(cx, key, start, value);
+					ensureSymbolScriptable(cx, start).put(cx, key, start, value);
 				}
 			}
 			return;

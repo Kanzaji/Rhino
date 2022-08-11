@@ -1,7 +1,6 @@
 package dev.latvian.mods.rhino.classdata;
 
 import dev.latvian.mods.rhino.Context;
-import dev.latvian.mods.rhino.ContextJS;
 import dev.latvian.mods.rhino.Scriptable;
 import dev.latvian.mods.rhino.SharedContextData;
 import dev.latvian.mods.rhino.js.AsJS;
@@ -162,7 +161,7 @@ public class ClassData implements AsJS {
 	}
 
 	@Override
-	public ObjectJS asJS(ContextJS cx) {
+	public ObjectJS asJS() {
 		return new JavaClassJS(publicClassData.type);
 	}
 }

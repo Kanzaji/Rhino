@@ -124,7 +124,7 @@ public final class ES6Generator extends IdScriptableObject {
 			Scriptable nextThis = ScriptRuntime.lastStoredScriptable(cx);
 			Object nr = nextFn.call(cx, scope, nextThis, nextArgs);
 
-			Scriptable nextResult = ScriptableObject.ensureScriptable(nr);
+			Scriptable nextResult = ScriptableObject.ensureScriptable(cx, nr);
 			if (ScriptRuntime.isIteratorDone(cx, nextResult)) {
 				// Iterator is "done".
 				delegee = null;
@@ -162,7 +162,7 @@ public final class ES6Generator extends IdScriptableObject {
 				return resumeLocal(cx, scope, ScriptRuntime.getObjectProp(cx, throwResult, ES6Iterator.VALUE_PROPERTY, scope));
 			}
 			// Otherwise, we have a normal result and should continue
-			return ensureScriptable(throwResult);
+			return ensureScriptable(cx, throwResult);
 
 		} catch (RhinoException re) {
 			// Handle all exceptions, including missing methods, by delegating to original.
@@ -193,7 +193,7 @@ public final class ES6Generator extends IdScriptableObject {
 					return resumeAbruptLocal(cx, scope, GeneratorState.GENERATOR_CLOSE, ScriptRuntime.getObjectPropNoWarn(cx, retResult, ES6Iterator.VALUE_PROPERTY, scope));
 				} else {
 					// Not actually done yet!
-					return ensureScriptable(retResult);
+					return ensureScriptable(cx, retResult);
 				}
 			}
 
@@ -352,9 +352,9 @@ public final class ES6Generator extends IdScriptableObject {
 		Object retFnObj = ScriptRuntime.getObjectPropNoWarn(cx, delegee, ES6Iterator.RETURN_METHOD, scope);
 		if (!Undefined.instance.equals(retFnObj)) {
 			if (!(retFnObj instanceof Callable)) {
-				throw ScriptRuntime.typeError2("msg.isnt.function", ES6Iterator.RETURN_METHOD, ScriptRuntime.typeof(retFnObj));
+				throw ScriptRuntime.typeError2("msg.isnt.function", ES6Iterator.RETURN_METHOD, ScriptRuntime.typeof(cx, retFnObj));
 			}
-			return ((Callable) retFnObj).call(cx, scope, ensureScriptable(delegee), retArgs);
+			return ((Callable) retFnObj).call(cx, scope, ensureScriptable(cx, delegee), retArgs);
 		}
 		return null;
 	}

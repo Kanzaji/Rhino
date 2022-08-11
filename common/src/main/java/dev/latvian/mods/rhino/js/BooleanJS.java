@@ -41,6 +41,11 @@ public class BooleanJS extends ObjectJS {
 	}
 
 	@Override
+	public TypeJS getType() {
+		return TypeJS.BOOLEAN;
+	}
+
+	@Override
 	public Object unwrap() {
 		return value;
 	}
@@ -53,5 +58,20 @@ public class BooleanJS extends ObjectJS {
 	@Override
 	public double asNumber() {
 		return value ? 1.0 : 0.0;
+	}
+
+	@Override
+	public boolean asBoolean() {
+		return value;
+	}
+
+	@Override
+	public Object cast(TypeJS type) {
+		return type == TypeJS.BOOLEAN ? value : super.cast(type);
+	}
+
+	@Override
+	public ObjectJS castJS(TypeJS type) {
+		return type == TypeJS.BOOLEAN ? this : super.castJS(type);
 	}
 }

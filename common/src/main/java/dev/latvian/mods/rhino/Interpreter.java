@@ -1226,7 +1226,7 @@ public final class Interpreter extends Icode implements Evaluator {
 									if (lhs == DBL_MRK) {
 										lhs = ScriptRuntime.wrapNumber(sDbl[stackTop]);
 									}
-									throw ScriptRuntime.notFunctionError(lhs);
+									throw ScriptRuntime.notFunctionError(cx, lhs);
 								}
 
 								Object[] outArgs = getArgsArray(stack, sDbl, stackTop + 1, indexReg);
@@ -1238,7 +1238,7 @@ public final class Interpreter extends Icode implements Evaluator {
 								if (lhs == DBL_MRK) {
 									lhs = ScriptRuntime.wrapNumber(sDbl[stackTop]);
 								}
-								stack[stackTop] = ScriptRuntime.typeof(lhs).toString();
+								stack[stackTop] = ScriptRuntime.typeof(cx, lhs).toString();
 								continue;
 							}
 							case Icode_TYPEOFNAME:

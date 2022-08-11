@@ -324,7 +324,7 @@ public interface Scriptable extends IdEnumerationIterator {
 		Object v = ScriptableObject.getProperty(cx, this, ES6Iterator.NEXT_METHOD);
 
 		if (!(v instanceof Callable f)) {
-			throw ScriptRuntime.notFunctionError(this, ES6Iterator.NEXT_METHOD);
+			throw ScriptRuntime.notFunctionError(cx, this, ES6Iterator.NEXT_METHOD);
 		}
 
 		Scriptable scope = getParentScope();

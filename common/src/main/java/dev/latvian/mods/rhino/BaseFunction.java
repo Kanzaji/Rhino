@@ -61,12 +61,11 @@ public class BaseFunction extends IdScriptableObject implements Function {
 	/**
 	 * Gets the value returned by calling the typeof operator on this object.
 	 *
-	 * @return "function" or "undefined" if {@link #avoidObjectDetection()} returns <code>true</code>
 	 * @see ScriptableObject#getTypeOf()
 	 */
 	@Override
 	public MemberType getTypeOf() {
-		return avoidObjectDetection() ? MemberType.UNDEFINED : MemberType.FUNCTION;
+		return MemberType.FUNCTION;
 	}
 
 	/**
@@ -281,7 +280,7 @@ public class BaseFunction extends IdScriptableObject implements Function {
 
 			case Id_bind:
 				if (!(thisObj instanceof Callable targetFunction)) {
-					throw ScriptRuntime.notFunctionError(thisObj);
+					throw ScriptRuntime.notFunctionError(cx, thisObj);
 				}
 				int argc = args.length;
 				final Scriptable boundThis;

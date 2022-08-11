@@ -60,7 +60,7 @@ public class NativeWeakMap extends IdScriptableObject {
 			case Id_has:
 				return realThis(thisObj, f).js_has(args.length > 0 ? args[0] : Undefined.instance);
 			case Id_set:
-				return realThis(thisObj, f).js_set(args.length > 0 ? args[0] : Undefined.instance, args.length > 1 ? args[1] : Undefined.instance);
+				return realThis(thisObj, f).js_set(cx, args.length > 0 ? args[0] : Undefined.instance, args.length > 1 ? args[1] : Undefined.instance);
 		}
 		throw new IllegalArgumentException("WeakMap.prototype has no method: " + f.getFunctionName());
 	}
@@ -92,13 +92,13 @@ public class NativeWeakMap extends IdScriptableObject {
 		return map.containsKey(key);
 	}
 
-	private Object js_set(Object key, Object v) {
+	private Object js_set(Context cx, Object key, Object v) {
 		// As the spec says, only a true "Object" can be the key to a WeakMap.
 		// Use the default object equality here. ScriptableObject does not override
 		// equals or hashCode, which means that in effect we are only keying on object identity.
 		// This is all correct according to the ECMAscript spec.
 		if (!ScriptRuntime.isObject(key)) {
-			throw ScriptRuntime.typeError1("msg.arg.not.object", ScriptRuntime.typeof(key));
+			throw ScriptRuntime.typeError1("msg.arg.not.object", ScriptRuntime.typeof(cx, key));
 		}
 		// Map.get() does not distinguish between "not found" and a null value. So,
 		// replace true null here with a marker so that we can re-convert in "get".

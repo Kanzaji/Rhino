@@ -151,7 +151,6 @@ public class ScriptRuntime {
 
 		NativeWith.init(cx, scope);
 		NativeCall.init(cx, scope);
-		NativeScript.init(cx, scope);
 
 		NativeIterator.init(cx, scope); // Also initializes NativeGenerator & ES6Generator
 
@@ -264,7 +263,7 @@ public class ScriptRuntime {
 			return (!Double.isNaN(d) && d != 0.0);
 		}
 		if (val instanceof Scriptable) {
-			return !(val instanceof ScriptableObject) || !((ScriptableObject) val).avoidObjectDetection();
+			return true;
 		}
 		warnAboutNonJSObject(cx, val);
 		return true;
@@ -1367,7 +1366,7 @@ public class ScriptRuntime {
 
 	public static boolean deleteObjectElem(Context cx, Scriptable scope, Object elem) {
 		if (isSymbol(elem)) {
-			SymbolScriptable so = ScriptableObject.ensureSymbolScriptable(scope);
+			SymbolScriptable so = ScriptableObject.ensureSymbolScriptable(cx, scope);
 			Symbol s = (Symbol) elem;
 			so.delete(cx, scope, s);
 			return !so.has(cx, s, scope);
@@ -1506,7 +1505,7 @@ public class ScriptRuntime {
 
 		if (asFunctionCall) {
 			if (!(result instanceof Callable)) {
-				throw notFunctionError(result, name);
+				throw notFunctionError(cx, result, name);
 			}
 			storeScriptable(cx, thisObj);
 		}
@@ -1701,7 +1700,7 @@ public class ScriptRuntime {
 				if (result == Scriptable.NOT_FOUND) {
 					throw notFoundError(scope, name);
 				}
-				throw notFunctionError(result, name);
+				throw notFunctionError(cx, result, name);
 			}
 			// Top scope is not NativeWith or NativeCall => thisObj == scope
 			Scriptable thisObj = scope;
@@ -1746,7 +1745,7 @@ public class ScriptRuntime {
 		}
 
 		if (!(value instanceof Callable)) {
-			throw notFunctionError(value, elem);
+			throw notFunctionError(cx, value, elem);
 		}
 
 		storeScriptable(cx, thisObj);
@@ -1795,7 +1794,7 @@ public class ScriptRuntime {
 	 */
 	public static Callable getValueFunctionAndThis(Object value, Context cx) {
 		if (!(value instanceof Callable f)) {
-			throw notFunctionError(value);
+			throw notFunctionError(cx, value);
 		}
 
 		Scriptable thisObj = null;
@@ -1873,7 +1872,7 @@ public class ScriptRuntime {
 	 */
 	public static Scriptable newObject(Context cx, Object fun, Scriptable scope, Object[] args) {
 		if (!(fun instanceof Function function)) {
-			throw notFunctionError(fun);
+			throw notFunctionError(cx, fun);
 		}
 		return function.construct(cx, scope, args);
 	}
@@ -1968,7 +1967,7 @@ public class ScriptRuntime {
 		} else {
 			Object value = thisObj.getDefaultValue(cx, FunctionClass);
 			if (!(value instanceof Callable)) {
-				throw notFunctionError(value, thisObj);
+				throw notFunctionError(cx, value, thisObj);
 			}
 			function = (Callable) value;
 		}
@@ -2017,10 +2016,6 @@ public class ScriptRuntime {
 	/**
 	 * The typeof operator
 	 */
-	public static MemberType typeof(Object value) {
-		return typeof(Context.getCurrentContext(), value);
-	}
-
 	public static MemberType typeof(Context cx, Object value) {
 		return MemberType.get(cx, value);
 	}
@@ -2033,7 +2028,7 @@ public class ScriptRuntime {
 		if (val == null) {
 			return MemberType.UNDEFINED;
 		}
-		return typeof(getObjectProp(cx, val, id));
+		return typeof(cx, getObjectProp(cx, val, id));
 	}
 
 	public static boolean isObject(Object value) {
@@ -2324,7 +2319,7 @@ public class ScriptRuntime {
 	 * signed zeroes and NaNs differently.
 	 */
 	public static boolean same(Context cx, Scriptable scope, Object x, Object y) {
-		if (typeof(x) != typeof(y)) {
+		if (typeof(cx, x) != typeof(cx, y)) {
 			return false;
 		}
 		if (x instanceof Number) {
@@ -2343,7 +2338,7 @@ public class ScriptRuntime {
 		x = Wrapper.unwrapped(x);
 		y = Wrapper.unwrapped(y);
 
-		if (typeof(x) != typeof(y)) {
+		if (typeof(cx, x) != typeof(cx, y)) {
 			return false;
 		}
 		if (x instanceof Number) {
@@ -3182,17 +3177,17 @@ public class ScriptRuntime {
 		throw constructError("ReferenceError", msg);
 	}
 
-	public static RuntimeException notFunctionError(Object value) {
-		return notFunctionError(value, value);
+	public static RuntimeException notFunctionError(Context cx, Object value) {
+		return notFunctionError(cx, value, value);
 	}
 
-	public static RuntimeException notFunctionError(Object value, Object messageHelper) {
+	public static RuntimeException notFunctionError(Context cx, Object value, Object messageHelper) {
 		// Use value for better error reporting
 		String msg = (messageHelper == null) ? "null" : messageHelper.toString();
 		if (value == Scriptable.NOT_FOUND) {
 			return typeError1("msg.function.not.found", msg);
 		}
-		return typeError2("msg.isnt.function", msg, typeof(value));
+		return typeError2("msg.isnt.function", msg, typeof(cx, value));
 	}
 
 	public static RuntimeException notFunctionError(Context cx, Object obj, Object value, String propertyName) {
@@ -3209,7 +3204,7 @@ public class ScriptRuntime {
 		if (value == Scriptable.NOT_FOUND) {
 			return typeError2("msg.function.not.found.in", propertyName, objString);
 		}
-		return typeError3("msg.isnt.function.in", propertyName, objString, typeof(value).toString());
+		return typeError3("msg.isnt.function.in", propertyName, objString, typeof(cx, value).toString());
 	}
 
 	private static RuntimeException notXmlError(Context cx, Object value) {

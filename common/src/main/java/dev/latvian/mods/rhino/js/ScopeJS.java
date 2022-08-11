@@ -48,6 +48,6 @@ public class ScopeJS {
 
 	public ObjectJS get(String name) throws Exception {
 		var value = objects.get(name);
-		return value != null ? value : parent != null ? parent.get(name) : SpecialJS.NOT_FOUND;
+		return value != null ? value : parent != null ? parent.get(name) : SpecialJS.UNDEFINED;
 	}
 }

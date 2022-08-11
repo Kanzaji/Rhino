@@ -51,7 +51,7 @@ public class NativeWeakSet extends IdScriptableObject {
 				}
 				throw ScriptRuntime.typeError1("msg.no.new", "WeakSet");
 			case Id_add:
-				return realThis(thisObj, f).js_add(args.length > 0 ? args[0] : Undefined.instance);
+				return realThis(thisObj, f).js_add(cx, args.length > 0 ? args[0] : Undefined.instance);
 			case Id_delete:
 				return realThis(thisObj, f).js_delete(args.length > 0 ? args[0] : Undefined.instance);
 			case Id_has:
@@ -60,13 +60,13 @@ public class NativeWeakSet extends IdScriptableObject {
 		throw new IllegalArgumentException("WeakMap.prototype has no method: " + f.getFunctionName());
 	}
 
-	private Object js_add(Object key) {
+	private Object js_add(Context cx, Object key) {
 		// As the spec says, only a true "Object" can be the key to a WeakSet.
 		// Use the default object equality here. ScriptableObject does not override
 		// equals or hashCode, which means that in effect we are only keying on object identity.
 		// This is all correct according to the ECMAscript spec.
 		if (!ScriptRuntime.isObject(key)) {
-			throw ScriptRuntime.typeError1("msg.arg.not.object", ScriptRuntime.typeof(key));
+			throw ScriptRuntime.typeError1("msg.arg.not.object", ScriptRuntime.typeof(cx, key));
 		}
 		// Add a value to the map, but don't make it the key -- otherwise the WeakHashMap
 		// will never GC anything.

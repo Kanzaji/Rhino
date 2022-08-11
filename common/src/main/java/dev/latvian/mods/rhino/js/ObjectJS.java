@@ -1,13 +1,13 @@
 package dev.latvian.mods.rhino.js;
 
 import dev.latvian.mods.rhino.ContextJS;
+import dev.latvian.mods.rhino.ScriptRuntime;
 import dev.latvian.mods.rhino.Wrapper;
 import dev.latvian.mods.rhino.util.JavaSetWrapper;
 import dev.latvian.mods.rhino.util.NativeArrayWrapper;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -15,11 +15,11 @@ import java.util.Set;
  * New experimental replacement for {@link dev.latvian.mods.rhino.Scriptable} classes
  */
 public abstract class ObjectJS implements AsJS, Wrapper {
-	public static ObjectJS wrap(ContextJS cx, @Nullable Object object) {
+	public static ObjectJS wrap(@Nullable Object object) {
 		if (object == null) {
 			return SpecialJS.NULL;
 		} else if (object instanceof AsJS o) {
-			return o.asJS(cx);
+			return o.asJS();
 		} else if (object instanceof CharSequence o) {
 			return StringJS.of(o);
 		} else if (object instanceof Number o) {
@@ -43,6 +43,10 @@ public abstract class ObjectJS implements AsJS, Wrapper {
 		return PrototypeJS.EMPTY;
 	}
 
+	public TypeJS getType() {
+		return TypeJS.OBJECT;
+	}
+
 	public boolean isNull() {
 		return false;
 	}
@@ -55,8 +59,12 @@ public abstract class ObjectJS implements AsJS, Wrapper {
 		return Double.NaN;
 	}
 
+	public boolean asBoolean() {
+		return true;
+	}
+
 	@Override
-	public final ObjectJS asJS(ContextJS cx) {
+	public final ObjectJS asJS() {
 		return this;
 	}
 
@@ -72,7 +80,7 @@ public abstract class ObjectJS implements AsJS, Wrapper {
 			return prop.get(cx, this);
 		}
 
-		return SpecialJS.NOT_FOUND;
+		return SpecialJS.UNDEFINED;
 	}
 
 	public void set(ContextJS cx, String name, ObjectJS value) throws Exception {
@@ -102,25 +110,54 @@ public abstract class ObjectJS implements AsJS, Wrapper {
 			return func.invoke(cx, this, args);
 		}
 
-		return SpecialJS.NOT_FOUND;
+		return SpecialJS.UNDEFINED;
 	}
 
-	public Iterator<ObjectJS> valueIterator(ContextJS cx) {
-		return Collections.singletonList(this).iterator();
+	public Object[] getKeys() {
+		return ScriptRuntime.EMPTY_OBJECTS;
 	}
 
-	public Iterator<ObjectJS> keyIterator(ContextJS cx) {
-		return Collections.emptyIterator();
+	public boolean isInstanceOf(ObjectJS rhs) {
+		return getType() == rhs.getType();
 	}
 
-	@SuppressWarnings({"CastCanBeRemovedNarrowingVariableType", "unchecked"})
-	public Iterator<ObjectJS> entryIterator(ContextJS cx) {
-		Iterator<?> keyIterator = keyIterator(cx);
-
-		if (keyIterator == Collections.emptyIterator()) {
-			return Collections.emptyIterator();
+	public Object cast(TypeJS type) {
+		if (type == TypeJS.STRING) {
+			return asString();
+		} else if (type == TypeJS.NUMBER) {
+			return asNumber();
+		} else if (type == TypeJS.BOOLEAN) {
+			return asBoolean();
+		} else if (type == TypeJS.ARRAY) {
+			return Collections.singletonList(unwrap());
+		} else {
+			return unwrap();
 		}
+	}
 
-		return new DefaultEntryIteratorJS((Iterator<ObjectJS>) keyIterator, valueIterator(cx));
+	public ObjectJS castJS(TypeJS type) {
+		if (type == TypeJS.STRING) {
+			return StringJS.of(asString());
+		} else if (type == TypeJS.NUMBER) {
+			return NumberJS.of(asNumber());
+		} else if (type == TypeJS.BOOLEAN) {
+			return BooleanJS.of(asBoolean());
+		} else if (type == TypeJS.ARRAY) {
+			return new ArrayJS(Collections.singletonList(unwrap()), ArrayJS.IMMUTABLE);
+		} else {
+			return this;
+		}
+	}
+
+	public IteratorJS keyIterator(ContextJS cx) {
+		return new IteratorJS.Keys(this);
+	}
+
+	public IteratorJS valueIterator(ContextJS cx) {
+		return new IteratorJS.Values(cx, this);
+	}
+
+	public IteratorJS entryIterator(ContextJS cx) {
+		return new IteratorJS.Entries(cx, this);
 	}
 }

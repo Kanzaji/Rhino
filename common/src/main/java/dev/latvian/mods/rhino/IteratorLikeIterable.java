@@ -71,7 +71,7 @@ public class IteratorLikeIterable implements Iterable<Object>, Closeable {
 			Object val = next.call(cx, scope, iterator, ScriptRuntime.EMPTY_OBJECTS);
 			// This will throw if "val" is not an object. 
 			// "getObjectPropNoWarn" won't, so do this as follows.
-			Object doneval = ScriptableObject.getProperty(cx, ScriptableObject.ensureScriptable(val), ES6Iterator.DONE_PROPERTY);
+			Object doneval = ScriptableObject.getProperty(cx, ScriptableObject.ensureScriptable(cx, val), ES6Iterator.DONE_PROPERTY);
 			if (doneval == Scriptable.NOT_FOUND) {
 				doneval = Undefined.instance;
 			}

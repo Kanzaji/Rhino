@@ -132,7 +132,7 @@ public class IdEnumeration implements Consumer<Object> {
 		Object result;
 
 		if (ScriptRuntime.isSymbol(currentId)) {
-			SymbolScriptable so = ScriptableObject.ensureSymbolScriptable(obj);
+			SymbolScriptable so = ScriptableObject.ensureSymbolScriptable(cx, obj);
 			result = so.get(cx, (Symbol) currentId, obj);
 		} else {
 			ScriptRuntime.StringIdOrIndex s = ScriptRuntime.toStringIdOrIndex(cx, currentId);

@@ -78,6 +78,7 @@ public class PrototypeJS {
 	private ConstructorCallback constructor;
 	private Map<String, PropertyCallback> properties;
 	private Map<String, FunctionCallback> functions;
+	private Object[] keys;
 
 	private PrototypeJS(String name) {
 		this.name = name;
@@ -102,6 +103,7 @@ public class PrototypeJS {
 			properties = new HashMap<>();
 		}
 
+		keys = null;
 		properties.put(name, callback);
 		return this;
 	}
@@ -111,6 +113,7 @@ public class PrototypeJS {
 			functions = new HashMap<>();
 		}
 
+		keys = null;
 		functions.put(name, callback);
 		return this;
 	}
@@ -132,5 +135,22 @@ public class PrototypeJS {
 	@Nullable
 	public FunctionCallback getFunction(String name) {
 		return functions == null ? null : functions.get(name);
+	}
+
+	public Object[] getKeys() {
+		if (keys == null) {
+			keys = new Object[properties.size() + functions.size()];
+			int i = 0;
+
+			for (var key : properties.keySet()) {
+				keys[i++] = key;
+			}
+
+			for (var key : functions.keySet()) {
+				keys[i++] = key;
+			}
+		}
+
+		return keys;
 	}
 }

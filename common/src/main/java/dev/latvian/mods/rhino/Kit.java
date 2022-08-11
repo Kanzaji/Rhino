@@ -6,10 +6,6 @@
 
 package dev.latvian.mods.rhino;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Reader;
 import java.util.Map;
 
 /**
@@ -316,44 +312,6 @@ public class Kit {
 			throw new IllegalArgumentException();
 		}
 		return new ComplexKey(key1, key2);
-	}
-
-	public static String readReader(Reader reader) throws IOException {
-		try (BufferedReader in = new BufferedReader(reader)) {
-			char[] cbuf = new char[1024];
-			StringBuilder sb = new StringBuilder(1024);
-			int bytes_read;
-			while ((bytes_read = in.read(cbuf, 0, 1024)) != -1) {
-				sb.append(cbuf, 0, bytes_read);
-			}
-			return sb.toString();
-		}
-	}
-
-	public static byte[] readStream(InputStream is, int initialBufferCapacity) throws IOException {
-		if (initialBufferCapacity <= 0) {
-			throw new IllegalArgumentException("Bad initialBufferCapacity: " + initialBufferCapacity);
-		}
-		byte[] buffer = new byte[initialBufferCapacity];
-		int cursor = 0;
-		for (; ; ) {
-			int n = is.read(buffer, cursor, buffer.length - cursor);
-			if (n < 0) {
-				break;
-			}
-			cursor += n;
-			if (cursor == buffer.length) {
-				byte[] tmp = new byte[buffer.length * 2];
-				System.arraycopy(buffer, 0, tmp, 0, cursor);
-				buffer = tmp;
-			}
-		}
-		if (cursor != buffer.length) {
-			byte[] tmp = new byte[cursor];
-			System.arraycopy(buffer, 0, tmp, 0, cursor);
-			buffer = tmp;
-		}
-		return buffer;
 	}
 
 	/**

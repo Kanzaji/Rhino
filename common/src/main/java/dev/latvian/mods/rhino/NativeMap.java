@@ -121,7 +121,7 @@ public class NativeMap extends IdScriptableObject implements Wrapper {
 
 	private Object js_forEach(Context cx, Scriptable scope, Object arg1, Object arg2) {
 		if (!(arg1 instanceof final Callable f)) {
-			throw ScriptRuntime.typeError2("msg.isnt.function", arg1, ScriptRuntime.typeof(arg1));
+			throw ScriptRuntime.typeError2("msg.isnt.function", arg1, ScriptRuntime.typeof(cx, arg1));
 		}
 
 		boolean isStrict = cx.isStrictMode();
@@ -165,16 +165,16 @@ public class NativeMap extends IdScriptableObject implements Wrapper {
 		// Find the "add" function of our own prototype, since it might have
 		// been replaced. Since we're not fully constructed yet, create a dummy instance
 		// so that we can get our own prototype.
-		ScriptableObject dummy = ensureScriptableObject(cx.newObject(scope, map.getClassName()));
+		ScriptableObject dummy = ensureScriptableObject(cx, cx.newObject(scope, map.getClassName()));
 		final Callable set = ScriptRuntime.getPropFunctionAndThis(dummy.getPrototype(cx), "set", cx, scope);
 		ScriptRuntime.lastStoredScriptable(cx);
 
 		// Finally, run through all the iterated values and add them!
 		try (IteratorLikeIterable it = new IteratorLikeIterable(cx, scope, ito)) {
 			for (Object val : it) {
-				Scriptable sVal = ensureScriptable(val);
+				Scriptable sVal = ensureScriptable(cx, val);
 				if (sVal instanceof Symbol) {
-					throw ScriptRuntime.typeError1("msg.arg.not.object", ScriptRuntime.typeof(sVal));
+					throw ScriptRuntime.typeError1("msg.arg.not.object", ScriptRuntime.typeof(cx, sVal));
 				}
 				Object finalKey = sVal.get(cx, 0, sVal);
 				if (finalKey == NOT_FOUND) {

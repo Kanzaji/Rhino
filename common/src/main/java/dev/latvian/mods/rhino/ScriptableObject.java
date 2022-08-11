@@ -149,7 +149,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 */
 	@Override
 	public MemberType getTypeOf() {
-		return avoidObjectDetection() ? MemberType.UNDEFINED : MemberType.OBJECT;
+		return MemberType.OBJECT;
 	}
 
 	/**
@@ -299,7 +299,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 		if (start == this) {
 			throw Kit.codeBug();
 		}
-		ensureSymbolScriptable(start).put(cx, key, start, value);
+		ensureSymbolScriptable(cx, start).put(cx, key, start, value);
 	}
 
 	/**
@@ -715,22 +715,6 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	}
 
 	/**
-	 * Emulate the SpiderMonkey (and Firefox) feature of allowing
-	 * custom objects to avoid detection by normal "object detection"
-	 * code patterns. This is used to implement document.all.
-	 * See https://bugzilla.mozilla.org/show_bug.cgi?id=412247.
-	 * This is an analog to JOF_DETECTING from SpiderMonkey; see
-	 * https://bugzilla.mozilla.org/show_bug.cgi?id=248549.
-	 * Other than this special case, embeddings should return false.
-	 *
-	 * @return true if this object should avoid object detection
-	 * @since 1.7R1
-	 */
-	public boolean avoidObjectDetection() {
-		return false;
-	}
-
-	/**
 	 * Custom <code>==</code> operator.
 	 * Must return {@link Scriptable#NOT_FOUND} if this object does not
 	 * have custom equality operator for the given value,
@@ -1098,7 +1082,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 		ScriptableObject[] descs = new ScriptableObject[ids.length];
 		for (int i = 0, len = ids.length; i < len; ++i) {
 			Object descObj = ScriptRuntime.getObjectElem(cx, props, ids[i]);
-			ScriptableObject desc = ensureScriptableObject(descObj);
+			ScriptableObject desc = ensureScriptableObject(cx, descObj);
 			checkPropertyDefinition(cx, desc);
 			descs[i] = desc;
 		}
@@ -1185,11 +1169,11 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	protected void checkPropertyDefinition(Context cx, Scriptable desc) {
 		Object getter = getProperty(cx, desc, "get");
 		if (getter != NOT_FOUND && getter != Undefined.instance && !(getter instanceof Callable)) {
-			throw ScriptRuntime.notFunctionError(getter);
+			throw ScriptRuntime.notFunctionError(cx, getter);
 		}
 		Object setter = getProperty(cx, desc, "set");
 		if (setter != NOT_FOUND && setter != Undefined.instance && !(setter instanceof Callable)) {
-			throw ScriptRuntime.notFunctionError(setter);
+			throw ScriptRuntime.notFunctionError(cx, setter);
 		}
 		if (isDataDescriptor(cx, desc) && isAccessorDescriptor(cx, desc)) {
 			throw ScriptRuntime.typeError0("msg.both.data.and.accessor.desc");
@@ -1328,23 +1312,23 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 		return !isDataDescriptor(cx, desc) && !isAccessorDescriptor(cx, desc);
 	}
 
-	protected static Scriptable ensureScriptable(Object arg) {
+	protected static Scriptable ensureScriptable(Context cx, Object arg) {
 		if (!(arg instanceof Scriptable)) {
-			throw ScriptRuntime.typeError1("msg.arg.not.object", ScriptRuntime.typeof(arg));
+			throw ScriptRuntime.typeError1("msg.arg.not.object", ScriptRuntime.typeof(cx, arg));
 		}
 		return (Scriptable) arg;
 	}
 
-	protected static SymbolScriptable ensureSymbolScriptable(Object arg) {
+	protected static SymbolScriptable ensureSymbolScriptable(Context cx, Object arg) {
 		if (!(arg instanceof SymbolScriptable)) {
-			throw ScriptRuntime.typeError1("msg.object.not.symbolscriptable", ScriptRuntime.typeof(arg));
+			throw ScriptRuntime.typeError1("msg.object.not.symbolscriptable", ScriptRuntime.typeof(cx, arg));
 		}
 		return (SymbolScriptable) arg;
 	}
 
-	protected static ScriptableObject ensureScriptableObject(Object arg) {
+	protected static ScriptableObject ensureScriptableObject(Context cx, Object arg) {
 		if (!(arg instanceof ScriptableObject)) {
-			throw ScriptRuntime.typeError1("msg.arg.not.object", ScriptRuntime.typeof(arg));
+			throw ScriptRuntime.typeError1("msg.arg.not.object", ScriptRuntime.typeof(cx, arg));
 		}
 		return (ScriptableObject) arg;
 	}
@@ -1494,7 +1478,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 		Scriptable start = obj;
 		Object result;
 		do {
-			result = ensureSymbolScriptable(obj).get(cx, key, start);
+			result = ensureSymbolScriptable(cx, obj).get(cx, key, start);
 			if (result != NOT_FOUND) {
 				break;
 			}
@@ -1681,7 +1665,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 		if (base == null) {
 			base = obj;
 		}
-		ensureSymbolScriptable(base).put(cx, key, obj, value);
+		ensureSymbolScriptable(cx, base).put(cx, key, obj, value);
 	}
 
 	/**
@@ -1833,7 +1817,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	public static Object callMethod(Context cx, Scriptable obj, String methodName, Object[] args) {
 		Object funObj = getProperty(cx, obj, methodName);
 		if (!(funObj instanceof Function fun)) {
-			throw ScriptRuntime.notFunctionError(obj, methodName);
+			throw ScriptRuntime.notFunctionError(cx, obj, methodName);
 		}
 		// XXX: What should be the scope when calling funObj?
 		// The following favor scope stored in the object on the assumption
@@ -1868,7 +1852,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 
 	private static Scriptable getBase(Context cx, Scriptable obj, Symbol key) {
 		do {
-			if (ensureSymbolScriptable(obj).has(cx, key, obj)) {
+			if (ensureSymbolScriptable(cx, obj).has(cx, key, obj)) {
 				break;
 			}
 			obj = obj.getPrototype(cx);

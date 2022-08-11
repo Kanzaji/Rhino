@@ -152,7 +152,7 @@ public final class JavaAdapter implements IdFunctionCall {
 		Class<?>[] interfaces = new Class[interfaceCount];
 		System.arraycopy(intfs, 0, interfaces, 0, interfaceCount);
 		// next argument is implementation, must be scriptable
-		Scriptable obj = ScriptableObject.ensureScriptable(args[classCount]);
+		Scriptable obj = ScriptableObject.ensureScriptable(cx, args[classCount]);
 
 		Class<?> adapterClass = getAdapterClass(cx, scope, superClass, interfaces, obj);
 		Object adapter;

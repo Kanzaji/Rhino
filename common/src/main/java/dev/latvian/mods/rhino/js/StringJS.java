@@ -18,10 +18,10 @@ public class StringJS extends ObjectJS {
 		return args[0] instanceof StringJS s ? s : of(args[0].toString());
 	}
 
-	public final CharSequence string;
+	public final CharSequence value;
 
-	private StringJS(CharSequence string) {
-		this.string = string;
+	private StringJS(CharSequence value) {
+		this.value = value;
 	}
 
 	@Override
@@ -30,18 +30,33 @@ public class StringJS extends ObjectJS {
 	}
 
 	@Override
+	public TypeJS getType() {
+		return TypeJS.STRING;
+	}
+
+	@Override
 	public Object unwrap() {
-		return string.toString();
+		return value.toString();
 	}
 
 	@Override
 	public double asNumber() {
-		return Double.parseDouble(string.toString());
+		return Double.parseDouble(value.toString());
 	}
 
 	@Override
 	public String asString() {
-		return string.toString();
+		return value.toString();
+	}
+
+	@Override
+	public Object cast(TypeJS type) {
+		return type == TypeJS.STRING ? value : super.cast(type);
+	}
+
+	@Override
+	public ObjectJS castJS(TypeJS type) {
+		return type == TypeJS.STRING ? this : super.castJS(type);
 	}
 
 	private static ObjectJS length(ContextJS cx, ObjectJS self) {
