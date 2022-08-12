@@ -19,6 +19,7 @@ import dev.latvian.mods.rhino.Symbol;
 import dev.latvian.mods.rhino.SymbolKey;
 import dev.latvian.mods.rhino.TopLevel;
 import dev.latvian.mods.rhino.Undefined;
+import dev.latvian.mods.rhino.js.NumberJS;
 
 /**
  * This class implements the RegExp native object.
@@ -129,7 +130,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 
 	NativeRegExp(Context cx, Scriptable scope, RECompiled regexpCompiled) {
 		this.re = regexpCompiled;
-		setLastIndex(ScriptRuntime.zeroObj);
+		setLastIndex(NumberJS.ZERO);
 		ScriptRuntime.setBuiltinProtoAndParent(cx, this, scope, TopLevel.Builtins.RegExp);
 	}
 
@@ -172,7 +173,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 		String s = args.length == 0 || args[0] instanceof Undefined ? "" : escapeRegExp(cx, args[0]);
 		String global = args.length > 1 && args[1] != Undefined.instance ? ScriptRuntime.toString(cx, args[1]) : null;
 		this.re = compileRE(cx, s, global, false);
-		setLastIndex(ScriptRuntime.zeroObj);
+		setLastIndex(NumberJS.ZERO);
 		return this;
 	}
 
@@ -248,14 +249,14 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 
 		Object rval;
 		if (d < 0 || str.length() < d) {
-			setLastIndex(ScriptRuntime.zeroObj);
+			setLastIndex(NumberJS.ZERO);
 			rval = null;
 		} else {
 			int[] indexp = {(int) d};
 			rval = executeRegExp(cx, scopeObj, reImpl, str, indexp, matchType);
 			if ((re.flags & JSREG_GLOB) != 0) {
 				if (rval == null || rval == Undefined.instance) {
-					setLastIndex(ScriptRuntime.zeroObj);
+					setLastIndex(NumberJS.ZERO);
 				} else {
 					setLastIndex((double) indexp[0]);
 				}
@@ -2670,7 +2671,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 	// #/string_id_map#
 
 	private RECompiled re;
-	Object lastIndex = ScriptRuntime.zeroObj;     /* index after last match, for //g iterator */
+	Object lastIndex = NumberJS.ZERO;     /* index after last match, for //g iterator */
 	private int lastIndexAttr = DONTENUM | PERMANENT;
 
 }       // class NativeRegExp

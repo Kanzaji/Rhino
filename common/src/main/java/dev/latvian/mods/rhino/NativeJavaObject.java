@@ -8,6 +8,7 @@ package dev.latvian.mods.rhino;
 
 import dev.latvian.mods.rhino.classdata.ClassData;
 import dev.latvian.mods.rhino.classdata.MethodSignature;
+import dev.latvian.mods.rhino.js.NumberJS;
 import dev.latvian.mods.rhino.util.Deletable;
 import dev.latvian.mods.rhino.util.JavaIteratorWrapper;
 import dev.latvian.mods.rhino.util.wrap.TypeWrapperFactory;
@@ -290,7 +291,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 			} else {
 				if (hint == ScriptRuntime.NumberClass && javaObject instanceof Boolean) {
 					boolean b = (Boolean) javaObject;
-					value = b ? ScriptRuntime.wrapNumber(1.0) : ScriptRuntime.zeroObj;
+					value = b ? ScriptRuntime.wrapNumber(1.0) : NumberJS.ZERO;
 				} else {
 					value = javaObject.toString();
 				}

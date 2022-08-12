@@ -1,5 +1,6 @@
 package dev.latvian.mods.rhino.mod.util;
 
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 
 import java.util.ArrayList;
@@ -43,13 +44,13 @@ public class CountingMap {
 		return map.size();
 	}
 
-	public void forEach(Consumer<Object2LongEntry> forEach) {
-		map.object2LongEntrySet().forEach(entry -> forEach.accept(new Object2LongEntry(entry)));
+	public void forEach(Consumer<Object2LongMap.Entry<Object>> forEach) {
+		map.object2LongEntrySet().fastForEach(forEach);
 	}
 
-	public List<Object2LongEntry> getEntries() {
-		List<Object2LongEntry> list = new ArrayList<>(map.size());
-		forEach(list::add);
+	public List<Object[]> getEntries() {
+		List<Object[]> list = new ArrayList<>(map.size());
+		map.object2LongEntrySet().fastForEach(e -> list.add(new Object[]{e.getKey(), e.getLongValue()}));
 		return list;
 	}
 
@@ -63,7 +64,7 @@ public class CountingMap {
 
 	public long getTotalCount() {
 		final long[] count = {0L};
-		forEach(entry -> count[0] += entry.value);
+		forEach(entry -> count[0] += entry.getLongValue());
 		return count[0];
 	}
 }

@@ -13,6 +13,7 @@ import dev.latvian.mods.rhino.ScriptRuntime;
 import dev.latvian.mods.rhino.Scriptable;
 import dev.latvian.mods.rhino.ScriptableObject;
 import dev.latvian.mods.rhino.Undefined;
+import dev.latvian.mods.rhino.js.NumberJS;
 
 /**
  *
@@ -151,7 +152,7 @@ public class RegExp {
 				result = -1;
 			}
 		} else if (data.global) {
-			re.lastIndex = ScriptRuntime.zeroObj;
+			re.lastIndex = NumberJS.ZERO;
 			for (int count = 0; indexp[0] <= str.length(); count++) {
 				result = re.executeRegExp(cx, scope, reImpl, str, indexp, NativeRegExp.TEST);
 				if (result == null || !result.equals(Boolean.TRUE)) {

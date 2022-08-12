@@ -28,7 +28,7 @@ final class NativeDate extends IdScriptableObject {
 	static void init(Context cx, Scriptable scope) {
 		NativeDate obj = new NativeDate();
 		// Set the value of the prototype Date to NaN ('invalid date');
-		obj.date = ScriptRuntime.NaN;
+		obj.date = Double.NaN;
 		obj.exportAsJSClass(cx, MAX_PROTOTYPE_ID, scope);
 	}
 
@@ -471,7 +471,7 @@ final class NativeDate extends IdScriptableObject {
 				double year = ScriptRuntime.toNumber(cx, args, 0);
 
 				if (Double.isNaN(year) || Double.isInfinite(year)) {
-					t = ScriptRuntime.NaN;
+					t = Double.NaN;
 				} else {
 					if (Double.isNaN(t)) {
 						t = 0;
@@ -590,7 +590,7 @@ final class NativeDate extends IdScriptableObject {
 
 	private static double DaysInYear(double year) {
 		if (Double.isInfinite(year) || Double.isNaN(year)) {
-			return ScriptRuntime.NaN;
+			return Double.NaN;
 		}
 		return IsLeapYear((int) year) ? 366.0 : 365.0;
 	}
@@ -883,7 +883,7 @@ final class NativeDate extends IdScriptableObject {
 
 	private static double TimeClip(double d) {
 		if (Double.isNaN(d) || d == Double.POSITIVE_INFINITY || d == Double.NEGATIVE_INFINITY || Math.abs(d) > HalfTimeDomain) {
-			return ScriptRuntime.NaN;
+			return Double.NaN;
 		}
 		if (d > 0.0) {
 			return Math.floor(d + 0.);
@@ -917,7 +917,7 @@ final class NativeDate extends IdScriptableObject {
 			if (loop < args.length) {
 				d = ScriptRuntime.toNumber(cx, args[loop]);
 				if (Double.isNaN(d) || Double.isInfinite(d)) {
-					return ScriptRuntime.NaN;
+					return Double.NaN;
 				}
 				array[loop] = ScriptRuntime.toInteger(cx, args[loop]);
 			} else {
@@ -939,7 +939,7 @@ final class NativeDate extends IdScriptableObject {
 
 	private static double jsStaticFunction_UTC(Context cx, Object[] args) {
 		if (args.length == 0) {
-			return ScriptRuntime.NaN;
+			return Double.NaN;
 		}
 		return TimeClip(date_msecFromArgs(cx, args));
 	}
@@ -1078,7 +1078,7 @@ final class NativeDate extends IdScriptableObject {
 		}
 
 		// invalid ISO-8601 format, return NaN
-		return ScriptRuntime.NaN;
+		return Double.NaN;
 	}
 
 	private static double date_parseString(String s) {
@@ -1158,16 +1158,16 @@ final class NativeDate extends IdScriptableObject {
 						n = -n;
 					}
 					if (tzoffset != 0 && tzoffset != -1) {
-						return ScriptRuntime.NaN;
+						return Double.NaN;
 					}
 					tzoffset = n;
 				} else if (n >= 70 || (prevc == '/' && mon >= 0 && mday >= 0 && year < 0)) {
 					if (year >= 0) {
-						return ScriptRuntime.NaN;
+						return Double.NaN;
 					} else if (c <= ' ' || c == ',' || c == '/' || i >= limit) {
 						year = n < 100 ? n + 1900 : n;
 					} else {
-						return ScriptRuntime.NaN;
+						return Double.NaN;
 					}
 				} else if (c == ':') {
 					if (hour < 0) {
@@ -1175,7 +1175,7 @@ final class NativeDate extends IdScriptableObject {
 					} else if (min < 0) {
 						min = /*byte*/ n;
 					} else {
-						return ScriptRuntime.NaN;
+						return Double.NaN;
 					}
 				} else if (c == '/') {
 					if (mon < 0) {
@@ -1183,10 +1183,10 @@ final class NativeDate extends IdScriptableObject {
 					} else if (mday < 0) {
 						mday = /*byte*/ n;
 					} else {
-						return ScriptRuntime.NaN;
+						return Double.NaN;
 					}
 				} else if (i < limit && c != ',' && c > ' ' && c != '-') {
-					return ScriptRuntime.NaN;
+					return Double.NaN;
 				} else if (seenplusminus && n < 60) {  /* handle GMT-3:30 */
 					if (tzoffset < 0) {
 						tzoffset -= n;
@@ -1200,7 +1200,7 @@ final class NativeDate extends IdScriptableObject {
 				} else if (mday < 0) {
 					mday = /*byte*/ n;
 				} else {
-					return ScriptRuntime.NaN;
+					return Double.NaN;
 				}
 				prevc = 0;
 			} else if (c == '/' || c == ':' || c == '+' || c == '-') {
@@ -1216,7 +1216,7 @@ final class NativeDate extends IdScriptableObject {
 				}
 				int letterCount = i - st;
 				if (letterCount < 2) {
-					return ScriptRuntime.NaN;
+					return Double.NaN;
 				}
 				/*
 				 * Use ported code from jsdate.c rather than the locale-specific
@@ -1228,7 +1228,7 @@ final class NativeDate extends IdScriptableObject {
 				for (int wtbOffset = 0; ; ) {
 					int wtbNext = wtb.indexOf(';', wtbOffset);
 					if (wtbNext < 0) {
-						return ScriptRuntime.NaN;
+						return Double.NaN;
 					}
 					if (wtb.regionMatches(true, wtbOffset, s, st, letterCount)) {
 						break;
@@ -1242,7 +1242,7 @@ final class NativeDate extends IdScriptableObject {
 					 * 12:30, instead of blindly adding 12 if PM.
 					 */
 					if (hour > 12 || hour < 0) {
-						return ScriptRuntime.NaN;
+						return Double.NaN;
 					} else if (index == 0) {
 						// AM
 						if (hour == 12) {
@@ -1261,7 +1261,7 @@ final class NativeDate extends IdScriptableObject {
 					if (mon < 0) {
 						mon = index;
 					} else {
-						return ScriptRuntime.NaN;
+						return Double.NaN;
 					}
 				} else {
 					index -= 12;
@@ -1284,7 +1284,7 @@ final class NativeDate extends IdScriptableObject {
 			}
 		}
 		if (year < 0 || mon < 0 || mday < 0) {
-			return ScriptRuntime.NaN;
+			return Double.NaN;
 		}
 		if (sec < 0) {
 			sec = 0;
@@ -1540,7 +1540,7 @@ final class NativeDate extends IdScriptableObject {
 			 * if it's not given.  This means that "d = new Date();
 			 * d.setMilliseconds()" returns NaN.  Blech.
 			 */
-			return ScriptRuntime.NaN;
+			return Double.NaN;
 		}
 
 		int maxargs;
@@ -1594,7 +1594,7 @@ final class NativeDate extends IdScriptableObject {
 		// just return NaN if the date is already NaN,
 		// limit checks that happen in MakeTime in ECMA.
 		if (hasNaN || Double.isNaN(date)) {
-			return ScriptRuntime.NaN;
+			return Double.NaN;
 		}
 
 		int i = 0, stop = numNums;
@@ -1644,7 +1644,7 @@ final class NativeDate extends IdScriptableObject {
 	private static double makeDate(Context cx, double date, Object[] args, int methodId) {
 		/* see complaint about ECMA in date_MakeTime */
 		if (args.length == 0) {
-			return ScriptRuntime.NaN;
+			return Double.NaN;
 		}
 
 		int maxargs;
@@ -1690,7 +1690,7 @@ final class NativeDate extends IdScriptableObject {
 
 		// limit checks that happen in MakeTime in ECMA.
 		if (hasNaN) {
-			return ScriptRuntime.NaN;
+			return Double.NaN;
 		}
 
 		int i = 0, stop = numNums;
@@ -1701,7 +1701,7 @@ final class NativeDate extends IdScriptableObject {
 		 * If we are, use 0 as the time. */
 		if (Double.isNaN(date)) {
 			if (maxargs < 3) {
-				return ScriptRuntime.NaN;
+				return Double.NaN;
 			}
 			lorutime = 0;
 		} else {

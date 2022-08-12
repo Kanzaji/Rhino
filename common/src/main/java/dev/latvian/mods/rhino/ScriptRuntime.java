@@ -7,6 +7,8 @@
 package dev.latvian.mods.rhino;
 
 import dev.latvian.mods.rhino.ast.FunctionNode;
+import dev.latvian.mods.rhino.js.NumberJS;
+import dev.latvian.mods.rhino.js.UndefinedJS;
 import dev.latvian.mods.rhino.regexp.NativeRegExp;
 import dev.latvian.mods.rhino.regexp.RegExp;
 import dev.latvian.mods.rhino.util.SpecialEquality;
@@ -238,7 +240,7 @@ public class ScriptRuntime {
 
 	public static Number wrapNumber(double x) {
 		if (Double.isNaN(x)) {
-			return NaNobj;
+			return NumberJS.NaN;
 		}
 		return x;
 	}
@@ -281,8 +283,8 @@ public class ScriptRuntime {
 		if (val == null) {
 			return +0.0;
 		}
-		if (val == Undefined.instance) {
-			return NaN;
+		if (val == Undefined.instance || val == UndefinedJS.PROTOTYPE) {
+			return Double.NaN;
 		}
 		if (val instanceof String) {
 			return toNumber(cx, (String) val);
@@ -304,21 +306,15 @@ public class ScriptRuntime {
 			return toNumber(cx, val);
 		}
 		warnAboutNonJSObject(cx, val);
-		return NaN;
+		return Double.NaN;
 	}
 
 	public static double toNumber(Context cx, Object[] args, int index) {
-		return (index < args.length) ? toNumber(cx, args[index]) : NaN;
+		return (index < args.length) ? toNumber(cx, args[index]) : Double.NaN;
 	}
-
-	public static final double NaN = Double.NaN;
-	public static final Double NaNobj = NaN;
 
 	// Preserve backward-compatibility with historical value of this.
 	public static final double negativeZero = Double.longBitsToDouble(0x8000000000000000L);
-
-	public static final Double zeroObj = 0.0;
-	public static final Double negativeZeroObj = -0.0;
 
 	static double stringPrefixToNumber(String s, int start, int radix) {
 		return stringToNumber(s, start, s.length() - 1, radix, true);
@@ -354,14 +350,14 @@ public class ScriptRuntime {
 			} else if ('A' <= c && c < upperCaseBound) {
 				newDigit = c - 'A' + 10;
 			} else if (!isPrefix) {
-				return NaN; // isn't a prefix but found unexpected char
+				return Double.NaN; // isn't a prefix but found unexpected char
 			} else {
 				break; // unexpected char
 			}
 			sum = sum * radix + newDigit;
 		}
 		if (sourceStart == end) { // stopped right at the beginning
-			return NaN;
+			return Double.NaN;
 		}
 		if (sum > NativeNumber.MAX_SAFE_INTEGER) {
 			if (radix == 10) {
@@ -373,7 +369,7 @@ public class ScriptRuntime {
 				try {
 					return Double.parseDouble(source.substring(sourceStart, end));
 				} catch (NumberFormatException nfe) {
-					return NaN;
+					return Double.NaN;
 				}
 			} else if (radix == 2 || radix == 4 || radix == 8 || radix == 16 || radix == 32) {
 				/* The number may also be inaccurate for one of these bases.
@@ -566,7 +562,7 @@ public class ScriptRuntime {
 			if (start + 7 == end && s.regionMatches(start, "Infinity", 0, 8)) {
 				return startChar == '-' ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY;
 			}
-			return NaN;
+			return Double.NaN;
 		}
 		// A base10, non-infinity number:
 		// just try a normal floating point conversion
@@ -578,12 +574,12 @@ public class ScriptRuntime {
 			if (('0' <= c && c <= '9') || c == '.' || c == 'e' || c == 'E' || c == '+' || c == '-') {
 				continue;
 			}
-			return NaN;
+			return Double.NaN;
 		}
 		try {
 			return Double.parseDouble(sub);
 		} catch (NumberFormatException ex) {
-			return NaN;
+			return Double.NaN;
 		}
 	}
 
@@ -2128,8 +2124,8 @@ public class ScriptRuntime {
 				}
 				target = target.getPrototype(cx);
 			} while (target != null);
-			start.put(cx, id, start, NaNobj);
-			return NaNobj;
+			start.put(cx, id, start, NumberJS.NaN);
+			return NumberJS.NaN;
 		}
 		return doScriptableIncrDecr(cx, target, id, start, value, incrDecrMask);
 	}
@@ -2371,7 +2367,7 @@ public class ScriptRuntime {
 		return obj == null || obj == Undefined.instance || (obj instanceof Number) || (obj instanceof String) || (obj instanceof Boolean);
 	}
 
-	static boolean eqNumber(Context cx, double x, Object y) {
+	public static boolean eqNumber(Context cx, double x, Object y) {
 		if (y == null || y == Undefined.instance) {
 			return false;
 		} else if (y instanceof Number) {

@@ -34,7 +34,7 @@ final class NativeBoolean extends IdScriptableObject {
 		// This is actually non-ECMA, but will be proposed
 		// as a change in round 2.
 		if (typeHint == ScriptRuntime.BooleanClass) {
-			return ScriptRuntime.wrapBoolean(booleanValue);
+			return booleanValue;
 		}
 		return super.getDefaultValue(cx, typeHint);
 	}
@@ -69,7 +69,7 @@ final class NativeBoolean extends IdScriptableObject {
 				return new NativeBoolean(b);
 			}
 			// Boolean(val) converts val to a boolean.
-			return ScriptRuntime.wrapBoolean(b);
+			return b;
 		}
 
 		// The rest of Boolean.prototype methods require thisObj to be Boolean
@@ -88,7 +88,7 @@ final class NativeBoolean extends IdScriptableObject {
 				return "not_supported";
 
 			case Id_valueOf:
-				return ScriptRuntime.wrapBoolean(value);
+				return value;
 		}
 		throw new IllegalArgumentException(String.valueOf(id));
 	}

@@ -6,6 +6,8 @@
 
 package dev.latvian.mods.rhino;
 
+import dev.latvian.mods.rhino.js.NumberJS;
+
 /**
  * This class implements the Number native object.
  * <p>
@@ -42,7 +44,7 @@ final class NativeNumber extends IdScriptableObject {
 	protected void fillConstructorProperties(Context cx, IdFunctionObject ctor) {
 		final int attr = DONTENUM | PERMANENT | READONLY;
 
-		ctor.defineProperty(cx, "NaN", ScriptRuntime.NaNobj, attr);
+		ctor.defineProperty(cx, "NaN", NumberJS.NaN, attr);
 		ctor.defineProperty(cx, "POSITIVE_INFINITY", ScriptRuntime.wrapNumber(Double.POSITIVE_INFINITY), attr);
 		ctor.defineProperty(cx, "NEGATIVE_INFINITY", ScriptRuntime.wrapNumber(Double.NEGATIVE_INFINITY), attr);
 		ctor.defineProperty(cx, "MAX_VALUE", ScriptRuntime.wrapNumber(Double.MAX_VALUE), attr);
@@ -267,8 +269,7 @@ final class NativeNumber extends IdScriptableObject {
 
 	static Object isFinite(Context cx, Object val) {
 		double d = ScriptRuntime.toNumber(cx, val);
-		Double nd = d;
-		return ScriptRuntime.wrapBoolean(!nd.isInfinite() && !nd.isNaN());
+		return !Double.isInfinite(d) && !Double.isNaN(d);
 	}
 
 	private static Boolean isNaN(Number val) {

@@ -1,5 +1,7 @@
 package dev.latvian.mods.rhino;
 
+import dev.latvian.mods.rhino.js.NumberJS;
+
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -55,7 +57,7 @@ public class Hashtable implements Iterable<Hashtable.Entry> {
 
 			if (key == null) {
 				hashCode = 0;
-			} else if (k.equals(ScriptRuntime.negativeZeroObj)) {
+			} else if (k.equals(NumberJS.MINUS_ZERO)) {
 				hashCode = 0;
 			} else {
 				hashCode = key.hashCode();

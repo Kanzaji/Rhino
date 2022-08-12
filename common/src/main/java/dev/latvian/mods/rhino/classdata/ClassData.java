@@ -1,24 +1,26 @@
 package dev.latvian.mods.rhino.classdata;
 
 import dev.latvian.mods.rhino.Context;
+import dev.latvian.mods.rhino.ContextJS;
 import dev.latvian.mods.rhino.Scriptable;
 import dev.latvian.mods.rhino.SharedContextData;
-import dev.latvian.mods.rhino.js.AsJS;
-import dev.latvian.mods.rhino.js.JavaClassJS;
-import dev.latvian.mods.rhino.js.ObjectJS;
+import dev.latvian.mods.rhino.js.TypeJS;
+import dev.latvian.mods.rhino.js.prototype.PrototypeJS;
+import dev.latvian.mods.rhino.js.prototype.WithPrototype;
 import dev.latvian.mods.rhino.util.Possible;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class ClassData implements AsJS {
+public class ClassData implements WithPrototype {
 	public static ClassData of(Context cx, Scriptable scope, Class<?> type) {
 		return cx.getSharedData(scope).getClassDataCache().of(type);
 	}
 
 	public final ClassDataCache cache;
 	public final PublicClassData publicClassData;
+	private PrototypeJS prototype;
 	private Map<String, BaseMember> members;
 	private Map<String, BaseMember> staticMembers;
 	private Map<MethodSignature, ConstructorInfo> constructors;
@@ -161,7 +163,25 @@ public class ClassData implements AsJS {
 	}
 
 	@Override
-	public ObjectJS asJS() {
-		return new JavaClassJS(publicClassData.type);
+	public PrototypeJS getPrototype(ContextJS cx) {
+		if (prototype == null) {
+			String name = publicClassData.toString();
+
+			int idx = name.lastIndexOf('$');
+
+			if (idx != -1) {
+				name = name.substring(idx + 1);
+			}
+
+			idx = name.lastIndexOf('.');
+
+			if (idx != -1) {
+				name = name.substring(idx + 1);
+			}
+
+			prototype = PrototypeJS.DEFAULT.create(TypeJS.OBJECT, name);
+		}
+
+		return prototype;
 	}
 }

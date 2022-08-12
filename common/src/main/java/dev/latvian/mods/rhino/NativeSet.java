@@ -6,6 +6,8 @@
 
 package dev.latvian.mods.rhino;
 
+import dev.latvian.mods.rhino.js.NumberJS;
+
 import java.util.Iterator;
 
 public class NativeSet extends IdScriptableObject {
@@ -75,8 +77,8 @@ public class NativeSet extends IdScriptableObject {
 	private Object js_add(Object k) {
 		// Special handling of "negative zero" from the spec.
 		Object key = k;
-		if ((key instanceof Number) && ((Number) key).doubleValue() == ScriptRuntime.negativeZero) {
-			key = ScriptRuntime.zeroObj;
+		if ((key instanceof Number) && ((Number) key).doubleValue() == NumberJS.MINUS_ZERO) {
+			key = NumberJS.ZERO;
 		}
 		entries.put(key, key);
 		return this;

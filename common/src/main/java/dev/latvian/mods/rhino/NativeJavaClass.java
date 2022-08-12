@@ -8,6 +8,7 @@ package dev.latvian.mods.rhino;
 
 import dev.latvian.mods.rhino.classdata.ConstructorInfo;
 import dev.latvian.mods.rhino.classdata.MethodSignature;
+import dev.latvian.mods.rhino.js.NumberJS;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Modifier;
@@ -106,7 +107,7 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 			return Boolean.TRUE;
 		}
 		if (hint == ScriptRuntime.NumberClass) {
-			return ScriptRuntime.NaNobj;
+			return NumberJS.NaN;
 		}
 		return this;
 	}

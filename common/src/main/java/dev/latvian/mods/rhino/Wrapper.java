@@ -8,6 +8,8 @@
 
 package dev.latvian.mods.rhino;
 
+import dev.latvian.mods.rhino.js.UndefinedJS;
+
 /**
  * Objects that can wrap other values for reflection in the JS environment
  * will implement Wrapper.
@@ -25,6 +27,10 @@ public interface Wrapper {
 	Object unwrap();
 
 	static Object unwrapped(Object o) {
+		if (o == UndefinedJS.PROTOTYPE) {
+			return null;
+		}
+
 		Object o1 = o;
 
 		while (o1 instanceof Wrapper w) {

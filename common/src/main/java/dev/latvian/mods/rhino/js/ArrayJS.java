@@ -2,91 +2,88 @@ package dev.latvian.mods.rhino.js;
 
 import dev.latvian.mods.rhino.ContextJS;
 import dev.latvian.mods.rhino.Wrapper;
-import dev.latvian.mods.rhino.util.Deletable;
+import dev.latvian.mods.rhino.js.prototype.PrototypeJS;
+import dev.latvian.mods.rhino.util.NativeArrayWrapper;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
-@SuppressWarnings({"unchecked"})
-public class ArrayJS extends JavaObjectJS {
-	public static final PrototypeJS PROTOTYPE = OBJECT_PROTOTYPE.createSub("Array")
-			.constructor(ArrayJS::construct);
+public class ArrayJS {
+	public static final PrototypeJS PROTOTYPE = JavaObjectJS.PROTOTYPE.create(TypeJS.ARRAY, "Array")
+			.constructor(ArrayJS::construct)
+			.staticFunction("from", ArrayJS::unimpl)
+			.staticFunction("isArray", ArrayJS::unimpl)
+			.staticFunction("of", ArrayJS::unimpl)
+			.property("length", ArrayJS::length)
+			.function("push", ArrayJS::unimpl)
+			.function("pop", ArrayJS::unimpl)
+			.function("shift", ArrayJS::unimpl)
+			.function("unshift", ArrayJS::unimpl)
+			.function("concat", ArrayJS::unimpl)
+			.function("join", ArrayJS::unimpl)
+			.function("reverse", ArrayJS::unimpl)
+			.function("slice", ArrayJS::unimpl)
+			.function("splice", ArrayJS::unimpl)
+			.function("every", ArrayJS::unimpl)
+			.function("some", ArrayJS::unimpl)
+			.function("filter", ArrayJS::unimpl)
+			.function("map", ArrayJS::unimpl)
+			.function("reduce", ArrayJS::unimpl)
+			.function("reduceRight", ArrayJS::unimpl)
+			.function("find", ArrayJS::unimpl)
+			.function("findIndex", ArrayJS::unimpl)
+			.function("findLast", ArrayJS::unimpl)
+			.function("findLastIndex", ArrayJS::unimpl)
+			.function("flatMap", ArrayJS::unimpl)
+			.function("copyWithin", ArrayJS::unimpl)
+			.function("includes", ArrayJS::unimpl)
+			.function("fill", ArrayJS::unimpl);
 
-	public static final int MUTABLE = 0;
-	public static final int IMMUTABLE = 1;
-	public static final int IMMUTABLE_SIZE = 2;
-
-	private static ArrayJS construct(ContextJS cx, Object[] args) {
-		return new ArrayJS(new ArrayList<>(Arrays.asList(Wrapper.unwrappedArray(args))), MUTABLE);
-	}
-
-	public final List<Object> list;
-	public final int type;
-
-	public ArrayJS(Object javaObject, List<?> list, int type) {
-		super(javaObject);
-		this.list = (List<Object>) list;
-		this.type = type;
-	}
-
-	public ArrayJS(List<?> list, int type) {
-		this(list, list, type);
-	}
-
-	@Override
-	public PrototypeJS getPrototype() {
-		return PROTOTYPE;
-	}
-
-	@Override
-	public TypeJS getType() {
-		return TypeJS.ARRAY;
-	}
-
-	@Override
-	public ObjectJS get(ContextJS cx, int index) throws Exception {
-		return wrap(list.get(index));
-	}
-
-	@Override
-	public void set(ContextJS cx, int index, ObjectJS value) throws Exception {
-		list.set(index, Wrapper.unwrapped(value));
-	}
-
-	@Override
-	public void delete(ContextJS cx, int index) throws Exception {
-		Deletable.deleteObject(list.remove(index));
-	}
-
-	@Override
-	public Object[] getKeys() {
-		Object[] keys = new Object[list.size()];
-
-		for (int i = 0; i < keys.length; i++) {
-			keys[i] = i;
+	private static List<?> construct(ContextJS cx, Object[] args) {
+		if (args.length == 0) {
+			return new ArrayList<>(0);
+		} else if (args[0] instanceof Collection<?> l) {
+			return new ArrayList<>(l);
 		}
 
-		return keys;
+		return new ArrayList<>(Arrays.asList(Wrapper.unwrappedArray(args)));
 	}
 
-	@Override
-	public Object cast(TypeJS type) {
-		return type == TypeJS.ARRAY ? list : super.cast(type);
+	private static List<?> list(Object arg) {
+		if (arg == null) {
+			return List.of();
+		} else if (arg instanceof List<?> l) {
+			return l;
+		} else if (arg instanceof Collection<?>) {
+			return new ArrayList<>((Collection<?>) arg);
+		} else if (arg instanceof Object[]) {
+			return Arrays.asList((Object[]) arg);
+		} else if (arg.getClass().isArray()) {
+			return NativeArrayWrapper.of(arg);
+		} else if (arg instanceof Iterable<?>) {
+			var list = new ArrayList<>();
+
+			for (var o : (Iterable<?>) arg) {
+				list.add(o);
+			}
+
+			return list;
+		}
+
+		return List.of(arg);
 	}
 
-	@Override
-	public ObjectJS castJS(TypeJS type) {
-		return type == TypeJS.ARRAY ? this : super.castJS(type);
+	private static int length(ContextJS cx, Object self) {
+		return ((List<?>) self).size();
 	}
 
-	@Override
-	public IteratorJS keyIterator(ContextJS cx) {
-		return new IteratorJS.ArrayKeys(this);
+	private static Object unimpl(ContextJS cx, Object[] args) {
+		throw new IllegalStateException("This function is not yet implemented!");
 	}
 
-	@Override
-	public IteratorJS valueIterator(ContextJS cx) {
-		return new IteratorJS.ArrayValues(this);
+	private static Object unimpl(ContextJS cx, Object self) {
+		throw new IllegalStateException("This function is not yet implemented!");
 	}
 }

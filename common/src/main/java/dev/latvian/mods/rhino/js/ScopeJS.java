@@ -7,7 +7,7 @@ import java.util.Map;
 
 public class ScopeJS {
 	private ScopeJS parent;
-	private Map<String, ObjectJS> objects;
+	private Map<String, Object> objects;
 
 	@Nullable
 	public ScopeJS getParent() {
@@ -28,7 +28,7 @@ public class ScopeJS {
 		return (RootScopeJS) scope;
 	}
 
-	public void set(String name, ObjectJS value) {
+	public void set(String name, Object value) {
 		if (objects == null) {
 			objects = new LinkedHashMap<>();
 		}
@@ -46,8 +46,19 @@ public class ScopeJS {
 		}
 	}
 
-	public ObjectJS get(String name) throws Exception {
-		var value = objects.get(name);
-		return value != null ? value : parent != null ? parent.get(name) : SpecialJS.UNDEFINED;
+	public Object get(String name) throws Exception {
+		ScopeJS s = this;
+
+		while (s != null) {
+			var o = s.objects == null ? null : s.objects.get(name);
+
+			if (o != null) {
+				return o;
+			}
+
+			s = s.parent;
+		}
+
+		return UndefinedJS.PROTOTYPE;
 	}
 }

@@ -1,9 +1,9 @@
 package dev.latvian.mods.rhino.classdata;
 
+import dev.latvian.mods.rhino.ContextJS;
 import dev.latvian.mods.rhino.ScriptRuntime;
-import dev.latvian.mods.rhino.js.AsJS;
-import dev.latvian.mods.rhino.js.JavaClassJS;
-import dev.latvian.mods.rhino.js.ObjectJS;
+import dev.latvian.mods.rhino.js.prototype.PrototypeJS;
+import dev.latvian.mods.rhino.js.prototype.WithPrototype;
 import dev.latvian.mods.rhino.util.HideFromJS;
 import dev.latvian.mods.rhino.util.RemapPrefixForJS;
 import org.apache.commons.lang3.mutable.MutableBoolean;
@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class PublicClassData implements AsJS {
+public class PublicClassData implements WithPrototype {
 	public static final Set<Class<?>> EXCLUDED_PARENT_CLASSES = Set.of(Object.class, Comparable.class);
 	public static final PublicClassData[] EMPTY_ARRAY = new PublicClassData[0];
 
@@ -53,6 +53,7 @@ public class PublicClassData implements AsJS {
 	private FieldInfo[] fields;
 	private MethodInfo[] methods;
 	private MethodInfo[] declaredMethods;
+	private PublicClassData[] nestedClasses;
 
 	private PublicClassData(Class<?> type) {
 		this.type = type;
@@ -199,8 +200,24 @@ public class PublicClassData implements AsJS {
 		return declaredMethods;
 	}
 
+	public PublicClassData[] getNestedClasses() {
+		if (nestedClasses == null) {
+			List<PublicClassData> nestedClassList = new ArrayList<>();
+
+			for (var c : type.getClasses()) {
+				if (!c.isAnonymousClass() && !c.isSynthetic()) {
+					nestedClassList.add(of(c));
+				}
+			}
+
+			nestedClasses = nestedClassList.isEmpty() ? EMPTY_ARRAY : nestedClassList.toArray(EMPTY_ARRAY);
+		}
+
+		return nestedClasses;
+	}
+
 	@Override
-	public ObjectJS asJS() {
-		return new JavaClassJS(type);
+	public PrototypeJS getPrototype(ContextJS cx) {
+		return cx.getSharedContextData().getClassDataCache().of(type).getPrototype(cx);
 	}
 }

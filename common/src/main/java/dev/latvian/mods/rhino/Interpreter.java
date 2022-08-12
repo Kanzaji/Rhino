@@ -30,7 +30,7 @@ public final class Interpreter extends Icode implements Evaluator {
 	/**
 	 * Class to hold data corresponding to one interpreted call stack frame.
 	 */
-	private static class CallFrame implements Cloneable {
+	public static class CallFrame implements Cloneable {
 		// fields marked "final" in a comment are effectively final except when they're modified immediately after cloning.
 
 		/*final*/ CallFrame parentFrame;
@@ -657,6 +657,8 @@ public final class Interpreter extends Icode implements Evaluator {
 
 		Object interpreterResult = null;
 		double interpreterResultDbl = 0.0;
+		ContextJS cxjs = new ContextJS(cx);
+		cxjs.setFrame(frame);
 
 		StateLoop:
 		for (; ; ) {
@@ -670,6 +672,7 @@ public final class Interpreter extends Icode implements Evaluator {
 					frame = processThrowable(cx, throwable, frame, indexReg, instructionCounting);
 					throwable = frame.throwable;
 					frame.throwable = null;
+					cxjs.setFrame(frame);
 				} else {
 					if (generatorState == null && frame.frozen) {
 						throw Kit.codeBug();
@@ -785,7 +788,7 @@ public final class Interpreter extends Icode implements Evaluator {
 								--stackTop;
 								boolean valBln = doEquals(cx, frame.scope, stack, sDbl, stackTop);
 								valBln ^= (op == Token.NE);
-								stack[stackTop] = ScriptRuntime.wrapBoolean(valBln);
+								stack[stackTop] = valBln;
 								continue;
 							}
 							case Token.SHEQ:
@@ -793,7 +796,7 @@ public final class Interpreter extends Icode implements Evaluator {
 								--stackTop;
 								boolean valBln = doShallowEquals(cx, frame.scope, stack, sDbl, stackTop);
 								valBln ^= (op == Token.SHNE);
-								stack[stackTop] = ScriptRuntime.wrapBoolean(valBln);
+								stack[stackTop] = valBln;
 								continue;
 							}
 							case Token.IFNE:
@@ -944,7 +947,7 @@ public final class Interpreter extends Icode implements Evaluator {
 								continue;
 							}
 							case Token.NOT:
-								stack[stackTop] = ScriptRuntime.wrapBoolean(!stack_boolean(cx, frame, stackTop));
+								stack[stackTop] = !stack_boolean(cx, frame, stackTop);
 								continue;
 							case Token.BINDNAME:
 								stack[++stackTop] = ScriptRuntime.bind(cx, frame.scope, stringReg);
@@ -1169,6 +1172,7 @@ public final class Interpreter extends Icode implements Evaluator {
 										frame.savedCallOp = op;
 									}
 									frame = calleeFrame;
+									cxjs.setFrame(frame);
 									continue StateLoop;
 								}
 
@@ -1179,6 +1183,7 @@ public final class Interpreter extends Icode implements Evaluator {
 										Callable applyCallable = ScriptRuntime.getCallable(cx, funThisObj);
 										if (applyCallable instanceof InterpretedFunction iApplyCallable) {
 											frame = initFrameForApplyOrCall(cx, frame, indexReg, stack, sDbl, stackTop, op, calleeScope, ifun, iApplyCallable);
+											cxjs.setFrame(frame);
 											continue StateLoop;
 										}
 									}
@@ -1192,6 +1197,7 @@ public final class Interpreter extends Icode implements Evaluator {
 									// if the method is in fact an InterpretedFunction
 									if (noSuchMethodMethod instanceof InterpretedFunction ifun) {
 										frame = initFrameForNoSuchMethod(cx, frame, indexReg, stack, sDbl, stackTop, op, funThisObj, calleeScope, noSuchMethodShim, ifun);
+										cxjs.setFrame(frame);
 										continue StateLoop;
 									}
 								}
@@ -1220,6 +1226,7 @@ public final class Interpreter extends Icode implements Evaluator {
 									frame.savedStackTop = stackTop;
 									frame.savedCallOp = op;
 									frame = calleeFrame;
+									cxjs.setFrame(frame);
 									continue StateLoop;
 								}
 								if (!(lhs instanceof Function fun)) {
@@ -1328,10 +1335,12 @@ public final class Interpreter extends Icode implements Evaluator {
 								}
 								--stackTop;
 								frame.scope = ScriptRuntime.enterWith(lhs, cx, frame.scope);
+								cxjs.setFrame(frame);
 								continue;
 							}
 							case Token.LEAVEWITH:
 								frame.scope = ScriptRuntime.leaveWith(frame.scope);
+								cxjs.setFrame(frame);
 								continue;
 							case Token.CATCH_SCOPE: {
 								// stack top: exception object
@@ -1386,6 +1395,7 @@ public final class Interpreter extends Icode implements Evaluator {
 							case Icode_SCOPE_LOAD:
 								indexReg += frame.localShift;
 								frame.scope = (Scriptable) stack[indexReg];
+								cxjs.setFrame(frame);
 								continue;
 							case Icode_SCOPE_SAVE:
 								indexReg += frame.localShift;
@@ -1474,6 +1484,7 @@ public final class Interpreter extends Icode implements Evaluator {
 								}
 								--stackTop;
 								frame.scope = ScriptRuntime.enterDotQuery(cx, lhs, frame.scope);
+								cxjs.setFrame(frame);
 								continue;
 							}
 							case Icode_LEAVEDQ: {
@@ -1482,6 +1493,7 @@ public final class Interpreter extends Icode implements Evaluator {
 								if (x != null) {
 									stack[stackTop] = x;
 									frame.scope = ScriptRuntime.leaveDotQuery(frame.scope);
+									cxjs.setFrame(frame);
 									frame.pc += 2;
 									continue;
 								}
@@ -1582,6 +1594,7 @@ public final class Interpreter extends Icode implements Evaluator {
 					}
 					setCallResult(frame, interpreterResult, interpreterResultDbl);
 					interpreterResult = null; // Help GC
+					cxjs.setFrame(frame);
 					continue;
 				}
 				break StateLoop;
@@ -1661,6 +1674,8 @@ public final class Interpreter extends Icode implements Evaluator {
 				if (frame == null) {
 					break;
 				}
+
+				cxjs.setFrame(frame);
 			}
 
 			break StateLoop;
@@ -1705,7 +1720,7 @@ public final class Interpreter extends Icode implements Evaluator {
 		} else {
 			valBln = ScriptRuntime.instanceOf(cx, lhs, rhs);
 		}
-		stack[stackTop] = ScriptRuntime.wrapBoolean(valBln);
+		stack[stackTop] = valBln;
 		return stackTop;
 	}
 
@@ -1753,7 +1768,7 @@ public final class Interpreter extends Icode implements Evaluator {
 				default -> throw Kit.codeBug();
 			};
 		}
-		stack[stackTop] = ScriptRuntime.wrapBoolean(valBln);
+		stack[stackTop] = valBln;
 		return stackTop;
 	}
 
@@ -2074,6 +2089,7 @@ public final class Interpreter extends Icode implements Evaluator {
 			int exLocal = frame.localShift + table[indexReg + EXCEPTION_LOCAL_SLOT];
 			frame.scope = (Scriptable) frame.stack[scopeLocal];
 			frame.stack[exLocal] = throwable;
+
 
 			throwable = null;
 		} else {

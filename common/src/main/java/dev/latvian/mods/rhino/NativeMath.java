@@ -6,6 +6,8 @@
 
 package dev.latvian.mods.rhino;
 
+import dev.latvian.mods.rhino.js.NumberJS;
+
 /**
  * This class implements the Math native object.
  * See ECMA 15.8.
@@ -261,7 +263,7 @@ final class NativeMath extends IdScriptableObject {
 				if (!Double.isNaN(x)) {
 					return Math.log(x + Math.sqrt(x * x - 1.0));
 				}
-				return ScriptRuntime.NaNobj;
+				return NumberJS.NaN;
 
 			case Id_asinh:
 				x = ScriptRuntime.toNumber(cx, args, 0);
@@ -271,13 +273,13 @@ final class NativeMath extends IdScriptableObject {
 				if (!Double.isNaN(x)) {
 					if (x == 0) {
 						if (1 / x > 0) {
-							return ScriptRuntime.zeroObj;
+							return NumberJS.ZERO;
 						}
-						return ScriptRuntime.negativeZeroObj;
+						return NumberJS.MINUS_ZERO;
 					}
 					return Math.log(x + Math.sqrt(x * x + 1.0));
 				}
-				return ScriptRuntime.NaNobj;
+				return NumberJS.NaN;
 
 			case Id_atan:
 				x = ScriptRuntime.toNumber(cx, args, 0);
@@ -289,13 +291,13 @@ final class NativeMath extends IdScriptableObject {
 				if (!Double.isNaN(x) && -1.0 <= x && x <= 1.0) {
 					if (x == 0) {
 						if (1 / x > 0) {
-							return ScriptRuntime.zeroObj;
+							return NumberJS.ZERO;
 						}
-						return ScriptRuntime.negativeZeroObj;
+						return NumberJS.MINUS_ZERO;
 					}
 					return 0.5 * Math.log((x + 1.0) / (x - 1.0));
 				}
-				return ScriptRuntime.NaNobj;
+				return NumberJS.NaN;
 
 			case Id_atan2:
 				x = ScriptRuntime.toNumber(cx, args, 0);
@@ -434,13 +436,13 @@ final class NativeMath extends IdScriptableObject {
 				if (!Double.isNaN(x)) {
 					if (x == 0) {
 						if (1 / x > 0) {
-							return ScriptRuntime.zeroObj;
+							return NumberJS.ZERO;
 						}
-						return ScriptRuntime.negativeZeroObj;
+						return NumberJS.MINUS_ZERO;
 					}
 					return Math.signum(x);
 				}
-				return ScriptRuntime.NaNobj;
+				return NumberJS.NaN;
 
 			case Id_sin:
 				x = ScriptRuntime.toNumber(cx, args, 0);

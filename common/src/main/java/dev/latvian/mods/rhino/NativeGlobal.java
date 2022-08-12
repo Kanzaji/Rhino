@@ -6,6 +6,8 @@
 
 package dev.latvian.mods.rhino;
 
+import dev.latvian.mods.rhino.js.NumberJS;
+
 /**
  * This class implements the global native object (function and value
  * properties only).
@@ -47,7 +49,7 @@ public class NativeGlobal implements IdFunctionCall {
 			f.exportAsScopeProperty(cx);
 		}
 
-		ScriptableObject.defineProperty(cx, scope, "NaN", ScriptRuntime.NaNobj, ScriptableObject.READONLY | ScriptableObject.DONTENUM | ScriptableObject.PERMANENT);
+		ScriptableObject.defineProperty(cx, scope, "NaN", NumberJS.NaN, ScriptableObject.READONLY | ScriptableObject.DONTENUM | ScriptableObject.PERMANENT);
 		ScriptableObject.defineProperty(cx, scope, "Infinity", ScriptRuntime.wrapNumber(Double.POSITIVE_INFINITY), ScriptableObject.READONLY | ScriptableObject.DONTENUM | ScriptableObject.PERMANENT);
 		ScriptableObject.defineProperty(cx, scope, "undefined", Undefined.instance, ScriptableObject.READONLY | ScriptableObject.DONTENUM | ScriptableObject.PERMANENT);
 
@@ -111,7 +113,7 @@ public class NativeGlobal implements IdFunctionCall {
 						double d = ScriptRuntime.toNumber(cx, args[0]);
 						result = Double.isNaN(d);
 					}
-					return ScriptRuntime.wrapBoolean(result);
+					return result;
 				}
 
 				case Id_isXMLName: {
@@ -123,7 +125,7 @@ public class NativeGlobal implements IdFunctionCall {
 							xmlLib.isXMLName(cx, name));
 					 */
 
-					return ScriptRuntime.wrapBoolean(false);
+					return false;
 				}
 
 				case Id_parseFloat:
@@ -158,7 +160,7 @@ public class NativeGlobal implements IdFunctionCall {
 
 		int len = s.length();
 		if (len == 0) {
-			return ScriptRuntime.NaNobj;
+			return NumberJS.NaN;
 		}
 
 		boolean negative = false;
@@ -180,7 +182,7 @@ public class NativeGlobal implements IdFunctionCall {
 		if (radix == 0) {
 			radix = NO_RADIX;
 		} else if (radix < 2 || radix > 36) {
-			return ScriptRuntime.NaNobj;
+			return NumberJS.NaN;
 		} else if (radix == 16 && len - start > 1 && s.charAt(start) == '0') {
 			c = s.charAt(start + 1);
 			if (c == 'x' || c == 'X') {
@@ -215,7 +217,7 @@ public class NativeGlobal implements IdFunctionCall {
 	 */
 	static Object js_parseFloat(Context cx, Object[] args) {
 		if (args.length < 1) {
-			return ScriptRuntime.NaNobj;
+			return NumberJS.NaN;
 		}
 
 		String s = ScriptRuntime.toString(cx, args[0]);
@@ -225,7 +227,7 @@ public class NativeGlobal implements IdFunctionCall {
 		char c;
 		for (; ; ) {
 			if (start == len) {
-				return ScriptRuntime.NaNobj;
+				return NumberJS.NaN;
 			}
 			c = s.charAt(start);
 			if (!ScriptRuntime.isStrWhiteSpaceChar(c)) {
@@ -238,7 +240,7 @@ public class NativeGlobal implements IdFunctionCall {
 		if (c == '+' || c == '-') {
 			++i;
 			if (i == len) {
-				return ScriptRuntime.NaNobj;
+				return NumberJS.NaN;
 			}
 			c = s.charAt(i);
 		}
@@ -254,7 +256,7 @@ public class NativeGlobal implements IdFunctionCall {
 				}
 				return ScriptRuntime.wrapNumber(d);
 			}
-			return ScriptRuntime.NaNobj;
+			return NumberJS.NaN;
 		}
 
 		// Find the end of the legal bit
@@ -308,7 +310,7 @@ public class NativeGlobal implements IdFunctionCall {
 		try {
 			return Double.valueOf(s);
 		} catch (NumberFormatException ex) {
-			return ScriptRuntime.NaNobj;
+			return NumberJS.NaN;
 		}
 	}
 

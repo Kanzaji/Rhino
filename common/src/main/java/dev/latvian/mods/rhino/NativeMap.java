@@ -6,6 +6,8 @@
 
 package dev.latvian.mods.rhino;
 
+import dev.latvian.mods.rhino.js.NumberJS;
+
 public class NativeMap extends IdScriptableObject implements Wrapper {
 	private static final Object MAP_TAG = "Map";
 	static final String ITERATOR_TAG = "Map Iterator";
@@ -80,7 +82,7 @@ public class NativeMap extends IdScriptableObject implements Wrapper {
 		// Special handling of "negative zero" from the spec.
 		Object key = k;
 		if ((key instanceof Number) && ((Number) key).doubleValue() == ScriptRuntime.negativeZero) {
-			key = ScriptRuntime.zeroObj;
+			key = NumberJS.ZERO;
 		}
 		entries.put(key, value);
 		return this;

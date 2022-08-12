@@ -6,6 +6,7 @@
 
 package dev.latvian.mods.rhino;
 
+import dev.latvian.mods.rhino.js.NumberJS;
 import dev.latvian.mods.rhino.regexp.NativeRegExp;
 import dev.latvian.mods.rhino.regexp.RegExp;
 
@@ -447,7 +448,7 @@ final class NativeString extends IdScriptableObject implements Wrapper {
 						if (id == Id_charAt) {
 							return "";
 						}
-						return ScriptRuntime.NaNobj;
+						return NumberJS.NaN;
 					}
 					char c = target.charAt((int) pos);
 					if (id == Id_charAt) {
