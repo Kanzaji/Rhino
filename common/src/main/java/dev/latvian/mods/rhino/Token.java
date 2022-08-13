@@ -101,11 +101,11 @@ public interface Token {
 	int RETURN_RESULT = 65; // to return previously stored return result
 	int ARRAYLIT = 66; // array literal
 	int OBJECTLIT = 67; // object literal
-	int GET_REF = 68; // *reference
-	int SET_REF = 69; // *reference    = something
-	int DEL_REF = 70; // delete reference
-	int REF_CALL = 71; // f(args)    = something or f(args)++
-	int REF_SPECIAL = 72; // reference for special properties like __proto
+	// int GET_REF = 68; // *reference
+	// int SET_REF = 69; // *reference    = something
+	// int DEL_REF = 70; // delete reference
+	// int REF_CALL = 71; // f(args)    = something or f(args)++
+	// int REF_SPECIAL = 72; // reference for special properties like __proto
 	int YIELD = 73;  // JS 1.7 yield pseudo keyword
 	int STRICT_SETNAME = 74;
 	int NULLISH_COALESCING = 75; // nullish coalescing operator (??)
@@ -185,7 +185,7 @@ public interface Token {
 	int SETPROP_OP = 140; // x.y op= something
 	int SETELEM_OP = 141; // x[y] op= something
 	int LOCAL_BLOCK = 142;
-	int SET_REF_OP = 143; // *reference op= something
+	// int SET_REF_OP = 143; // *reference op= something
 
 	// Optimizer-only-tokens
 	int TO_OBJECT = 150;
@@ -301,11 +301,6 @@ public interface Token {
 			case RETURN_RESULT -> "RETURN_RESULT";
 			case ARRAYLIT -> "ARRAYLIT";
 			case OBJECTLIT -> "OBJECTLIT";
-			case GET_REF -> "GET_REF";
-			case SET_REF -> "SET_REF";
-			case DEL_REF -> "DEL_REF";
-			case REF_CALL -> "REF_CALL";
-			case REF_SPECIAL -> "REF_SPECIAL";
 			case TRY -> "TRY";
 			case SEMI -> "SEMI";
 			case LB -> "LB";
@@ -367,7 +362,6 @@ public interface Token {
 			case SETPROP_OP -> "SETPROP_OP";
 			case SETELEM_OP -> "SETELEM_OP";
 			case LOCAL_BLOCK -> "LOCAL_BLOCK";
-			case SET_REF_OP -> "SET_REF_OP";
 			case TO_OBJECT -> "TO_OBJECT";
 			case TO_DOUBLE -> "TO_DOUBLE";
 			case GET -> "GET";

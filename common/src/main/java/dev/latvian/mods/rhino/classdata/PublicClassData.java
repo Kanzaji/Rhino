@@ -119,6 +119,10 @@ public class PublicClassData implements WithPrototype {
 		var remapPrefixSet = new HashSet<String>();
 		var parents = getParents();
 
+		for (var a : type.getAnnotationsByType(RemapPrefixForJS.class)) {
+			remapPrefixSet.add(a.value());
+		}
+
 		for (var p : parents) {
 			for (var a : p.type.getAnnotationsByType(RemapPrefixForJS.class)) {
 				remapPrefixSet.add(a.value());

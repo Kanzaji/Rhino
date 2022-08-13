@@ -1396,10 +1396,6 @@ public final class IRFactory extends Parser {
 					child.removeChild(left);
 					child.removeChild(right);
 					n = new Node(nodeType, left, right);
-				} else if (childType == Token.GET_REF) {
-					Node ref = child.getFirstChild();
-					child.removeChild(ref);
-					n = new Node(Token.DEL_REF, ref);
 				} else {
 					// Always evaluate delete operand, see ES5 11.4.1 & bug #726121
 					n = new Node(nodeType, new Node(Token.TRUE), child);
@@ -1475,7 +1471,7 @@ public final class IRFactory extends Parser {
 		int childType = child.getType();
 
 		switch (childType) {
-			case Token.NAME, Token.GETPROP, Token.GETELEM, Token.GET_REF -> {
+			case Token.NAME, Token.GETPROP, Token.GETELEM -> {
 				Node n = new Node(nodeType, child);
 				int incrDecrMask = 0;
 				if (nodeType == Token.DEC) {
@@ -1497,11 +1493,6 @@ public final class IRFactory extends Parser {
 				return createName(name);
 			}
 			checkActivationName(name, Token.GETPROP);
-			if (ScriptRuntime.isSpecialProperty(name)) {
-				Node ref = new Node(Token.REF_SPECIAL, target);
-				ref.putProp(Node.NAME_PROP, name);
-				return new Node(Token.GET_REF, ref);
-			}
 			return new Node(Token.GETPROP, target, Node.newString(name));
 		}
 		Node elem = Node.newString(name);
@@ -1539,7 +1530,8 @@ public final class IRFactory extends Parser {
 			ref.putIntProp(Node.MEMBER_TYPE_PROP, memberTypeFlags);
 		}
 		*/
-		return new Node(Token.GET_REF, elem); // ref
+		// return new Node(Token.GET_REF, elem); // ref
+		return elem;
 	}
 
 	private static Node createBinary(Context cx, int nodeType, Node left, Node right) {
@@ -1744,13 +1736,6 @@ public final class IRFactory extends Parser {
 				Node op = new Node(assignOp, opLeft, right);
 				return new Node(type, obj, id, op);
 			}
-			case Token.GET_REF -> {
-				ref = left.getFirstChild();
-				checkMutableReference(ref);
-				Node opLeft = new Node(Token.USE_STACK);
-				Node op = new Node(assignOp, opLeft, right);
-				return new Node(Token.SET_REF_OP, ref, op);
-			}
 		}
 
 		throw Kit.codeBug();
@@ -1777,11 +1762,11 @@ public final class IRFactory extends Parser {
 			case Token.NAME:
 			case Token.GETPROP:
 			case Token.GETELEM:
-			case Token.GET_REF:
 				return node;
 			case Token.CALL:
-				node.setType(Token.REF_CALL);
-				return new Node(Token.GET_REF, node);
+				//FIXME node.setType(Token.REF_CALL);
+				//return new Node(Token.GET_REF, node);
+				return node;
 		}
 		// Signal caller to report error
 		return null;

@@ -9,6 +9,8 @@ package dev.latvian.mods.rhino;
 import dev.latvian.mods.rhino.classdata.ConstructorInfo;
 import dev.latvian.mods.rhino.classdata.MethodSignature;
 import dev.latvian.mods.rhino.js.NumberJS;
+import dev.latvian.mods.rhino.js.UndefinedJS;
+import dev.latvian.mods.rhino.js.prototype.PrototypeJS;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Modifier;
@@ -29,10 +31,9 @@ import java.lang.reflect.Modifier;
 
 public class NativeJavaClass extends NativeJavaObject implements Function {
 	// Special property for getting the underlying Java class object.
-	static final String javaClassPropertyName = "__javaObject__";
 
 	public NativeJavaClass(Context cx, Scriptable scope, Class<?> cl) {
-		super(cx, scope, cl, null);
+		super(cx, scope, cl, cl);
 	}
 
 	@Override
@@ -42,7 +43,7 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 
 	@Override
 	public boolean has(Context cx, String name, Scriptable start) {
-		return classData.getMember(name, true) != null || javaClassPropertyName.equals(name);
+		return classData.getMember(name, true) != null;
 	}
 
 	@Override
@@ -55,26 +56,27 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 			return null;
 		}
 
-		var m = classData.getMember(name, true);
+		ContextJS cxjs = new ContextJS(cx, start);
+		PrototypeJS p = classData.getPrototype(cxjs);
 
-		if (m != null) {
-			return m.actuallyGet(cx, start, null, null);
-		}
+		Object value = p.getValue(cxjs, null, name);
 
-		Scriptable scope = ScriptableObject.getTopLevelScope(start);
-		WrapFactory wrapFactory = cx.getWrapFactory();
+		if (value != UndefinedJS.PROTOTYPE) {
+			return Context.javaToJS(cx, value, start);
 
-		if (javaClassPropertyName.equals(name)) {
-			return wrapFactory.wrap(cx, scope, javaObject, ScriptRuntime.ClassClass);
-		}
+			/*
+			Scriptable scope = ScriptableObject.getTopLevelScope(start);
+			WrapFactory wrapFactory = cx.getWrapFactory();
 
-		// experimental:  look for nested classes by appending $name to
-		// current class' name.
-		Class<?> nestedClass = findNestedClass(getClassObject(), name);
-		if (nestedClass != null) {
-			Scriptable nestedValue = wrapFactory.wrapJavaClass(cx, scope, nestedClass);
-			nestedValue.setParentScope(this);
-			return nestedValue;
+			// experimental:  look for nested classes by appending $name to
+			// current class' name.
+			Class<?> nestedClass = findNestedClass(getClassObject(), name);
+			if (nestedClass != null) {
+				Scriptable nestedValue = wrapFactory.wrapJavaClass(cx, scope, nestedClass);
+				nestedValue.setParentScope(this);
+				return nestedValue;
+			}
+			 */
 		}
 
 		throw classData.reportMemberNotFound(cx, name);
@@ -85,7 +87,7 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 		var m = classData.getMember(name, true);
 
 		if (m != null) {
-			m.actuallySet(cx, start, null, value);
+			m.setJS(new ContextJS(cx, start), null, value);
 		}
 	}
 

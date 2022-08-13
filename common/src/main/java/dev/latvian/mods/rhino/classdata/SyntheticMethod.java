@@ -1,12 +1,11 @@
 package dev.latvian.mods.rhino.classdata;
 
-import dev.latvian.mods.rhino.Context;
-import dev.latvian.mods.rhino.Scriptable;
+import dev.latvian.mods.rhino.ContextJS;
 import org.jetbrains.annotations.Nullable;
 
 public record SyntheticMethod<T>(Class<?> type, SyntheticMethod.Callback<T> callback, MethodSignature sig, boolean isStatic) implements BaseMember {
 	public interface Callback<T> {
-		Object invoke(Context cx, Scriptable scope, T self, Object[] args) throws Exception;
+		Object invoke(ContextJS cx, T self, Object[] args) throws Exception;
 	}
 
 	public static <T> SyntheticMethod<T> make(Class<?> type, Callback<T> callback, Class<?>... sig) {
@@ -26,8 +25,8 @@ public record SyntheticMethod<T>(Class<?> type, SyntheticMethod.Callback<T> call
 	}
 
 	@Override
-	public Object invoke(Context cx, Scriptable scope, @Nullable Object self, Object[] args, MethodSignature argsSig) throws Exception {
-		return callback.invoke(cx, scope, (T) self, args);
+	public Object invoke(ContextJS cx, @Nullable Object self, Object[] args) throws Exception {
+		return callback.invoke(cx, (T) self, args);
 	}
 
 	@Override

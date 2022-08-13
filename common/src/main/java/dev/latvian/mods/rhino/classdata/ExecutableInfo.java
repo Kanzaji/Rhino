@@ -1,6 +1,9 @@
 package dev.latvian.mods.rhino.classdata;
 
+import dev.latvian.mods.rhino.ContextJS;
+import dev.latvian.mods.rhino.NativeJavaMethod;
 import dev.latvian.mods.rhino.util.Remapper;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Executable;
 
@@ -40,5 +43,10 @@ public class ExecutableInfo extends MemberInfo {
 	@Override
 	public boolean isVarArgs() {
 		return ((Executable) member).isVarArgs();
+	}
+
+	@Override
+	public Object get(ContextJS cx, @Nullable Object self) throws Exception {
+		return new NativeJavaMethod(this, self, member.getName());
 	}
 }

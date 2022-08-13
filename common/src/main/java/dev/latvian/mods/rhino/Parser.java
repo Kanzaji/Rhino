@@ -3374,7 +3374,7 @@ public class Parser {
 	private void checkBadIncDec(UnaryExpression expr) {
 		AstNode op = removeParens(expr.getOperand());
 		int tt = op.getType();
-		if (!(tt == Token.NAME || tt == Token.GETPROP || tt == Token.GETELEM || tt == Token.GET_REF || tt == Token.CALL)) {
+		if (!(tt == Token.NAME || tt == Token.GETPROP || tt == Token.GETELEM || tt == Token.CALL)) {
 			reportError(expr.getType() == Token.INC ? "msg.bad.incr" : "msg.bad.decr");
 		}
 	}
@@ -3667,11 +3667,6 @@ public class Parser {
 					type = Token.SETELEM;
 				}
 				return new Node(type, obj, id, right);
-			}
-			case Token.GET_REF -> {
-				Node ref = left.getFirstChild();
-				checkMutableReference(ref);
-				return new Node(Token.SET_REF, ref, right);
 			}
 		}
 

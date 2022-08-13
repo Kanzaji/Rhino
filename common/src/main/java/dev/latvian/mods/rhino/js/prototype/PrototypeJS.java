@@ -257,7 +257,7 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 	}
 
 	@Override
-	public Object getValue(ContextJS cx, Object self, Object key) {
+	public Object getValue(ContextJS cx, @Nullable Object self, Object key) {
 		if (self instanceof MemberFunctions mf) {
 			var result = mf.getValue(cx, self, key);
 
@@ -274,11 +274,11 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 				result = p.memberFunctions.getValue(cx, self, key);
 			}
 
-			if (result == UndefinedJS.PROTOTYPE && p.properties != null) {
+			if (result == UndefinedJS.PROTOTYPE && p.properties != null && self != null) {
 				var o = p.properties.get(name);
 
 				if (o != null) {
-					result = o.get(cx, key);
+					result = o.get(cx, self);
 				}
 			}
 
@@ -297,8 +297,10 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 	}
 
 	@Override
-	public boolean setValue(ContextJS cx, Object self, Object key, Object value) {
-		if (self instanceof MemberFunctions mf) {
+	public boolean setValue(ContextJS cx, @Nullable Object self, Object key, Object value) {
+		if (self == null) {
+			return false;
+		} else if (self instanceof MemberFunctions mf) {
 			var result = mf.setValue(cx, self, key, value);
 
 			if (result) {
@@ -321,7 +323,7 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 	}
 
 	@Override
-	public Object invoke(ContextJS cx, Object self, Object key, Object[] args) {
+	public Object invoke(ContextJS cx, @Nullable Object self, Object key, Object[] args) {
 		if (self instanceof MemberFunctions mf) {
 			var result = mf.invoke(cx, self, key, args);
 
@@ -334,11 +336,11 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 		PrototypeJS p = this;
 
 		while (result == UndefinedJS.PROTOTYPE && p != null) {
-			if (p.memberFunctions != null) {
+			if (p.memberFunctions != null && self != null) {
 				result = p.memberFunctions.invoke(cx, self, key, args);
 			}
 
-			if (result == UndefinedJS.PROTOTYPE && p.functions != null) {
+			if (result == UndefinedJS.PROTOTYPE && p.functions != null && self != null) {
 				var o = p.functions.get(name);
 
 				if (o != null) {
@@ -361,8 +363,10 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 	}
 
 	@Override
-	public boolean deleteValue(ContextJS cx, Object self, Object key) {
-		if (self instanceof MemberFunctions mf) {
+	public boolean deleteValue(ContextJS cx, @Nullable Object self, Object key) {
+		if (self == null) {
+			return false;
+		} else if (self instanceof MemberFunctions mf) {
 			var result = mf.deleteValue(cx, self, key);
 
 			if (result) {

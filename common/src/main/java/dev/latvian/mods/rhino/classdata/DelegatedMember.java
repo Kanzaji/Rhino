@@ -1,7 +1,6 @@
 package dev.latvian.mods.rhino.classdata;
 
-import dev.latvian.mods.rhino.Context;
-import dev.latvian.mods.rhino.Scriptable;
+import dev.latvian.mods.rhino.ContextJS;
 import org.jetbrains.annotations.Nullable;
 
 public record DelegatedMember(Object delegateTo, BaseMember parent) implements BaseMember {
@@ -11,18 +10,33 @@ public record DelegatedMember(Object delegateTo, BaseMember parent) implements B
 	}
 
 	@Override
-	public Object get(Context cx, Scriptable scope, @Nullable Object self) throws Exception {
-		return parent.get(cx, scope, delegateTo);
+	public Object get(ContextJS cx, @Nullable Object self) throws Exception {
+		return parent.get(cx, delegateTo);
 	}
 
 	@Override
-	public void set(Context cx, Scriptable scope, @Nullable Object self, Object value) throws Exception {
-		parent.set(cx, scope, delegateTo, value);
+	public boolean set(ContextJS cx, @Nullable Object self, Object value) throws Exception {
+		return parent.set(cx, delegateTo, value);
 	}
 
 	@Override
-	public Object invoke(Context cx, Scriptable scope, @Nullable Object self, Object[] args, MethodSignature argsSig) throws Exception {
-		return parent.invoke(cx, scope, delegateTo, args, argsSig);
+	public Object invoke(ContextJS cx, @Nullable Object self, Object[] args) throws Exception {
+		return parent.invoke(cx, delegateTo, args);
+	}
+
+	@Override
+	public Object getJS(ContextJS cx, @Nullable Object self) {
+		return parent.getJS(cx, delegateTo);
+	}
+
+	@Override
+	public void setJS(ContextJS cx, @Nullable Object self, Object value) {
+		parent.setJS(cx, delegateTo, value);
+	}
+
+	@Override
+	public Object invokeJS(ContextJS cx, @Nullable Object self, Object[] args) {
+		return parent.invokeJS(cx, delegateTo, args);
 	}
 
 	@Override

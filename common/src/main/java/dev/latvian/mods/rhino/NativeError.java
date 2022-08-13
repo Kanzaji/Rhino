@@ -16,8 +16,8 @@ import dev.latvian.mods.rhino.classdata.SyntheticMethod;
 final class NativeError extends IdScriptableObject {
 	private static final Object ERROR_TAG = "Error";
 
-	private static final SyntheticMethod<NativeError> ERROR_DELEGATE_GET_STACK = SyntheticMethod.make((cx, scope, self, args) -> self.getStackDelegated((Context) args[0], (Scriptable) args[1]), Context.class, Scriptable.class);
-	private static final SyntheticMethod<NativeError> ERROR_DELEGATE_SET_STACK = SyntheticMethod.make((cx, scope, self, args) -> {
+	private static final SyntheticMethod<NativeError> ERROR_DELEGATE_GET_STACK = SyntheticMethod.make((cx, self, args) -> self.getStackDelegated((Context) args[0], (Scriptable) args[1]), Context.class, Scriptable.class);
+	private static final SyntheticMethod<NativeError> ERROR_DELEGATE_SET_STACK = SyntheticMethod.make((cx, self, args) -> {
 		self.setStackDelegated((Context) args[0], (Scriptable) args[1], args[2]);
 		return null;
 	}, Context.class, Scriptable.class, Object.class);
@@ -280,13 +280,13 @@ final class NativeError extends IdScriptableObject {
 	private static final class ProtoProps {
 		static final String KEY = "_ErrorPrototypeProps";
 
-		static final SyntheticMethod<ProtoProps> GET_STACK_LIMIT = SyntheticMethod.make((cx, scope, obj, args) -> obj.getStackTraceLimit((Scriptable) args[0]), Scriptable.class);
-		static final SyntheticMethod<ProtoProps> SET_STACK_LIMIT = SyntheticMethod.make((cx, scope, obj, args) -> {
-			obj.setStackTraceLimit(cx, (Scriptable) args[0], args[1]);
+		static final SyntheticMethod<ProtoProps> GET_STACK_LIMIT = SyntheticMethod.make((cx, obj, args) -> obj.getStackTraceLimit((Scriptable) args[0]), Scriptable.class);
+		static final SyntheticMethod<ProtoProps> SET_STACK_LIMIT = SyntheticMethod.make((cx, obj, args) -> {
+			obj.setStackTraceLimit(cx.context, (Scriptable) args[0], args[1]);
 			return null;
 		}, Context.class, Scriptable.class, Object.class);
-		static final SyntheticMethod<ProtoProps> GET_PREPARE_STACK = SyntheticMethod.make((cx, scope, obj, args) -> obj.getPrepareStackTrace((Scriptable) args[0]), Scriptable.class);
-		static final SyntheticMethod<ProtoProps> SET_PREPARE_STACK = SyntheticMethod.make((cx, scope, obj, args) -> {
+		static final SyntheticMethod<ProtoProps> GET_PREPARE_STACK = SyntheticMethod.make((cx, obj, args) -> obj.getPrepareStackTrace((Scriptable) args[0]), Scriptable.class);
+		static final SyntheticMethod<ProtoProps> SET_PREPARE_STACK = SyntheticMethod.make((cx, obj, args) -> {
 			obj.setPrepareStackTrace((Scriptable) args[0], args[1]);
 			return null;
 		}, Scriptable.class, Object.class);

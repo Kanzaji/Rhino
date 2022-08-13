@@ -1,7 +1,6 @@
 package dev.latvian.mods.rhino.classdata;
 
-import dev.latvian.mods.rhino.Context;
-import dev.latvian.mods.rhino.Scriptable;
+import dev.latvian.mods.rhino.ContextJS;
 import dev.latvian.mods.rhino.util.HideFromJS;
 import dev.latvian.mods.rhino.util.RemapForJS;
 import org.apache.commons.lang3.mutable.MutableBoolean;
@@ -68,7 +67,7 @@ public class MethodInfo extends ExecutableInfo {
 	}
 
 	@Override
-	public Object invoke(Context cx, Scriptable scope, @Nullable Object self, Object[] args, MethodSignature argsSig) throws Exception {
+	public Object invoke(ContextJS cx, @Nullable Object self, Object[] args) throws Exception {
 		return ((Method) member).invoke(nullIfStatic(self), args);
 	}
 }

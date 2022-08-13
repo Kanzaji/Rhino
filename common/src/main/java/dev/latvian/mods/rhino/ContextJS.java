@@ -4,19 +4,24 @@ import dev.latvian.mods.rhino.js.UndefinedJS;
 
 public class ContextJS {
 	public final Context context;
-	private Interpreter.CallFrame frame;
+	private Scriptable scope;
 	private SharedContextData sharedContextData;
 
 	public ContextJS(Context context) {
 		this.context = context;
 	}
 
+	public ContextJS(Context context, Scriptable scope) {
+		this.context = context;
+		this.scope = scope;
+	}
+
 	public Scriptable getScope() {
-		return frame.scope;
+		return scope;
 	}
 
 	public void setFrame(Interpreter.CallFrame frame) {
-		this.frame = frame;
+		this.scope = frame.scope;
 		this.sharedContextData = null;
 	}
 

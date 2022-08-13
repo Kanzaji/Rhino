@@ -1036,32 +1036,6 @@ public final class Interpreter extends Icode implements Evaluator {
 								stackTop = doElemIncDec(cx, frame, iCode, stack, sDbl, stackTop);
 								continue;
 							}
-							case Token.GET_REF: {
-								Ref ref = (Ref) stack[stackTop];
-								stack[stackTop] = ScriptRuntime.refGet(ref, cx);
-								continue;
-							}
-							case Token.SET_REF: {
-								Object value = stack[stackTop];
-								if (value == DBL_MRK) {
-									value = ScriptRuntime.wrapNumber(sDbl[stackTop]);
-								}
-								--stackTop;
-								Ref ref = (Ref) stack[stackTop];
-								stack[stackTop] = ScriptRuntime.refSet(ref, value, cx, frame.scope);
-								continue;
-							}
-							case Token.DEL_REF: {
-								Ref ref = (Ref) stack[stackTop];
-								stack[stackTop] = ScriptRuntime.refDel(ref, cx);
-								continue;
-							}
-							case Icode_REF_INC_DEC: {
-								Ref ref = (Ref) stack[stackTop];
-								stack[stackTop] = ScriptRuntime.refIncrDecr(ref, cx, frame.scope, iCode[frame.pc]);
-								++frame.pc;
-								continue;
-							}
 							case Token.LOCAL_LOAD:
 								++stackTop;
 								indexReg += frame.localShift;
@@ -1121,8 +1095,7 @@ public final class Interpreter extends Icode implements Evaluator {
 								continue;
 							}
 							case Token.CALL:
-							case Icode_TAIL_CALL:
-							case Token.REF_CALL: {
+							case Icode_TAIL_CALL: {
 								if (instructionCounting) {
 									cx.instructionCount += INVOCATION_COST;
 								}
@@ -1134,11 +1107,6 @@ public final class Interpreter extends Icode implements Evaluator {
 								// are already Scriptable and Callable objects respectively
 								Callable fun = (Callable) stack[stackTop];
 								Scriptable funThisObj = (Scriptable) stack[stackTop + 1];
-								if (op == Token.REF_CALL) {
-									Object[] outArgs = getArgsArray(stack, sDbl, stackTop + 2, indexReg);
-									stack[stackTop] = ScriptRuntime.callRef(fun, funThisObj, outArgs, cx);
-									continue;
-								}
 								Scriptable calleeScope = frame.scope;
 								if (frame.useActivation) {
 									calleeScope = ScriptableObject.getTopLevelScope(frame.scope);
@@ -1186,19 +1154,6 @@ public final class Interpreter extends Icode implements Evaluator {
 											cxjs.setFrame(frame);
 											continue StateLoop;
 										}
-									}
-								}
-
-								// Bug 447697 -- make best effort to keep __noSuchMethod__ within this
-								// interpreter loop invocation
-								if (fun instanceof ScriptRuntime.NoSuchMethodShim noSuchMethodShim) {
-									// get the shim and the actual method
-									Callable noSuchMethodMethod = noSuchMethodShim.noSuchMethodMethod;
-									// if the method is in fact an InterpretedFunction
-									if (noSuchMethodMethod instanceof InterpretedFunction ifun) {
-										frame = initFrameForNoSuchMethod(cx, frame, indexReg, stack, sDbl, stackTop, op, funThisObj, calleeScope, noSuchMethodShim, ifun);
-										cxjs.setFrame(frame);
-										continue StateLoop;
 									}
 								}
 
@@ -1381,15 +1336,6 @@ public final class Interpreter extends Icode implements Evaluator {
 								IdEnumeration val = (IdEnumeration) stack[indexReg];
 								++stackTop;
 								stack[stackTop] = (op == Token.ENUM_NEXT) ? val.next(cx) : val.getId(cx);
-								continue;
-							}
-							case Token.REF_SPECIAL: {
-								//stringReg: name of special property
-								Object obj = stack[stackTop];
-								if (obj == DBL_MRK) {
-									obj = ScriptRuntime.wrapNumber(sDbl[stackTop]);
-								}
-								stack[stackTop] = ScriptRuntime.specialRef(obj, stringReg, cx, frame.scope);
 								continue;
 							}
 							case Icode_SCOPE_LOAD:
@@ -1983,43 +1929,6 @@ public final class Interpreter extends Icode implements Evaluator {
 		}
 		++frame.pc;
 		return stackTop;
-	}
-
-	/**
-	 * Call __noSuchMethod__.
-	 */
-	private static CallFrame initFrameForNoSuchMethod(Context cx, CallFrame frame, int indexReg, Object[] stack, double[] sDbl, int stackTop, int op, Scriptable funThisObj, Scriptable calleeScope, ScriptRuntime.NoSuchMethodShim noSuchMethodShim, InterpretedFunction ifun) {
-		// create an args array from the stack
-		Object[] argsArray = null;
-		// exactly like getArgsArray except that the first argument
-		// is the method name from the shim
-		int shift = stackTop + 2;
-		Object[] elements = new Object[indexReg];
-		for (int i = 0; i < indexReg; ++i, ++shift) {
-			Object val = stack[shift];
-			if (val == UniqueTag.DOUBLE_MARK) {
-				val = ScriptRuntime.wrapNumber(sDbl[shift]);
-			}
-			elements[i] = val;
-		}
-		argsArray = new Object[2];
-		argsArray[0] = noSuchMethodShim.methodName;
-		argsArray[1] = cx.newArray(calleeScope, elements);
-
-		// exactly the same as if it's a regular InterpretedFunction
-		CallFrame callParentFrame = frame;
-		if (op == Icode_TAIL_CALL) {
-			callParentFrame = frame.parentFrame;
-			exitFrame(cx, frame, null);
-		}
-		// init the frame with the underlying method with the
-		// adjusted args array and shim's function
-		CallFrame calleeFrame = initFrame(cx, calleeScope, funThisObj, argsArray, null, 0, 2, ifun, callParentFrame);
-		if (op != Icode_TAIL_CALL) {
-			frame.savedStackTop = stackTop;
-			frame.savedCallOp = op;
-		}
-		return calleeFrame;
 	}
 
 	private static boolean doEquals(Context cx, Scriptable scope, Object[] stack, double[] sDbl, int stackTop) {

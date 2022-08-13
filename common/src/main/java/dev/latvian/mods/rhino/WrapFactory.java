@@ -140,23 +140,6 @@ public class WrapFactory {
 	}
 
 	/**
-	 * Wrap a Java class as Scriptable instance to allow access to its static
-	 * members and fields and use as constructor from JavaScript.
-	 * <p>
-	 * Subclasses can override this method to provide custom wrappers for
-	 * Java classes.
-	 *
-	 * @param cx        the current Context for this thread
-	 * @param scope     the scope of the executing script
-	 * @param javaClass the class to be wrapped
-	 * @return the wrapped value which shall not be null
-	 * @since 1.7R3
-	 */
-	public Scriptable wrapJavaClass(Context cx, Scriptable scope, Class<?> javaClass) {
-		return new NativeJavaClass(cx, scope, javaClass);
-	}
-
-	/**
 	 * Return <code>false</code> if result of Java method, which is instance of
 	 * <code>String</code>, <code>Number</code>, <code>Boolean</code> and
 	 * <code>Character</code>, should be used directly as JavaScript primitive

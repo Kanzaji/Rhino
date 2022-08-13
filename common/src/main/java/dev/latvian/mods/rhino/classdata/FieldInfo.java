@@ -1,7 +1,7 @@
 package dev.latvian.mods.rhino.classdata;
 
 import dev.latvian.mods.rhino.Context;
-import dev.latvian.mods.rhino.Scriptable;
+import dev.latvian.mods.rhino.ContextJS;
 import dev.latvian.mods.rhino.util.RemapForJS;
 import org.jetbrains.annotations.Nullable;
 
@@ -46,16 +46,17 @@ public class FieldInfo extends MemberInfo implements BaseMember {
 	}
 
 	@Override
-	public Object get(Context cx, Scriptable scope, @Nullable Object self) throws Exception {
+	public Object get(ContextJS cx, @Nullable Object self) throws Exception {
 		return ((Field) member).get(nullIfStatic(self));
 	}
 
 	@Override
-	public void set(Context cx, Scriptable scope, @Nullable Object self, Object value) throws Exception {
+	public boolean set(ContextJS cx, @Nullable Object self, Object value) throws Exception {
 		if (isFinal()) {
 			throw new IllegalStateException("Cannot set final field " + member.getName());
 		}
 
-		((Field) member).set(nullIfStatic(self), value);
+		((Field) member).set(nullIfStatic(self), Context.jsToJava(cx.context, value, getType()));
+		return true;
 	}
 }

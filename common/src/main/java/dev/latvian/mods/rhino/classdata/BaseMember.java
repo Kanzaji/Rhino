@@ -1,8 +1,7 @@
 package dev.latvian.mods.rhino.classdata;
 
 import dev.latvian.mods.rhino.Context;
-import dev.latvian.mods.rhino.Scriptable;
-import dev.latvian.mods.rhino.ScriptableObject;
+import dev.latvian.mods.rhino.ContextJS;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.InvocationTargetException;
@@ -16,23 +15,22 @@ public interface BaseMember {
 		return true;
 	}
 
-	default Object get(Context cx, Scriptable scope, @Nullable Object self) throws Exception {
+	default Object get(ContextJS cx, @Nullable Object self) throws Exception {
 		throw new MemberMethodNotSupportedException.Get(this);
 	}
 
-	default void set(Context cx, Scriptable scope, @Nullable Object self, Object value) throws Exception {
+	default boolean set(ContextJS cx, @Nullable Object self, Object value) throws Exception {
 		throw new MemberMethodNotSupportedException.Set(this);
 	}
 
-	default Object invoke(Context cx, Scriptable scope, @Nullable Object self, Object[] args, MethodSignature argsSig) throws Exception {
+	default Object invoke(ContextJS cx, @Nullable Object self, Object[] args) throws Exception {
 		throw new MemberMethodNotSupportedException.Invoke(this);
 	}
 
-	default Object actuallyGet(Context cx, Scriptable scope, @Nullable Object self, Class<?> hint) {
+	default Object getJS(ContextJS cx, @Nullable Object self) {
 		try {
-			var value = get(cx, scope, self);
-			scope = ScriptableObject.getTopLevelScope(scope);
-			return cx.getWrapFactory().wrap(cx, scope, value, hint);
+			var value = get(cx, self);
+			return Context.javaToJS(cx.context, value, cx.getScope());
 		} catch (InvocationTargetException ite) {
 			// Must allow ContinuationPending exceptions to propagate unhindered
 			Throwable e = ite;
@@ -45,9 +43,9 @@ public interface BaseMember {
 		}
 	}
 
-	default void actuallySet(Context cx, Scriptable scope, @Nullable Object self, Object value) {
+	default void setJS(ContextJS cx, @Nullable Object self, Object value) {
 		try {
-			set(cx, scope, self, value);
+			set(cx, self, value);
 		} catch (InvocationTargetException ite) {
 			// Must allow ContinuationPending exceptions to propagate unhindered
 			Throwable e = ite;
@@ -60,9 +58,9 @@ public interface BaseMember {
 		}
 	}
 
-	default Object actuallyInvoke(Context cx, Scriptable scope, @Nullable Object self, Object[] args, MethodSignature argsSig) {
+	default Object invokeJS(ContextJS cx, @Nullable Object self, Object[] args) {
 		try {
-			return invoke(cx, scope, self, args, argsSig);
+			return invoke(cx, self, args);
 		} catch (InvocationTargetException ite) {
 			// Must allow ContinuationPending exceptions to propagate unhindered
 			Throwable e = ite;

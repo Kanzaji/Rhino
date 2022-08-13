@@ -28,6 +28,11 @@ public class Undefined {
 		return 0;
 	}
 
+	@Override
+	public String toString() {
+		return "undefined";
+	}
+
 	public static final Scriptable SCRIPTABLE_UNDEFINED;
 
 	static {

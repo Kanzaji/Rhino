@@ -1,8 +1,8 @@
 package dev.latvian.mods.rhino.classdata;
 
-import dev.latvian.mods.rhino.Context;
+import dev.latvian.mods.rhino.ContextJS;
 import dev.latvian.mods.rhino.ScriptRuntime;
-import dev.latvian.mods.rhino.Scriptable;
+import dev.latvian.mods.rhino.js.UndefinedJS;
 import dev.latvian.mods.rhino.util.Possible;
 import org.jetbrains.annotations.Nullable;
 
@@ -85,37 +85,37 @@ public class MemberGroup implements BaseMember {
 	}
 
 	@Override
-	public Object get(Context cx, Scriptable scope, @Nullable Object self) throws Exception {
+	public Object get(ContextJS cx, @Nullable Object self) throws Exception {
 		if (beanGet != null) {
-			return beanGet.invoke(cx, scope, self, ScriptRuntime.EMPTY_OBJECTS, MethodSignature.EMPTY);
+			return beanGet.invoke(cx, self, ScriptRuntime.EMPTY_OBJECTS);
 		} else if (field != null) {
-			return field.get(cx, scope, self);
+			return field.get(cx, self);
 		}
 
-		throw new MemberMethodNotSupportedException.Get(this);
+		return UndefinedJS.PROTOTYPE;
 	}
 
 	@Override
-	public void set(Context cx, Scriptable scope, @Nullable Object self, @Nullable Object value) throws Exception {
+	public boolean set(ContextJS cx, @Nullable Object self, @Nullable Object value) throws Exception {
 		if (beanSet != null) {
-			beanSet.invoke(cx, scope, self, new Object[]{value}, MethodSignature.ofArgs(value));
+			return beanSet.invoke(cx, self, new Object[]{value}) != UndefinedJS.PROTOTYPE;
 		} else if (field != null) {
-			field.set(cx, scope, self, value);
+			return field.set(cx, self, value);
 		}
 
 		throw new MemberMethodNotSupportedException.Set(this);
 	}
 
 	@Override
-	public Object invoke(Context cx, Scriptable scope, @Nullable Object self, Object[] args, MethodSignature argsSig) throws Exception {
-		if (!argsSig.isEmpty()) {
-			var m = method(cx, scope, args, argsSig);
+	public Object invoke(ContextJS cx, @Nullable Object self, Object[] args) throws Exception {
+		if (args.length > 0) {
+			var m = method(cx, args);
 
 			if (m.isSet()) {
-				return m.get().invoke(cx, scope, self, args, argsSig);
+				return m.get().invoke(cx, self, args);
 			}
 		} else if (noArgMethod != null) {
-			return noArgMethod.invoke(cx, scope, self, args, argsSig);
+			return noArgMethod.invoke(cx, self, args);
 		}
 
 		throw new MemberMethodNotSupportedException.Invoke(this);
@@ -123,7 +123,7 @@ public class MemberGroup implements BaseMember {
 
 	// FIXME: override actualGet, actualSet, actualInvoke for proper type
 
-	private Possible<BaseMember> method(Context cx, Scriptable scope, Object[] args, MethodSignature argsSig) {
+	private Possible<BaseMember> method(ContextJS cx, Object[] args) {
 		if (methods == null) {
 			return Possible.absent();
 		}
@@ -132,10 +132,11 @@ public class MemberGroup implements BaseMember {
 			methodCache = new HashMap<>();
 		}
 
+		MethodSignature argsSig = MethodSignature.ofArgs(args);
 		var p = methodCache.get(argsSig);
 
 		if (p == null) {
-			var data = cx.getSharedData(scope);
+			var data = cx.getSharedContextData();
 			p = Possible.absent();
 			int ca = -1;
 

@@ -61,35 +61,6 @@ public class ScriptRuntime {
 		return cx.typeErrorThrower;
 	}
 
-	static class NoSuchMethodShim implements Callable {
-		String methodName;
-		Callable noSuchMethodMethod;
-
-		NoSuchMethodShim(Callable noSuchMethodMethod, String methodName) {
-			this.noSuchMethodMethod = noSuchMethodMethod;
-			this.methodName = methodName;
-		}
-
-		/**
-		 * Perform the call.
-		 *
-		 * @param cx      the current Context for this thread
-		 * @param scope   the scope to use to resolve properties.
-		 * @param thisObj the JavaScript <code>this</code> object
-		 * @param args    the array of arguments
-		 * @return the result of the call
-		 */
-		@Override
-		public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
-			Object[] nestedArgs = new Object[2];
-
-			nestedArgs[0] = methodName;
-			nestedArgs[1] = newArrayLiteral(args, null, cx, scope);
-			return noSuchMethodMethod.call(cx, scope, thisObj, nestedArgs);
-		}
-
-	}
-
 	public final static Class<Boolean> BooleanClass = Boolean.class;
 	public final static Class<Byte> ByteClass = Byte.class;
 	public final static Class<Character> CharacterClass = Character.class;
@@ -179,7 +150,7 @@ public class ScriptRuntime {
 
 	public static ScriptableObject initStandardObjects(Context cx, ScriptableObject scope) {
 		ScriptableObject s = initSafeStandardObjects(cx, scope);
-		JavaAdapter.init(cx, scope);
+		JavaAdapter.init(cx, s);
 		return s;
 	}
 
@@ -1393,26 +1364,6 @@ public class ScriptRuntime {
 		return result;
 	}
 
-	public static Object refGet(Ref ref, Context cx) {
-		return ref.get(cx);
-	}
-
-	public static Object refSet(Ref ref, Object value, Context cx, Scriptable scope) {
-		return ref.set(cx, scope, value);
-	}
-
-	public static Object refDel(Ref ref, Context cx) {
-		return wrapBoolean(ref.delete(cx));
-	}
-
-	static boolean isSpecialProperty(String s) {
-		return s.equals("__proto__") || s.equals("__parent__");
-	}
-
-	public static Ref specialRef(Object obj, String specialProperty, Context cx, Scriptable scope) {
-		return SpecialRef.createSpecial(cx, scope, obj, specialProperty);
-	}
-
 	/**
 	 * The delete operator
 	 * <p>
@@ -1766,12 +1717,6 @@ public class ScriptRuntime {
 		}
 
 		Object value = ScriptableObject.getProperty(cx, thisObj, property);
-		if (!(value instanceof Callable)) {
-			Object noSuchMethod = ScriptableObject.getProperty(cx, thisObj, "__noSuchMethod__");
-			if (noSuchMethod instanceof Callable) {
-				value = new NoSuchMethodShim((Callable) noSuchMethod, property);
-			}
-		}
 
 		if (!(value instanceof Callable)) {
 			throw notFunctionError(cx, thisObj, value, property);
@@ -1837,28 +1782,6 @@ public class ScriptRuntime {
 		}
 		final Object prop = getObjectProp(cx, (Scriptable) result, ES6Iterator.DONE_PROPERTY);
 		return toBoolean(cx, prop);
-	}
-
-	/**
-	 * Perform function call in reference context. Should always
-	 * return value that can be passed to
-	 * {@link #refGet(Ref, Context)} or {@link #refSet(Ref, Object, Context, Scriptable)}
-	 * arbitrary number of times.
-	 * The args array reference should not be stored in any object that is
-	 * can be GC-reachable after this method returns. If this is necessary,
-	 * store args.clone(), not args array itself.
-	 */
-	public static Ref callRef(Callable function, Scriptable thisObj, Object[] args, Context cx) {
-		if (function instanceof RefCallable rfunction) {
-			Ref ref = rfunction.refCall(cx, thisObj, args);
-			if (ref == null) {
-				throw new IllegalStateException(rfunction.getClass().getName() + ".refCall() returned null");
-			}
-			return ref;
-		}
-		// No runtime support for now
-		String msg = getMessage1("msg.no.ref.from.function", toString(cx, function));
-		throw constructError("ReferenceError", msg);
 	}
 
 	/**
@@ -2175,32 +2098,6 @@ public class ScriptRuntime {
 		}
 		Number result = wrapNumber(number);
 		setObjectElem(obj, index, result, cx, scope);
-		if (post) {
-			return value;
-		}
-		return result;
-	}
-
-	public static Object refIncrDecr(Ref ref, Context cx, Scriptable scope, int incrDecrMask) {
-		Object value = ref.get(cx);
-		boolean post = ((incrDecrMask & Node.POST_FLAG) != 0);
-		double number;
-		if (value instanceof Number) {
-			number = ((Number) value).doubleValue();
-		} else {
-			number = toNumber(cx, value);
-			if (post) {
-				// convert result to number
-				value = wrapNumber(number);
-			}
-		}
-		if ((incrDecrMask & Node.DECR_FLAG) == 0) {
-			++number;
-		} else {
-			--number;
-		}
-		Number result = wrapNumber(number);
-		ref.set(cx, scope, result);
 		if (post) {
 			return value;
 		}
@@ -2974,24 +2871,18 @@ public class ScriptRuntime {
 	}
 
 	public static Scriptable newObjectLiteral(Object[] propertyIds, Object[] propertyValues, int[] getterSetters, Context cx, Scriptable scope) {
-		Scriptable object = cx.newObject(scope);
+		NativeObject object = cx.newObject(scope);
 		for (int i = 0, end = propertyIds.length; i != end; ++i) {
 			Object id = propertyIds[i];
 			int getterSetter = getterSetters == null ? 0 : getterSetters[i];
 			Object value = propertyValues[i];
 			if (id instanceof String) {
 				if (getterSetter == 0) {
-					if (isSpecialProperty((String) id)) {
-						Ref ref = specialRef(object, (String) id, cx, scope);
-						ref.set(cx, scope, value);
-					} else {
-						object.put(cx, (String) id, object, value);
-					}
+					object.put(cx, (String) id, object, value);
 				} else {
-					ScriptableObject so = (ScriptableObject) object;
 					Callable getterOrSetter = (Callable) value;
 					boolean isSetter = getterSetter == 1;
-					so.setGetterOrSetter(cx, (String) id, 0, getterOrSetter, isSetter);
+					object.setGetterOrSetter(cx, (String) id, 0, getterOrSetter, isSetter);
 				}
 			} else {
 				int index = (Integer) id;

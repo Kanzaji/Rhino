@@ -3,7 +3,6 @@ package dev.latvian.mods.rhino;
 
 import dev.latvian.mods.rhino.classdata.BaseMember;
 import dev.latvian.mods.rhino.classdata.DelegatedMember;
-import dev.latvian.mods.rhino.classdata.MethodSignature;
 
 /**
  * A GetterSlot is a specialication of a Slot for properties that are assigned functions
@@ -77,7 +76,7 @@ public class GetterSlot extends Slot {
 				} else {
 					args = new Object[]{actualArg};
 				}
-				nativeSetter.actuallyInvoke(cx, start, start, args, MethodSignature.ofArgs(args));
+				nativeSetter.invokeJS(new ContextJS(cx, start), start, args);
 			} else if (setter instanceof Function f) {
 				f.call(cx, f.getParentScope(), start, new Object[]{value});
 			}

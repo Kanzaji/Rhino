@@ -39,7 +39,6 @@ abstract class Icode {
 	static final int Icode_NAME_INC_DEC = -8;
 	static final int Icode_PROP_INC_DEC = -9;
 	static final int Icode_ELEM_INC_DEC = -10;
-	static final int Icode_REF_INC_DEC = -11;
 
 	static final int// load/save scope from/to local
 			Icode_SCOPE_LOAD = -12;

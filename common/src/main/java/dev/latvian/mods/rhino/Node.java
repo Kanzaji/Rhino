@@ -942,9 +942,6 @@ public class Node implements Iterable<Node> {
 			case Token.SETVAR:
 			case Token.CATCH_SCOPE:
 			case Token.RETURN_RESULT:
-			case Token.SET_REF:
-			case Token.DEL_REF:
-			case Token.REF_CALL:
 			case Token.TRY:
 			case Token.SEMI:
 			case Token.INC:
@@ -973,7 +970,6 @@ public class Node implements Iterable<Node> {
 			case Token.SETPROP_OP:
 			case Token.SETELEM_OP:
 			case Token.LOCAL_BLOCK:
-			case Token.SET_REF_OP:
 			case Token.YIELD:
 			case Token.YIELD_STAR:
 				return true;

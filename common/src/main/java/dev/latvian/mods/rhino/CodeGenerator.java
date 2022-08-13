@@ -532,7 +532,7 @@ class CodeGenerator extends Icode {
 				// Indicates that stack was modified externally,
 				// like placed catch object
 					stackChange(1);
-			case Token.REF_CALL, Token.CALL, Token.NEW -> {
+			case Token.CALL, Token.NEW -> {
 				if (type == Token.NEW) {
 					visitExpression(child, 0);
 				} else {
@@ -544,7 +544,7 @@ class CodeGenerator extends Icode {
 					++argCount;
 				}
 				int callType = node.getIntProp(Node.SPECIALCALL_PROP, Node.NON_SPECIALCALL);
-				if (type != Token.REF_CALL && callType != Node.NON_SPECIALCALL) {
+				if (callType != Node.NON_SPECIALCALL) {
 					// embed line number and source filename
 					addIndexOp(Icode_CALLSPECIAL, argCount);
 					addUint8(callType);
@@ -638,10 +638,6 @@ class CodeGenerator extends Icode {
 					addToken(type);
 				}
 			}
-			case Token.GET_REF, Token.DEL_REF -> {
-				visitExpression(child, 0);
-				addToken(type);
-			}
 			case Token.SETPROP, Token.SETPROP_OP -> {
 				visitExpression(child, 0);
 				child = child.getNext();
@@ -674,20 +670,6 @@ class CodeGenerator extends Icode {
 				visitExpression(child, 0);
 				addToken(Token.SETELEM);
 				stackChange(-2);
-			}
-			case Token.SET_REF, Token.SET_REF_OP -> {
-				visitExpression(child, 0);
-				child = child.getNext();
-				if (type == Token.SET_REF_OP) {
-					addIcode(Icode_DUP);
-					stackChange(1);
-					addToken(Token.GET_REF);
-					// Compensate for the following USE_STACK
-					stackChange(-1);
-				}
-				visitExpression(child, 0);
-				addToken(Token.SET_REF);
-				stackChange(-1);
 			}
 			case Token.STRICT_SETNAME, Token.SETNAME -> {
 				String name = child.getString();
@@ -793,10 +775,6 @@ class CodeGenerator extends Icode {
 			}
 			case Token.ARRAYLIT, Token.OBJECTLIT -> visitLiteral(node, child);
 			case Token.ARRAYCOMP -> visitArrayComprehension(node, child, child.getNext());
-			case Token.REF_SPECIAL -> {
-				visitExpression(child, 0);
-				addStringOp(type, (String) node.getProp(Node.NAME_PROP));
-			}
 			case Token.YIELD, Token.YIELD_STAR -> {
 				if (child != null) {
 					visitExpression(child, 0);
@@ -898,12 +876,6 @@ class CodeGenerator extends Icode {
 				addIcode(Icode_ELEM_INC_DEC);
 				addUint8(incrDecrMask);
 				stackChange(-1);
-			}
-			case Token.GET_REF -> {
-				Node ref = child.getFirstChild();
-				visitExpression(ref, 0);
-				addIcode(Icode_REF_INC_DEC);
-				addUint8(incrDecrMask);
 			}
 			default -> throw badTree(node);
 		}

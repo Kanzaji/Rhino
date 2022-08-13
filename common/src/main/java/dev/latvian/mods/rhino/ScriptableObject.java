@@ -1043,6 +1043,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 				setterBox = new DelegatedMember(Void.TYPE, setterBox);
 			}
 
+			/* FIXME: param error checking
 			String errorId = null;
 			Class<?>[] parmTypes = setter.getSignature().types;
 			if (parmTypes.length == 1) {
@@ -1063,6 +1064,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 			if (errorId != null) {
 				throw Context.reportRuntimeError1(cx, errorId, setter.toString());
 			}
+			 */
 		}
 
 		GetterSlot gslot = (GetterSlot) slotMap.get(cx, propertyName, 0, SlotAccess.MODIFY_GETTER_SETTER);

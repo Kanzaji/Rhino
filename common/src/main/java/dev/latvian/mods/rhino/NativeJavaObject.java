@@ -120,7 +120,14 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 		}
 
 		var m = classData.getMember(name, false);
-		return m == null ? Scriptable.NOT_FOUND : m.actuallyGet(cx, start, javaObject, m.getType());
+
+		if (m == null) {
+			return Scriptable.NOT_FOUND;
+		}
+
+		var value = m.getJS(new ContextJS(cx, start), javaObject);
+		start = ScriptableObject.getTopLevelScope(start);
+		return cx.getWrapFactory().wrap(cx, start, value, m.getType());
 	}
 
 	@Override
@@ -146,7 +153,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 		// prototype. Since we can't add a property to a Java object,
 		// we modify it in the prototype rather than copy it down.
 		if (m != null) {
-			m.actuallySet(cx, start, javaObject, value);
+			m.setJS(new ContextJS(cx, start), javaObject, value);
 		} else if (prototype != null) {
 			prototype.put(cx, name, prototype, value);
 		} else {
@@ -163,7 +170,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 		var m = classData.getMember(name, false);
 
 		if (m != null) {
-			m.actuallySet(cx, start, javaObject, value);
+			m.setJS(new ContextJS(cx, start), javaObject, value);
 		} else if (prototype instanceof SymbolScriptable) {
 			((SymbolScriptable) prototype).put(cx, symbol, prototype, value);
 		} else {
@@ -195,7 +202,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 		var m = classData.getMember(name, false);
 
 		if (m != null) {
-			Deletable.deleteObject(m.actuallyGet(cx, scope, name, null));
+			Deletable.deleteObject(m.getJS(new ContextJS(cx, scope), name));
 		}
 	}
 

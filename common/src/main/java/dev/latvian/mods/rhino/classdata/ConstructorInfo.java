@@ -1,7 +1,6 @@
 package dev.latvian.mods.rhino.classdata;
 
-import dev.latvian.mods.rhino.Context;
-import dev.latvian.mods.rhino.Scriptable;
+import dev.latvian.mods.rhino.ContextJS;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Constructor;
@@ -33,7 +32,7 @@ public class ConstructorInfo extends ExecutableInfo {
 	}
 
 	@Override
-	public Object invoke(Context cx, Scriptable scope, @Nullable Object self, Object[] args, MethodSignature argsSig) throws Exception {
+	public Object invoke(ContextJS cx, @Nullable Object self, Object[] args) throws Exception {
 		return newInstance(args);
 	}
 }

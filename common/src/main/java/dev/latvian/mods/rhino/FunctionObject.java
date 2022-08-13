@@ -10,7 +10,6 @@ package dev.latvian.mods.rhino;
 
 import dev.latvian.mods.rhino.classdata.BaseMember;
 import dev.latvian.mods.rhino.classdata.MethodInfo;
-import dev.latvian.mods.rhino.classdata.MethodSignature;
 
 public class FunctionObject extends BaseFunction {
 	/**
@@ -281,13 +280,13 @@ public class FunctionObject extends BaseFunction {
 		if (parmsLength < 0) {
 			if (parmsLength == VARARGS_METHOD) {
 				Object[] invokeArgs = {cx, thisObj, args, this};
-				result = member.actuallyInvoke(cx, scope, null, invokeArgs, MethodSignature.ofArgs(invokeArgs));
+				result = member.invokeJS(new ContextJS(cx, scope), null, invokeArgs);
 				checkMethodResult = true;
 			} else {
 				boolean inNewExpr = (thisObj == null);
 				Boolean b = inNewExpr ? Boolean.TRUE : Boolean.FALSE;
 				Object[] invokeArgs = {cx, args, this, b};
-				result = member.actuallyInvoke(cx, scope, null, invokeArgs, MethodSignature.ofArgs(invokeArgs));
+				result = member.invokeJS(new ContextJS(cx, scope), null, invokeArgs);
 			}
 
 		} else {
@@ -337,7 +336,7 @@ public class FunctionObject extends BaseFunction {
 					invokeArgs[i] = convertArg(cx, scope, arg, typeTags[i]);
 				}
 			}
-			result = member.actuallyInvoke(cx, scope, thisObj, invokeArgs, MethodSignature.ofArgs(invokeArgs));
+			result = member.invokeJS(new ContextJS(cx, scope), thisObj, invokeArgs);
 
 			if (member.isMethod()) {
 				checkMethodResult = true;

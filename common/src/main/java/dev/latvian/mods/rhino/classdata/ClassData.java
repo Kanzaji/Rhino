@@ -4,7 +4,10 @@ import dev.latvian.mods.rhino.Context;
 import dev.latvian.mods.rhino.ContextJS;
 import dev.latvian.mods.rhino.Scriptable;
 import dev.latvian.mods.rhino.SharedContextData;
+import dev.latvian.mods.rhino.js.JavaObjectJS;
 import dev.latvian.mods.rhino.js.TypeJS;
+import dev.latvian.mods.rhino.js.UndefinedJS;
+import dev.latvian.mods.rhino.js.prototype.MemberFunctions;
 import dev.latvian.mods.rhino.js.prototype.PrototypeJS;
 import dev.latvian.mods.rhino.js.prototype.WithPrototype;
 import dev.latvian.mods.rhino.util.Possible;
@@ -13,7 +16,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ClassData implements WithPrototype {
+public class ClassData implements WithPrototype, MemberFunctions {
 	public static ClassData of(Context cx, Scriptable scope, Class<?> type) {
 		return cx.getSharedData(scope).getClassDataCache().of(type);
 	}
@@ -163,6 +166,45 @@ public class ClassData implements WithPrototype {
 	}
 
 	@Override
+	public Object getValue(ContextJS cx, @Nullable Object self, Object key) {
+		var m = getMember(key.toString(), self == null);
+
+		if (m != null) {
+			return m.getJS(cx, self);
+		}
+
+		return UndefinedJS.PROTOTYPE;
+	}
+
+	@Override
+	public boolean setValue(ContextJS cx, @Nullable Object self, Object key, Object value) {
+		var m = getMember(key.toString(), self == null);
+
+		if (m != null) {
+			m.setJS(cx, self, value);
+			return true;
+		}
+
+		return false;
+	}
+
+	@Override
+	public Object invoke(ContextJS cx, @Nullable Object self, Object key, Object[] args) {
+		var m = getMember(key.toString(), self == null);
+
+		if (m != null) {
+			m.invokeJS(cx, self, args);
+		}
+
+		return UndefinedJS.PROTOTYPE;
+	}
+
+	@Override
+	public boolean deleteValue(ContextJS cx, @Nullable Object self, Object key) {
+		return false;
+	}
+
+	@Override
 	public PrototypeJS getPrototype(ContextJS cx) {
 		if (prototype == null) {
 			String name = publicClassData.toString();
@@ -179,7 +221,7 @@ public class ClassData implements WithPrototype {
 				name = name.substring(idx + 1);
 			}
 
-			prototype = PrototypeJS.DEFAULT.create(TypeJS.OBJECT, name);
+			prototype = JavaObjectJS.PROTOTYPE.create(TypeJS.OBJECT, name).memberFunctions(this);
 		}
 
 		return prototype;
