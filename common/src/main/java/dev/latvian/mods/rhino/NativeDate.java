@@ -6,6 +6,8 @@
 
 package dev.latvian.mods.rhino;
 
+import dev.latvian.mods.rhino.js.TypeJS;
+
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -41,9 +43,9 @@ final class NativeDate extends IdScriptableObject {
 	}
 
 	@Override
-	public Object getDefaultValue(Context cx, Class<?> typeHint) {
-		if (typeHint == null) {
-			typeHint = ScriptRuntime.StringClass;
+	public Object getDefaultValue(ContextJS cx, TypeJS typeHint) {
+		if (typeHint == TypeJS.UNDEFINED) {
+			typeHint = TypeJS.STRING;
 		}
 		return super.getDefaultValue(cx, typeHint);
 	}
@@ -282,14 +284,14 @@ final class NativeDate extends IdScriptableObject {
 				if (thisObj != null) {
 					return date_format(now(), Id_toString);
 				}
-				return jsConstructor(cx, args);
+				return jsConstructor(cx, scope, args);
 			}
 
 			case Id_toJSON: {
 				final String toISOString = "toISOString";
 
 				Scriptable o = ScriptRuntime.toObject(cx, scope, thisObj);
-				Object tv = ScriptRuntime.toPrimitive(cx, o, ScriptRuntime.NumberClass);
+				Object tv = ScriptRuntime.toPrimitive(cx, o, TypeJS.NUMBER);
 				if (tv instanceof Number) {
 					double d = ((Number) tv).doubleValue();
 					if (Double.isNaN(d) || Double.isInfinite(d)) {
@@ -1367,7 +1369,7 @@ final class NativeDate extends IdScriptableObject {
 	}
 
 	/* the javascript constructor */
-	private static Object jsConstructor(Context cx, Object[] args) {
+	private static Object jsConstructor(Context cx, Scriptable scope, Object[] args) {
 		NativeDate obj = new NativeDate();
 
 		// if called as a constructor with no args,
@@ -1385,7 +1387,7 @@ final class NativeDate extends IdScriptableObject {
 				return obj;
 			}
 			if (arg0 instanceof Scriptable) {
-				arg0 = ((Scriptable) arg0).getDefaultValue(cx, null);
+				arg0 = ((Scriptable) arg0).getDefaultValue(new ContextJS(cx, scope), null);
 			}
 			double date;
 			if (arg0 instanceof CharSequence) {

@@ -6,10 +6,10 @@
 
 package dev.latvian.mods.rhino;
 
-import dev.latvian.mods.rhino.classdata.ClassData;
 import dev.latvian.mods.rhino.classdata.MethodSignature;
-import dev.latvian.mods.rhino.js.NumberJS;
-import dev.latvian.mods.rhino.util.Deletable;
+import dev.latvian.mods.rhino.js.TypeJS;
+import dev.latvian.mods.rhino.js.prototype.CastType;
+import dev.latvian.mods.rhino.js.prototype.PrototypeJS;
 import dev.latvian.mods.rhino.util.JavaIteratorWrapper;
 import dev.latvian.mods.rhino.util.wrap.TypeWrapperFactory;
 
@@ -17,8 +17,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Objects;
 
 /**
  * This class reflects non-Array Java objects into the JavaScript environment.  It
@@ -33,54 +32,33 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 	private static final Object COERCED_INTERFACE_KEY = "Coerced Interface";
 
 	/**
-	 * The prototype of this object.
-	 */
-	protected Scriptable prototype;
-
-	/**
 	 * The parent scope of this object.
 	 */
 	protected Scriptable parent;
 
-	protected transient Object javaObject;
+	public final Object javaObject;
+	public final Object unwrappedJavaObject;
+	public final Class<?> staticType;
+	private PrototypeJS prototypeJS;
 
-	protected transient ClassData classData;
-	protected transient Map<String, Object> customMembers;
-
-	public NativeJavaObject(Context cx, Scriptable scope, Object javaObject, Class<?> type) {
+	public NativeJavaObject(Scriptable scope, Object javaObject, Class<?> staticType) {
 		this.parent = scope;
 		this.javaObject = javaObject;
-		this.classData = ClassData.of(cx, scope, type);
-		this.customMembers = null;
-		initMembers(cx);
+		this.unwrappedJavaObject = Objects.requireNonNull(Wrapper.unwrapped(javaObject));
+		this.staticType = staticType != null ? staticType : this.unwrappedJavaObject.getClass();
 	}
 
-	protected void initMembers(Context cx) {
-	}
-
-	protected void addCustomMember(String name, Object fm) {
-		if (customMembers == null) {
-			customMembers = new HashMap<>();
+	public PrototypeJS getPrototypeJS(ContextJS cx) {
+		if (prototypeJS == null) {
+			prototypeJS = cx.getSharedData().getPrototypeOf(cx, javaObject);
 		}
 
-		customMembers.put(name, fm);
-	}
-
-	protected void addCustomFunction(String name, CustomFunction.Func func, Class<?>... argTypes) {
-		addCustomMember(name, new CustomFunction(name, func, argTypes));
-	}
-
-	protected void addCustomFunction(String name, CustomFunction.NoArgFunc func) {
-		addCustomFunction(name, func, CustomFunction.NO_ARGS);
-	}
-
-	public void addCustomProperty(String name, CustomProperty getter) {
-		addCustomMember(name, getter);
+		return prototypeJS;
 	}
 
 	@Override
 	public boolean has(Context cx, String name, Scriptable start) {
-		return customMembers != null && customMembers.containsKey(name) || classData.getMember(name, false) != null;
+		return getPrototypeJS(new ContextJS(cx, start)).hasValue(new ContextJS(cx, start), javaObject, name);
 	}
 
 	@Override
@@ -95,45 +73,20 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 
 	@Override
 	public Object get(Context cx, String name, Scriptable start) {
-		if (customMembers != null) {
-			Object result = customMembers.get(name);
+		var cxjs = new ContextJS(cx, start);
+		var val = getPrototypeJS(cxjs).getValue(cxjs, javaObject, name, CastType.WRAP);
 
-			if (result != null) {
-				if (result instanceof CustomProperty) {
-					Object r = ((CustomProperty) result).get();
-
-					if (r == null) {
-						return Undefined.instance;
-					}
-
-					Object r1 = cx.getWrapFactory().wrap(cx, this, r, r.getClass());
-
-					if (r1 instanceof Scriptable) {
-						return ((Scriptable) r1).getDefaultValue(cx, null);
-					}
-
-					return r1;
-				}
-
-				return result;
-			}
+		if (val instanceof Scriptable s) {
+			return s.getDefaultValue(cxjs, TypeJS.UNDEFINED);
 		}
 
-		var m = classData.getMember(name, false);
-
-		if (m == null) {
-			return Scriptable.NOT_FOUND;
-		}
-
-		var value = m.getJS(new ContextJS(cx, start), javaObject);
-		start = ScriptableObject.getTopLevelScope(start);
-		return cx.getWrapFactory().wrap(cx, start, value, m.getType());
+		return Scriptable.NOT_FOUND;
 	}
 
 	@Override
 	public Object get(Context cx, Symbol key, Scriptable start) {
-		if (javaObject instanceof Iterable<?> && SymbolKey.ITERATOR.equals(key)) {
-			return new JavaIteratorWrapper(((Iterable<?>) javaObject).iterator());
+		if (javaObject instanceof Iterable<?> itr && SymbolKey.ITERATOR.equals(key)) {
+			return new JavaIteratorWrapper(itr.iterator());
 		}
 
 		// Native Java objects have no Symbol members
@@ -142,68 +95,50 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 
 	@Override
 	public Object get(Context cx, int index, Scriptable start) {
-		throw classData.reportMemberNotFound(cx, Integer.toString(index));
+		var cxjs = new ContextJS(cx, start);
+		var val = getPrototypeJS(cxjs).getValue(cxjs, javaObject, index, CastType.WRAP);
+
+		if (val instanceof Scriptable s) {
+			return s.getDefaultValue(cxjs, TypeJS.UNDEFINED);
+		}
+
+		return Scriptable.NOT_FOUND;
 	}
 
 	@Override
 	public void put(Context cx, String name, Scriptable start, Object value) {
-		var m = classData.getMember(name, false);
-
-		// We could be asked to modify the value of a property in the
-		// prototype. Since we can't add a property to a Java object,
-		// we modify it in the prototype rather than copy it down.
-		if (m != null) {
-			m.setJS(new ContextJS(cx, start), javaObject, value);
-		} else if (prototype != null) {
-			prototype.put(cx, name, prototype, value);
-		} else {
-			addCustomMember(name, value);
-		}
+		var cxjs = new ContextJS(cx, start);
+		getPrototypeJS(cxjs).setValue(cxjs, javaObject, name, value, CastType.UNWRAP);
 	}
 
 	@Override
 	public void put(Context cx, Symbol symbol, Scriptable start, Object value) {
-		// We could be asked to modify the value of a property in the
-		// prototype. Since we can't add a property to a Java object,
-		// we modify it in the prototype rather than copy it down.
-		String name = symbol.toString();
-		var m = classData.getMember(name, false);
-
-		if (m != null) {
-			m.setJS(new ContextJS(cx, start), javaObject, value);
-		} else if (prototype instanceof SymbolScriptable) {
-			((SymbolScriptable) prototype).put(cx, symbol, prototype, value);
-		} else {
-			addCustomMember(name, value);
-		}
+		var cxjs = new ContextJS(cx, start);
+		getPrototypeJS(cxjs).setValue(cxjs, javaObject, symbol.toString(), value, CastType.UNWRAP);
 	}
 
 	@Override
 	public void put(Context cx, int index, Scriptable start, Object value) {
-		throw classData.reportMemberNotFound(cx, Integer.toString(index));
+		var cxjs = new ContextJS(cx, start);
+		getPrototypeJS(cxjs).setValue(cxjs, javaObject, index, value, CastType.UNWRAP);
 	}
 
 	@Override
-	public boolean hasInstance(Context cx, Scriptable value) {
-		// This is an instance of a Java class, so always return false
+	public boolean hasInstance(Context cx, Scriptable lhsScriptable) {
+		if (lhsScriptable instanceof Wrapper && !(lhsScriptable instanceof NativeJavaClass)) {
+			Object instance = ((Wrapper) lhsScriptable).unwrap();
+
+			return staticType.isInstance(instance);
+		}
+
+		// value wasn't something we understand
 		return false;
 	}
 
 	@Override
 	public void delete(Context cx, Scriptable scope, String name) {
-		if (customMembers != null) {
-			Object result = customMembers.get(name);
-			if (result != null) {
-				Deletable.deleteObject(result);
-				return;
-			}
-		}
-
-		var m = classData.getMember(name, false);
-
-		if (m != null) {
-			Deletable.deleteObject(m.getJS(new ContextJS(cx, scope), name));
-		}
+		var cxjs = new ContextJS(cx, scope);
+		getPrototypeJS(cxjs).deleteValue(cxjs, javaObject, name, CastType.NONE);
 	}
 
 	@Override
@@ -216,10 +151,10 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 
 	@Override
 	public Scriptable getPrototype(Context cx) {
-		if (prototype == null && javaObject instanceof String) {
+		if (javaObject instanceof String) {
 			return TopLevel.getBuiltinPrototype(cx, ScriptableObject.getTopLevelScope(parent), TopLevel.Builtins.String);
 		}
-		return prototype;
+		return null;
 	}
 
 	/**
@@ -227,7 +162,6 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 	 */
 	@Override
 	public void setPrototype(Context cx, Scriptable m) {
-		prototype = m;
 	}
 
 	/**
@@ -248,16 +182,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 
 	@Override
 	public Object[] getIds(Context cx) {
-		if (customMembers != null) {
-			Object[] c = customMembers.keySet().toArray();
-			Object[] m = classData.getMembers(false).keySet().toArray();
-			Object[] result = new Object[c.length + m.length];
-			System.arraycopy(c, 0, result, 0, c.length);
-			System.arraycopy(m, 0, result, c.length, m.length);
-			return result;
-		}
-
-		return classData.getMembers(false).keySet().toArray(ScriptRuntime.EMPTY_OBJECTS);
+		return ScriptRuntime.EMPTY_OBJECTS;
 	}
 
 	@Override
@@ -271,40 +196,37 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 	}
 
 	@Override
-	public Object getDefaultValue(Context cx, Class<?> hint) {
-		Object value;
-		if (hint == null) {
+	public Object getDefaultValue(ContextJS cx, TypeJS hint) {
+		if (hint == null || hint == TypeJS.UNDEFINED) {
 			if (javaObject instanceof Boolean) {
-				hint = ScriptRuntime.BooleanClass;
+				hint = TypeJS.BOOLEAN;
 			}
 			if (javaObject instanceof Number) {
-				hint = ScriptRuntime.NumberClass;
+				hint = TypeJS.NUMBER;
 			}
 		}
-		if (hint == null || hint == ScriptRuntime.StringClass) {
-			value = javaObject.toString();
-		} else {
-			String converterName;
-			if (hint == ScriptRuntime.BooleanClass) {
-				converterName = "booleanValue";
-			} else if (hint == ScriptRuntime.NumberClass) {
-				converterName = "doubleValue";
-			} else {
-				throw Context.reportRuntimeError0(cx, "msg.default.value");
+
+		if (hint == null || hint == TypeJS.UNDEFINED || hint == TypeJS.STRING) {
+			if (javaObject instanceof CharSequence) {
+				return javaObject.toString();
 			}
-			Object converterObject = get(cx, converterName, this);
-			if (converterObject instanceof Function f) {
-				value = f.call(cx, f.getParentScope(), this, ScriptRuntime.EMPTY_OBJECTS);
-			} else {
-				if (hint == ScriptRuntime.NumberClass && javaObject instanceof Boolean) {
-					boolean b = (Boolean) javaObject;
-					value = b ? ScriptRuntime.wrapNumber(1.0) : NumberJS.ZERO;
-				} else {
-					value = javaObject.toString();
-				}
+
+			return getPrototypeJS(cx).getAsString(javaObject);
+		} else if (hint == TypeJS.NUMBER) {
+			if (javaObject instanceof Number) {
+				return javaObject;
 			}
+
+			return getPrototypeJS(cx).getAsNumber(javaObject);
+		} else if (hint == TypeJS.BOOLEAN) {
+			if (javaObject instanceof Boolean) {
+				return javaObject;
+			}
+
+			return getPrototypeJS(cx).getAsBoolean(javaObject);
 		}
-		return value;
+
+		return javaObject.toString();
 	}
 
 	/**
@@ -312,7 +234,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 	 * desired one.  This should be superceded by a conversion-cost calculation
 	 * function, but for now I'll hide behind precedent.
 	 */
-	public static boolean canConvert(Context cx, Object fromObj, Class<?> to) {
+	public static boolean canConvert(ContextJS cx, Object fromObj, Class<?> to) {
 		return getConversionWeight(cx, fromObj, Wrapper.unwrapped(fromObj), to) < CONVERSION_NONE;
 	}
 
@@ -339,8 +261,9 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 	 * <a href="http://www.mozilla.org/js/liveconnect/lc3_method_overloading.html">
 	 * "preferred method conversions" from Live Connect 3</a>
 	 */
-	static int getConversionWeight(Context cx, Object fromObj, Object unwrappedFromObj, Class<?> to) {
-		var wrapperFactory = cx.getSharedData().hasTypeWrappers() ? cx.getSharedData().getTypeWrappers().getWrapperFactory(cx.getSharedData(), to, unwrappedFromObj) : null;
+	static int getConversionWeight(ContextJS cx, Object fromObj, Object unwrappedFromObj, Class<?> to) {
+		var data = cx.getSharedData();
+		var wrapperFactory = data.hasTypeWrappers() ? data.getTypeWrappers().getWrapperFactory(data, to, unwrappedFromObj) : null;
 
 		if (wrapperFactory != null) {
 			return CONVERSION_NONTRIVIAL;
@@ -534,13 +457,14 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 	 * Type-munging for field setting and method invocation.
 	 * Conforms to LC3 specification
 	 */
-	static Object coerceTypeImpl(Context cx, Class<?> type, Object value) {
+	static Object coerceTypeImpl(Context cx, Scriptable scope, Class<?> type, Object value) {
 		if (value == null || value.getClass() == type) {
 			return value;
 		}
 
 		Object unwrappedValue = Wrapper.unwrapped(value);
-		TypeWrapperFactory<?> typeWrapper = cx.getSharedData().hasTypeWrappers() ? cx.getSharedData().getTypeWrappers().getWrapperFactory(cx.getSharedData(), type, unwrappedValue) : null;
+		var data = cx.getSharedData(scope);
+		TypeWrapperFactory<?> typeWrapper = data.hasTypeWrappers() ? data.getTypeWrappers().getWrapperFactory(data, type, unwrappedValue) : null;
 
 		if (typeWrapper != null) {
 			return typeWrapper.wrap(unwrappedValue);
@@ -645,7 +569,7 @@ public class NativeJavaObject implements Scriptable, SymbolScriptable, Wrapper {
 					Object Result = Array.newInstance(arrayType, (int) length);
 					for (int i = 0; i < length; ++i) {
 						try {
-							Array.set(Result, i, coerceTypeImpl(cx, arrayType, array.get(cx, i, array)));
+							Array.set(Result, i, coerceTypeImpl(cx, scope, arrayType, array.get(cx, i, array)));
 						} catch (EvaluatorException ee) {
 							return reportConversionError(cx, value, type);
 						}

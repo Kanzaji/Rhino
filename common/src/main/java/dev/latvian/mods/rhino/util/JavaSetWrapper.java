@@ -1,15 +1,22 @@
 package dev.latvian.mods.rhino.util;
 
+import dev.latvian.mods.rhino.Wrapper;
+
 import java.util.AbstractList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Set;
 
-public class JavaSetWrapper<T> extends AbstractList<T> {
+public class JavaSetWrapper<T> extends AbstractList<T> implements Wrapper {
 	public final Set<T> set;
 
 	public JavaSetWrapper(Set<T> set) {
 		this.set = set;
+	}
+
+	@Override
+	public Object unwrap() {
+		return set;
 	}
 
 	@Override

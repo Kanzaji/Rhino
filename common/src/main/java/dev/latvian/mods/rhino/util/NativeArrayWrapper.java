@@ -1,16 +1,12 @@
 package dev.latvian.mods.rhino.util;
 
+import dev.latvian.mods.rhino.Wrapper;
+
 import java.lang.reflect.Array;
 import java.util.AbstractList;
-import java.util.Arrays;
-import java.util.List;
 
-public class NativeArrayWrapper extends AbstractList<Object> {
-	public static List<Object> of(Object array) {
-		if (array instanceof Object[] a) {
-			return Arrays.asList(a);
-		}
-
+public class NativeArrayWrapper extends AbstractList<Object> implements Wrapper {
+	public static NativeArrayWrapper of(Object array) {
 		return new NativeArrayWrapper(array);
 	}
 
@@ -25,12 +21,27 @@ public class NativeArrayWrapper extends AbstractList<Object> {
 	}
 
 	@Override
+	public Object unwrap() {
+		return array;
+	}
+
+	@Override
 	public Object get(int index) {
+		if (array instanceof Object[] a) {
+			return a[index];
+		}
+
 		return Array.get(array, index);
 	}
 
 	@Override
 	public Object set(int index, Object value) {
+		if (array instanceof Object[] a) {
+			var o = a[index];
+			a[index] = value;
+			return o;
+		}
+
 		Object o = get(index);
 		Array.set(array, index, value);
 		return o;

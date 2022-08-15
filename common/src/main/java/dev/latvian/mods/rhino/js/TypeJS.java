@@ -7,6 +7,7 @@ public enum TypeJS {
 	UNDEFINED,
 	OBJECT,
 	FUNCTION,
+	SCRIPTABLE, // TO be removed after new scope impl
 	ARRAY,
 	STRING,
 	NUMBER,

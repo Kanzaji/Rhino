@@ -134,7 +134,7 @@ public final class NativeIterator extends IdScriptableObject {
 		}
 
 		return switch (id) {
-			case Id_next -> iterator.objectIterator.nextExec(cx, scope);
+			case Id_next -> iterator.objectIterator.nextExec(new ContextJS(cx, scope));
 			case Id___iterator__ ->
 				/// XXX: what about argument? SpiderMonkey apparently ignores it
 					thisObj;

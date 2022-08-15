@@ -1,9 +1,12 @@
 package dev.latvian.mods.rhino.classdata;
 
+import dev.latvian.mods.rhino.Context;
 import dev.latvian.mods.rhino.ContextJS;
+import dev.latvian.mods.rhino.js.prototype.CastType;
+import dev.latvian.mods.rhino.js.prototype.MemberFunctions;
 import org.jetbrains.annotations.Nullable;
 
-public record SyntheticMethod<T>(Class<?> type, SyntheticMethod.Callback<T> callback, MethodSignature sig, boolean isStatic) implements BaseMember {
+public record SyntheticMethod<T>(Class<?> type, SyntheticMethod.Callback<T> callback, MethodSignature sig, boolean isStatic) implements MemberFunctions {
 	public interface Callback<T> {
 		Object invoke(ContextJS cx, T self, Object[] args) throws Exception;
 	}
@@ -25,22 +28,11 @@ public record SyntheticMethod<T>(Class<?> type, SyntheticMethod.Callback<T> call
 	}
 
 	@Override
-	public Object invoke(ContextJS cx, @Nullable Object self, Object[] args) throws Exception {
-		return callback.invoke(cx, (T) self, args);
-	}
-
-	@Override
-	public MethodSignature getSignature() {
-		return sig;
-	}
-
-	@Override
-	public Class<?> getType() {
-		return type;
-	}
-
-	@Override
-	public boolean isStatic() {
-		return isStatic;
+	public Object invoke(ContextJS cx, @Nullable Object self, Object key, Object[] args, CastType returnType) {
+		try {
+			return returnType.cast(cx, callback.invoke(cx, (T) self, args));
+		} catch (Exception e) {
+			throw Context.throwAsScriptRuntimeEx(e);
+		}
 	}
 }

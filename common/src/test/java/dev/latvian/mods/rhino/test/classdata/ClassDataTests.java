@@ -1,7 +1,7 @@
 package dev.latvian.mods.rhino.test.classdata;
 
 import dev.latvian.mods.rhino.Context;
-import dev.latvian.mods.rhino.classdata.MethodSignature;
+import dev.latvian.mods.rhino.ContextJS;
 import dev.latvian.mods.rhino.classdata.PublicClassData;
 import dev.latvian.mods.rhino.mod.util.NBTUtils;
 import net.minecraft.nbt.CompoundTag;
@@ -14,7 +14,6 @@ import org.junit.jupiter.api.TestMethodOrder;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
 
 @SuppressWarnings("unused")
@@ -24,10 +23,12 @@ public class ClassDataTests {
 	@DisplayName("Class Data")
 	public void classData() {
 		Context cx = Context.enterWithNewFactory();
-		var cache = cx.getSharedData().getClassDataCache();
-		var data = cache.of(Player.class);
-		var member = data.getMember("x", false);
-		System.out.println(member);
+		var scope = cx.initStandardObjects();
+		var cxjs = new ContextJS(cx, scope);
+		var sharedData = cxjs.getSharedData();
+		var data = sharedData.getPrototype(cxjs, Player.class);
+		//var member = data.getMember("x", false);
+		//System.out.println(member);
 		Context.exit();
 	}
 
@@ -36,10 +37,14 @@ public class ClassDataTests {
 	public void ambiguousCassData() {
 		Context cx = Context.enterWithNewFactory();
 		var scope = cx.initStandardObjects();
-		var typeWrappers = cx.getSharedData().getTypeWrappers();
+		var cxjs = new ContextJS(cx, scope);
+		var sharedData = cxjs.getSharedData();
+		var typeWrappers = sharedData.getTypeWrappers();
 		typeWrappers.register(CompoundTag.class, NBTUtils::isTagCompound, NBTUtils::toTagCompound);
-		var cache = cx.getSharedData().getClassDataCache();
-		var data = cache.of(CompoundTag.class);
+		var data = sharedData.getPrototype(new ContextJS(cx, scope), CompoundTag.class);
+		Assertions.fail("Test");
+
+		/*
 		var member = data.getMember("merge", false);
 		System.out.println(member);
 		Context.exit();
@@ -55,6 +60,7 @@ public class ClassDataTests {
 		// var m = member.method(cx.getSharedData(), args, argsSig);
 		// Assertions.assertTrue(m.isSet());
 		// member.actuallyInvoke(cx, scope, null)
+		 */
 	}
 
 	@Test

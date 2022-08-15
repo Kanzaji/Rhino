@@ -1,8 +1,8 @@
 package dev.latvian.mods.rhino;
 
 
-import dev.latvian.mods.rhino.classdata.BaseMember;
-import dev.latvian.mods.rhino.classdata.DelegatedMember;
+import dev.latvian.mods.rhino.js.prototype.CastType;
+import dev.latvian.mods.rhino.js.prototype.MemberFunctions;
 
 /**
  * A GetterSlot is a specialication of a Slot for properties that are assigned functions
@@ -27,9 +27,9 @@ public class GetterSlot extends Slot {
 			desc.defineProperty(cx, "writable", (attr & ScriptableObject.READONLY) == 0, ScriptableObject.EMPTY);
 		}
 
-		String fName = name == null ? "f" : name.toString();
+		String fName = name == null ? "<unknown>" : name.toString();
 		if (getter != null) {
-			if (getter instanceof BaseMember m) {
+			if (getter instanceof MemberFunctions m) {
 				desc.defineProperty(cx, "get", new FunctionObject(cx, fName, m, scope), ScriptableObject.EMPTY);
 			} else {
 				desc.defineProperty(cx, "get", getter, ScriptableObject.EMPTY);
@@ -37,7 +37,7 @@ public class GetterSlot extends Slot {
 		}
 
 		if (setter != null) {
-			if (setter instanceof BaseMember m) {
+			if (setter instanceof MemberFunctions m) {
 				desc.defineProperty(cx, "set", new FunctionObject(cx, fName, m, scope), ScriptableObject.EMPTY);
 			} else {
 				desc.defineProperty(cx, "set", setter, ScriptableObject.EMPTY);
@@ -63,20 +63,9 @@ public class GetterSlot extends Slot {
 				return true;
 			}
 		} else {
-			if (setter instanceof BaseMember nativeSetter) {
-				Class<?>[] pTypes = nativeSetter.getSignature().types;
-				// XXX: cache tag since it is already calculated in
-				// defineProperty ?
-				Class<?> valueType = pTypes[pTypes.length - 1];
-				int tag = FunctionObject.getTypeTag(valueType);
-				Object actualArg = FunctionObject.convertArg(cx, start, value, tag);
-				Object[] args;
-				if (nativeSetter instanceof DelegatedMember) {
-					args = new Object[]{start, actualArg};
-				} else {
-					args = new Object[]{actualArg};
-				}
-				nativeSetter.invokeJS(new ContextJS(cx, start), start, args);
+			if (setter instanceof MemberFunctions nativeSetter) {
+				var cxjs = new ContextJS(cx, start);
+				nativeSetter.invoke(cxjs, null, name == null ? "<unknown>" : name, new Object[]{CastType.UNWRAP.cast(cxjs, value)}, CastType.UNWRAP);
 			} else if (setter instanceof Function f) {
 				f.call(cx, f.getParentScope(), start, new Object[]{value});
 			}
@@ -88,17 +77,9 @@ public class GetterSlot extends Slot {
 	@Override
 	Object getValue(Context cx, Scriptable start) {
 		if (getter != null) {
-			if (getter instanceof MemberBox nativeGetter) {
-				Object getterThis;
-				Object[] args;
-				if (nativeGetter.delegateTo == null) {
-					getterThis = start;
-					args = ScriptRuntime.EMPTY_OBJECTS;
-				} else {
-					getterThis = nativeGetter.delegateTo;
-					args = new Object[]{start};
-				}
-				return nativeGetter.invoke(getterThis, args);
+			if (getter instanceof MemberFunctions nativeGetter) {
+				var cxjs = new ContextJS(cx, start);
+				return nativeGetter.invoke(cxjs, null, name == null ? "<unknown>" : name, ScriptRuntime.EMPTY_OBJECTS, CastType.WRAP);
 			} else if (getter instanceof Function f) {
 				return f.call(cx, f.getParentScope(), start, ScriptRuntime.EMPTY_OBJECTS);
 			}

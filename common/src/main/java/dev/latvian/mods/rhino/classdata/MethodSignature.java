@@ -1,13 +1,13 @@
 package dev.latvian.mods.rhino.classdata;
 
-import dev.latvian.mods.rhino.Context;
+import dev.latvian.mods.rhino.ContextJS;
 import dev.latvian.mods.rhino.Function;
-import dev.latvian.mods.rhino.ScriptRuntime;
 import dev.latvian.mods.rhino.Scriptable;
-import dev.latvian.mods.rhino.SharedContextData;
 import dev.latvian.mods.rhino.Undefined;
 import dev.latvian.mods.rhino.Wrapper;
 import org.jetbrains.annotations.Nullable;
+
+import java.lang.reflect.Executable;
 
 public class MethodSignature {
 	public static final MethodSignature EMPTY = new MethodSignature();
@@ -64,6 +64,10 @@ public class MethodSignature {
 		}
 
 		return new MethodSignature(types);
+	}
+
+	public static MethodSignature ofExecutable(Executable executable) {
+		return executable.getParameterCount() == 0 ? EMPTY : of(executable.getParameterTypes());
 	}
 
 	public static MethodSignature ofArgs(Object... args) {
@@ -154,7 +158,7 @@ public class MethodSignature {
 		return types.length == 0;
 	}
 
-	public int matches(SharedContextData data, Object[] args, MethodSignature argsSig) {
+	public int matches(ContextJS cx, Object[] args, MethodSignature argsSig) {
 		if (this == argsSig) {
 			return args.length;
 		}
@@ -171,6 +175,7 @@ public class MethodSignature {
 					exactMatches++;
 				}
 
+				var data = cx.getSharedData();
 				var typeWrapper = data.hasTypeWrappers() ? data.getTypeWrappers().getWrapperFactory(data, types[i], args[i]) : null;
 
 				if (typeWrapper != null) {
@@ -182,28 +187,6 @@ public class MethodSignature {
 		}
 
 		return exactMatches;
-	}
-
-	public static Object[] unwrapArgs(Context cx, Object[] args, Class<?>[] types) {
-		if (args.length == 0) {
-			return ScriptRuntime.EMPTY_OBJECTS;
-		}
-
-		Object[] origArgs = args;
-
-		for (int i = 0; i < args.length; i++) {
-			Object o = Context.jsToJava(cx, args[i], types[i]);
-
-			if (args[i] != o) {
-				if (args == origArgs) {
-					args = args.clone();
-				}
-
-				args[i] = o;
-			}
-		}
-
-		return args;
 	}
 
 	public static String javaSignature(Class<?> type) {

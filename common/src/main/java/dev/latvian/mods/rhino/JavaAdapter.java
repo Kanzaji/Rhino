@@ -3,6 +3,7 @@ package dev.latvian.mods.rhino;
 import dev.latvian.mods.rhino.classdata.MethodSignature;
 import dev.latvian.mods.rhino.classfile.ByteCode;
 import dev.latvian.mods.rhino.classfile.ClassFileWriter;
+import dev.latvian.mods.rhino.js.prototype.CastType;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -84,21 +85,6 @@ public final class JavaAdapter implements IdFunctionCall {
 		throw f.unknown();
 	}
 
-	public static Object convertResult(Context cx, Object result, Class<?> c) {
-		if (result == Undefined.instance && (c != ScriptRuntime.ObjectClass && c != ScriptRuntime.StringClass)) {
-			// Avoid an error for an undefined value; return null instead.
-			return null;
-		}
-		return Context.jsToJava(cx, result, c);
-	}
-
-	public static Scriptable createAdapterWrapper(Context cx, Scriptable obj, Object adapter) {
-		Scriptable scope = ScriptableObject.getTopLevelScope(obj);
-		NativeJavaObject res = new NativeJavaObject(cx, scope, adapter, null);
-		res.setPrototype(cx, obj);
-		return res;
-	}
-
 	public static Object getAdapterSelf(Class<?> adapterClass, Object adapter) throws NoSuchFieldException, IllegalAccessException {
 		Field self = adapterClass.getDeclaredField("self");
 		return self.get(adapter);
@@ -134,7 +120,7 @@ public final class JavaAdapter implements IdFunctionCall {
 		Class<?>[] intfs = new Class[classCount];
 		int interfaceCount = 0;
 		for (int i = 0; i < classCount; ++i) {
-			Class<?> c = ((NativeJavaClass) args[i]).getClassObject();
+			Class<?> c = ((NativeJavaClass) args[i]).staticType;
 			if (!c.isInterface()) {
 				if (superClass != null) {
 					throw ScriptRuntime.typeError2("msg.only.one.super", superClass.getName(), c.getName());
@@ -168,16 +154,15 @@ public final class JavaAdapter implements IdFunctionCall {
 				ctorArgs[1] = cx.getFactory();
 				System.arraycopy(args, classCount + 1, ctorArgs, 2, argsCount);
 				// TODO: cache class wrapper?
-				NativeJavaClass classWrapper = new NativeJavaClass(cx, scope, adapterClass);
-				var cp = classWrapper.classData.constructor(cx.getSharedData(scope), ctorArgs, MethodSignature.ofArgs(ctorArgs));
+				var cxjs = new ContextJS(cx, scope);
+				var cons = cxjs.getSharedData().getPrototype(cxjs, adapterClass);
 
-				if (!cp.isSet()) {
+				if (cons == null) {
 					String sig = MethodSignature.scriptSignature(args);
 					throw Context.reportRuntimeError2(cx, "msg.no.java.ctor", adapterClass.getName(), sig);
 				}
 
-				// Found the constructor, so try invoking it.
-				adapter = NativeJavaClass.constructInternal(cx, scope, ctorArgs, cp.get());
+				adapter = cons.invoke(cxjs, null, "<init>", args, CastType.UNWRAP);
 			} else {
 				Class<?>[] ctorParms = {ScriptRuntime.ScriptableClass, ScriptRuntime.ContextFactoryClass};
 				Object[] ctorArgs = {obj, cx.getFactory()};
@@ -221,7 +206,7 @@ public final class JavaAdapter implements IdFunctionCall {
 	}
 
 	private static Class<?> getAdapterClass(Context cx, Scriptable scope, Class<?> superClass, Class<?>[] interfaces, Scriptable obj) {
-		ClassCache cache = ClassCache.get(cx, scope);
+		var cache = SharedContextData.get(cx, scope);
 		Map<JavaAdapterSignature, Class<?>> generated = cache.getInterfaceAdapterCacheMap();
 
 		ObjToIntMap names = getObjectFunctionNames(cx, obj);

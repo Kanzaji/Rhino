@@ -13,10 +13,11 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.internal.Streams;
 import com.google.gson.stream.JsonWriter;
-import dev.latvian.mods.rhino.classdata.ConstructorInfo;
 import dev.latvian.mods.rhino.classdata.MethodSignature;
 import dev.latvian.mods.rhino.classdata.PublicClassData;
+import dev.latvian.mods.rhino.classdata.RemappedClassData;
 import dev.latvian.mods.rhino.json.JsonParser;
+import dev.latvian.mods.rhino.util.Remapper;
 
 import java.io.StringWriter;
 import java.util.Arrays;
@@ -190,7 +191,7 @@ public final class NativeJSON extends IdScriptableObject {
 
 	public static String stringify(Context cx, Scriptable scope, Object value, Object replacer, Object space) {
 		SharedContextData data = cx.getSharedData(scope);
-		JsonElement e = stringify0(cx, data, value);
+		JsonElement e = stringify0(cx, data.getRemapper(), value);
 
 		StringWriter stringWriter = new StringWriter();
 		JsonWriter writer = new JsonWriter(stringWriter);
@@ -232,7 +233,7 @@ public final class NativeJSON extends IdScriptableObject {
 	}
 
 	private static void type(SharedContextData data, StringBuilder builder, Class<?> type) {
-		String s = data.getRemapper().getMappedClass(data, PublicClassData.of(type));
+		String s = data.getRemapper().getMappedClass(PublicClassData.of(type));
 
 		if (s.startsWith("java.lang.") || s.startsWith("java.util.")) {
 			builder.append(s.substring(10));
@@ -255,7 +256,7 @@ public final class NativeJSON extends IdScriptableObject {
 		builder.append(')');
 	}
 
-	public static JsonElement stringify0(Context cx, SharedContextData data, Object v) {
+	public static JsonElement stringify0(Context cx, Remapper remapper, Object v) {
 		if (v == null) {
 			return JsonNull.INSTANCE;
 		} else if (v instanceof Boolean) {
@@ -272,7 +273,7 @@ public final class NativeJSON extends IdScriptableObject {
 			JsonObject json = new JsonObject();
 
 			for (Map.Entry<?, ?> entry : ((Map<?, ?>) v).entrySet()) {
-				json.add(entry.getKey().toString(), stringify0(cx, data, entry.getValue()));
+				json.add(entry.getKey().toString(), stringify0(cx, remapper, entry.getValue()));
 			}
 
 			return json;
@@ -280,7 +281,7 @@ public final class NativeJSON extends IdScriptableObject {
 			JsonArray json = new JsonArray();
 
 			for (Object o : (Iterable<?>) v) {
-				json.add(stringify0(cx, data, o));
+				json.add(stringify0(cx, remapper, o));
 
 				return json;
 			}
@@ -298,15 +299,13 @@ public final class NativeJSON extends IdScriptableObject {
 			array++;
 		}
 
-		PublicClassData classData = PublicClassData.of(cl);
+		var classData = new RemappedClassData(PublicClassData.of(cl), remapper);
 
-		StringBuilder clName = new StringBuilder(data.getRemapper().getMappedClass(data, classData));
+		StringBuilder clName = new StringBuilder(classData.name);
 
 		if (array > 0) {
 			clName.append("[]".repeat(array));
 		}
-
-		JsonArray list = new JsonArray();
 
 		if (cl.isInterface()) {
 			clName.insert(0, "interface ");
@@ -318,62 +317,7 @@ public final class NativeJSON extends IdScriptableObject {
 			clName.insert(0, "class ");
 		}
 
-		list.add(clName.toString());
-
-		for (ConstructorInfo constructor : classData.getConstructors()) {
-			StringBuilder builder = new StringBuilder("new ");
-			String s = data.getRemapper().getMappedClass(data, PublicClassData.of(constructor.getDeclaringClass()));
-			int si = s.lastIndexOf('.');
-			builder.append(si == -1 || si >= s.length() ? s : s.substring(si + 1));
-			params(data, builder, constructor.signature);
-			list.add(builder.toString());
-		}
-
-		for (var field : classData.getFields()) {
-			StringBuilder builder = new StringBuilder();
-
-			if (field.isStatic()) {
-				builder.append("static ");
-			}
-
-			if (field.isFinal()) {
-				builder.append("final ");
-			}
-
-			if (field.isNative()) {
-				builder.append("native ");
-			}
-
-			type(data, builder, field.getType());
-			builder.append(' ');
-			builder.append(data.getRemapper().getMappedField(data, classData, field));
-			list.add(builder.toString());
-		}
-
-		for (var method : classData.getMethods()) {
-			StringBuilder builder = new StringBuilder();
-
-			if (method.isStatic()) {
-				builder.append("static ");
-			}
-
-			if (method.isNative()) {
-				builder.append("native ");
-			}
-
-			type(data, builder, method.getType());
-			builder.append(' ');
-			builder.append(data.getRemapper().getMappedMethod(data, classData, method));
-			params(data, builder, method.signature);
-
-			String s = builder.toString();
-
-			if (!IGNORED_METHODS.contains(s)) {
-				list.add(s);
-			}
-		}
-
-		return list;
+		return new JsonPrimitive(clName.toString());
 	}
 
 	// #string_id_map#

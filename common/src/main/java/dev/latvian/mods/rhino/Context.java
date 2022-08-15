@@ -102,6 +102,7 @@ public class Context {
 	public boolean generateObserverCount = false;
 
 	boolean isTopLevelStrict;
+	public Scriptable topLevelScope;
 
 	/**
 	 * Creates a new context. Provided as a preferred super constructor for
@@ -698,7 +699,7 @@ public class Context {
 	 */
 	public NativeJavaList newArray(Scriptable scope, int length) {
 		var list = new ArrayList<>(length);
-		var result = new NativeJavaList(this, scope, list, list);
+		var result = new NativeJavaList(scope, list);
 		ScriptRuntime.setBuiltinProtoAndParent(this, result, scope, TopLevel.Builtins.Array);
 		return result;
 	}
@@ -719,13 +720,13 @@ public class Context {
 		}
 
 		var list = new ArrayList<>(Arrays.asList(elements));
-		var result = new NativeJavaList(this, scope, list, list);
+		var result = new NativeJavaList(scope, list);
 		ScriptRuntime.setBuiltinProtoAndParent(this, result, scope, TopLevel.Builtins.Array);
 		return result;
 	}
 
 	public Scriptable newArray(Scriptable scope, List<Object> elements) {
-		var result = new NativeJavaList(this, scope, elements, elements);
+		var result = new NativeJavaList(scope, elements);
 		ScriptRuntime.setBuiltinProtoAndParent(this, result, scope, TopLevel.Builtins.Array);
 		return result;
 	}
@@ -758,7 +759,7 @@ public class Context {
 	 * @param scope top scope object
 	 * @return value suitable to pass to any API that takes JavaScript values.
 	 */
-	public static Object javaToJS(Context cx, Object value, Scriptable scope) {
+	public static Object javaToJS(Context cx, Scriptable scope, Object value) {
 		if (value instanceof String || value instanceof Number || value instanceof Boolean || value instanceof Scriptable) {
 			return value;
 		} else if (value instanceof Character) {
@@ -780,12 +781,12 @@ public class Context {
 	 * @return the converted value
 	 * @throws EvaluatorException if the conversion cannot be performed
 	 */
-	public static Object jsToJava(Context cx, Object value, Class<?> desiredType) throws EvaluatorException {
+	public static Object jsToJava(Context cx, Scriptable scope, Object value, Class<?> desiredType) throws EvaluatorException {
 		if (desiredType == null) {
 			return Wrapper.unwrapped(value);
 		}
 
-		return NativeJavaObject.coerceTypeImpl(cx, desiredType, value);
+		return NativeJavaObject.coerceTypeImpl(cx, scope, desiredType, value);
 	}
 
 	/**
@@ -1235,11 +1236,7 @@ public class Context {
 		return isTopLevelStrict || (currentActivationCall != null && currentActivationCall.isStrict);
 	}
 
-	public SharedContextData getSharedData() {
-		return factory.getSharedData();
-	}
-
 	public SharedContextData getSharedData(Scriptable scope) {
-		return factory.getSharedData(scope);
+		return SharedContextData.get(this, scope == null ? topLevelScope : scope);
 	}
 }

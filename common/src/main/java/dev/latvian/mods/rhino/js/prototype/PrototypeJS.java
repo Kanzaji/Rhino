@@ -2,22 +2,15 @@ package dev.latvian.mods.rhino.js.prototype;
 
 import dev.latvian.mods.rhino.ContextJS;
 import dev.latvian.mods.rhino.Wrapper;
-import dev.latvian.mods.rhino.js.ArrayJS;
-import dev.latvian.mods.rhino.js.BooleanJS;
-import dev.latvian.mods.rhino.js.JavaClassJS;
-import dev.latvian.mods.rhino.js.JavaObjectJS;
-import dev.latvian.mods.rhino.js.NumberJS;
-import dev.latvian.mods.rhino.js.ObjectJS;
-import dev.latvian.mods.rhino.js.StringJS;
+import dev.latvian.mods.rhino.classdata.ExecutableGroup;
+import dev.latvian.mods.rhino.classdata.RemappedClassData;
 import dev.latvian.mods.rhino.js.TypeJS;
 import dev.latvian.mods.rhino.js.UndefinedJS;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public final class PrototypeJS implements WithPrototype, MemberFunctions {
 	public static final PrototypeJS DEFAULT = new PrototypeJS(TypeJS.UNDEFINED, "Default")
@@ -32,42 +25,19 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 		return Wrapper.unwrapped(self);
 	}
 
-	public static PrototypeJS of(ContextJS cx, Object object) {
-		if (object instanceof WithPrototype p) {
-			return p.getPrototype(cx);
-		} else if (object instanceof CharSequence || object instanceof Character) {
-			return StringJS.PROTOTYPE;
-		} else if (object instanceof Number) {
-			return NumberJS.PROTOTYPE;
-		} else if (object instanceof Boolean) {
-			return BooleanJS.PROTOTYPE;
-		} else if (object instanceof Class<?>) {
-			return JavaClassJS.PROTOTYPE;
-		} else if (object instanceof Map<?, ?>) {
-			return ObjectJS.PROTOTYPE;
-		} else if (object instanceof Iterable<?> || object != null && object.getClass().isArray()) {
-			return ArrayJS.PROTOTYPE;
-		}
-
-		return JavaObjectJS.PROTOTYPE;
-	}
-
 	public final TypeJS type;
 	public final String name;
 	private PrototypeJS parent;
-	private StaticFunctionCallback constructor;
-	private Map<String, PropertyCallback> properties;
-	private Map<String, FunctionCallback> functions;
-	private Map<String, StaticPropertyCallback> staticProperties;
-	private Map<String, StaticFunctionCallback> staticFunctions;
-	private Set<Object> keys;
+	private MemberFunctions constructor;
+	private MemberFunctions selfMembers;
+	private Map<String, MemberFunctions> members;
+	private Map<String, MemberFunctions> staticMembers;
 	private AsString asString;
 	private AsNumber asNumber;
 	private AsBoolean asBoolean;
 	private ListSupplier keyList;
 	private ListSupplier valueList;
 	private ListSupplier entryList;
-	private MemberFunctions memberFunctions;
 
 	private PrototypeJS(TypeJS type, String name) {
 		this.type = type;
@@ -80,8 +50,19 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 		this.entryList = ListSupplier.DEFAULT_ENTRIES;
 	}
 
+	private PrototypeJS(TypeJS type, String name, PrototypeJS p) {
+		this(type, name);
+		parent = p;
+		asString = p.asString;
+		asNumber = p.asNumber;
+		asBoolean = p.asBoolean;
+		keyList = p.keyList;
+		valueList = p.valueList;
+		entryList = p.entryList;
+	}
+
 	@Override
-	public PrototypeJS getPrototype(ContextJS cx) {
+	public PrototypeJS getPrototype() {
 		return this;
 	}
 
@@ -91,12 +72,7 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 	}
 
 	public PrototypeJS create(TypeJS type, String name) {
-		var p = new PrototypeJS(type, name);
-		p.parent = this;
-		p.asString = asString;
-		p.asNumber = asNumber;
-		p.asBoolean = asBoolean;
-		return p;
+		return new PrototypeJS(type, name, this);
 	}
 
 	public PrototypeJS create(String name) {
@@ -105,59 +81,59 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 
 	// Builder methods //
 
+	public PrototypeJS constructorMember(MemberFunctions constructor) {
+		this.constructor = constructor;
+		return this;
+	}
+
 	public PrototypeJS constructor(StaticFunctionCallback callback) {
-		this.constructor = callback;
+		return constructorMember(callback);
+	}
+
+	public PrototypeJS member(String name, MemberFunctions member) {
+		if (members == null) {
+			members = new HashMap<>();
+		}
+
+		members.put(name, member);
+		return this;
+	}
+
+	public PrototypeJS staticMember(String name, MemberFunctions member) {
+		if (staticMembers == null) {
+			staticMembers = new HashMap<>();
+		}
+
+		staticMembers.put(name, member);
 		return this;
 	}
 
 	public PrototypeJS property(String name, PropertyCallback callback) {
-		if (properties == null) {
-			properties = new HashMap<>();
-		}
-
-		keys = null;
-		properties.put(name, callback);
-		return this;
+		return member(name, callback);
 	}
 
 	public PrototypeJS function(String name, FunctionCallback callback) {
-		if (functions == null) {
-			functions = new HashMap<>();
-		}
-
-		keys = null;
-		functions.put(name, callback);
-		return this;
+		return member(name, callback);
 	}
 
 	public PrototypeJS function(String name, FunctionCallbackNoArgs callback) {
-		return function(name, (FunctionCallback) callback);
+		return member(name, callback);
 	}
 
 	public PrototypeJS staticProperty(String name, StaticPropertyCallback callback) {
-		if (staticProperties == null) {
-			staticProperties = new HashMap<>();
-		}
-
-		staticProperties.put(name, callback);
-		return this;
+		return staticMember(name, callback);
 	}
 
 	public PrototypeJS staticPropertyValue(String name, Object value) {
-		return staticProperty(name, new StaticPropertyCallback.Fixed(value));
+		return staticMember(name, new StaticPropertyCallback.Fixed(value));
 	}
 
 	public PrototypeJS staticFunction(String name, StaticFunctionCallback callback) {
-		if (staticFunctions == null) {
-			staticFunctions = new HashMap<>();
-		}
-
-		staticFunctions.put(name, callback);
-		return this;
+		return staticMember(name, callback);
 	}
 
 	public PrototypeJS staticFunction(String name, StaticFunctionCallbackNoArgs callback) {
-		return staticFunction(name, (StaticFunctionCallback) callback);
+		return staticMember(name, callback);
 	}
 
 	public PrototypeJS asString(AsString asString) {
@@ -190,46 +166,16 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 		return this;
 	}
 
-	public PrototypeJS memberFunctions(MemberFunctions memberFunctions) {
-		this.memberFunctions = memberFunctions;
+	public PrototypeJS selfMembers(MemberFunctions selfMembers) {
+		this.selfMembers = selfMembers;
 		return this;
 	}
 
 	// Getters //
 
 	@Nullable
-	public StaticFunctionCallback getConstructor() {
+	public MemberFunctions getConstructor() {
 		return constructor;
-	}
-
-	public Set<Object> getPrototypeKeys() {
-		if (keys == null) {
-			keys = new HashSet<>((properties == null ? 0 : properties.size()) + (functions == null ? 0 : functions.size()));
-
-			if (properties != null) {
-				keys.addAll(properties.keySet());
-			}
-
-			if (functions != null) {
-				keys.addAll(functions.keySet());
-			}
-
-			keys = Set.copyOf(keys);
-		}
-
-		return keys;
-	}
-
-	public Set<Object> getAllPrototypeKeys() {
-		var keys = new HashSet<>();
-		PrototypeJS p = this;
-
-		while (p != null) {
-			keys.addAll(p.getPrototypeKeys());
-			p = p.parent;
-		}
-
-		return keys;
 	}
 
 	public String getAsString(Object value) {
@@ -257,134 +203,232 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 	}
 
 	@Override
-	public Object getValue(ContextJS cx, @Nullable Object self, Object key) {
+	public Object getValue(ContextJS cx, @Nullable Object self, Object key, CastType returnType) {
 		if (self instanceof MemberFunctions mf) {
-			var result = mf.getValue(cx, self, key);
+			var result = mf.getValue(cx, self, key, returnType);
 
 			if (result != UndefinedJS.PROTOTYPE) {
 				return result;
 			}
 		}
 
-		Object result = UndefinedJS.PROTOTYPE;
 		PrototypeJS p = this;
 
-		while (result == UndefinedJS.PROTOTYPE && p != null) {
-			if (p.memberFunctions != null) {
-				result = p.memberFunctions.getValue(cx, self, key);
-			}
+		while (p != null) {
+			if (p.selfMembers != null) {
+				var result = p.selfMembers.getValue(cx, self, key, returnType);
 
-			if (result == UndefinedJS.PROTOTYPE && p.properties != null && self != null) {
-				var o = p.properties.get(name);
-
-				if (o != null) {
-					result = o.get(cx, self);
+				if (result != UndefinedJS.PROTOTYPE) {
+					return result;
 				}
 			}
 
-			if (result == UndefinedJS.PROTOTYPE && p.staticProperties != null) {
-				var o = p.staticProperties.get(name);
+			if (key instanceof String) {
+				if (p.members != null && self != null) {
+					var o = p.members.get(key);
 
-				if (o != null) {
-					result = o.get(cx);
+					if (o != null) {
+						var result = o.getValue(cx, self, key, returnType);
+
+						if (result != UndefinedJS.PROTOTYPE) {
+							return result;
+						}
+					}
+				}
+
+				if (p.staticMembers != null) {
+					var o = p.staticMembers.get(key);
+
+					if (o != null) {
+						var result = o.getValue(cx, null, key, returnType);
+
+						if (result != UndefinedJS.PROTOTYPE) {
+							return result;
+						}
+					}
 				}
 			}
 
 			p = p.parent;
 		}
 
-		return result;
+		return UndefinedJS.PROTOTYPE;
 	}
 
 	@Override
-	public boolean setValue(ContextJS cx, @Nullable Object self, Object key, Object value) {
+	public boolean hasValue(ContextJS cx, @Nullable Object self, Object key) {
+		if (self instanceof MemberFunctions mf && mf.hasValue(cx, self, key)) {
+			return true;
+		}
+
+		PrototypeJS p = this;
+
+		while (p != null) {
+			if (p.selfMembers != null && p.selfMembers.hasValue(cx, self, key)) {
+				return true;
+			}
+
+			if (key instanceof String) {
+				if (p.members != null && self != null && p.members.containsKey(key)) {
+					return true;
+				}
+
+				if (p.staticMembers != null && p.staticMembers.containsKey(key)) {
+					return true;
+				}
+			}
+
+			p = p.parent;
+		}
+
+		return false;
+	}
+
+	@Override
+	public boolean setValue(ContextJS cx, @Nullable Object self, Object key, Object value, CastType valueType) {
 		if (self == null) {
 			return false;
 		} else if (self instanceof MemberFunctions mf) {
-			var result = mf.setValue(cx, self, key, value);
+			var result = mf.setValue(cx, self, key, value, valueType);
 
 			if (result) {
 				return true;
 			}
 		}
 
-		boolean result = false;
 		PrototypeJS p = this;
 
-		while (!result && p != null) {
-			if (p.memberFunctions != null) {
-				result = p.memberFunctions.setValue(cx, self, key, value);
+		while (p != null) {
+			if (p.selfMembers != null && p.selfMembers.setValue(cx, self, key, value, valueType)) {
+				return true;
 			}
 
 			p = p.parent;
 		}
 
-		return result;
+		return false;
 	}
 
 	@Override
-	public Object invoke(ContextJS cx, @Nullable Object self, Object key, Object[] args) {
+	public Object invoke(ContextJS cx, @Nullable Object self, Object key, Object[] args, CastType returnType) {
 		if (self instanceof MemberFunctions mf) {
-			var result = mf.invoke(cx, self, key, args);
+			var result = mf.invoke(cx, self, key, args, returnType);
 
 			if (result != UndefinedJS.PROTOTYPE) {
 				return result;
 			}
 		}
 
-		Object result = UndefinedJS.PROTOTYPE;
 		PrototypeJS p = this;
 
-		while (result == UndefinedJS.PROTOTYPE && p != null) {
-			if (p.memberFunctions != null && self != null) {
-				result = p.memberFunctions.invoke(cx, self, key, args);
-			}
+		while (p != null) {
+			if (p.selfMembers != null && self != null) {
+				var result = p.selfMembers.invoke(cx, self, key, args, returnType);
 
-			if (result == UndefinedJS.PROTOTYPE && p.functions != null && self != null) {
-				var o = p.functions.get(name);
-
-				if (o != null) {
-					result = o.invoke(cx, self, args);
+				if (result != UndefinedJS.PROTOTYPE) {
+					return result;
 				}
 			}
 
-			if (result == UndefinedJS.PROTOTYPE && p.staticFunctions != null) {
-				var o = p.staticFunctions.get(name);
+			if (key instanceof String) {
+				if (p.members != null && self != null) {
+					var o = p.members.get(key);
 
-				if (o != null) {
-					result = o.invoke(cx, args);
+					if (o != null) {
+						var result = o.invoke(cx, self, key, args, returnType);
+
+						if (result != UndefinedJS.PROTOTYPE) {
+							return result;
+						}
+					}
+				}
+
+				if (p.staticMembers != null) {
+					var o = p.staticMembers.get(key);
+
+					if (o != null) {
+						var result = o.invoke(cx, null, key, args, returnType);
+
+						if (result != UndefinedJS.PROTOTYPE) {
+							return result;
+						}
+					}
 				}
 			}
 
 			p = p.parent;
 		}
 
-		return result;
+		return UndefinedJS.PROTOTYPE;
 	}
 
 	@Override
-	public boolean deleteValue(ContextJS cx, @Nullable Object self, Object key) {
-		if (self == null) {
-			return false;
-		} else if (self instanceof MemberFunctions mf) {
-			var result = mf.deleteValue(cx, self, key);
+	public Object deleteValue(ContextJS cx, @Nullable Object self, Object key, CastType returnType) {
+		if (self instanceof MemberFunctions mf) {
+			var result = mf.getValue(cx, self, key, returnType);
 
-			if (result) {
-				return true;
+			if (result != UndefinedJS.PROTOTYPE) {
+				return result;
 			}
 		}
 
-		boolean result = false;
 		PrototypeJS p = this;
 
-		while (!result && p != null) {
-			if (p.memberFunctions != null) {
-				result = p.memberFunctions.deleteValue(cx, self, key);
+		while (p != null) {
+			if (p.selfMembers != null) {
+				var result = p.selfMembers.deleteValue(cx, self, key, returnType);
+
+				if (result != UndefinedJS.PROTOTYPE) {
+					return result;
+				}
+			}
+
+			if (key instanceof String) {
+				if (p.members != null && self != null) {
+					var o = p.members.get(key);
+
+					if (o != null) {
+						var result = o.deleteValue(cx, self, key, returnType);
+
+						if (result != UndefinedJS.PROTOTYPE) {
+							return result;
+						}
+					}
+				}
+
+				if (p.staticMembers != null) {
+					var o = p.staticMembers.get(key);
+
+					if (o != null) {
+						var result = o.deleteValue(cx, null, key, returnType);
+
+						if (result != UndefinedJS.PROTOTYPE) {
+							return result;
+						}
+					}
+				}
 			}
 
 			p = p.parent;
 		}
 
-		return result;
+		return UndefinedJS.PROTOTYPE;
+	}
+
+	public void fill(RemappedClassData classData) {
+		classData.members.forEach(this::member);
+		classData.staticMembers.forEach(this::staticMember);
+
+		var ctors = classData.publicClassData.getConstructors();
+
+		if (ctors.length > 0) {
+			constructorMember(ctors.length == 1 ? ctors[0] : new ExecutableGroup(ctors));
+		}
+	}
+
+	public void optimize() {
+		// Map.Entry[] entries = new Map.Entry[m.size()];
+		// System.arraycopy(m.entrySet().toArray(), 0, entries, 0, entries.length);
+		// m = Map.ofEntries(entries);
 	}
 }

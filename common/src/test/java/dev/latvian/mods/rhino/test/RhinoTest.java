@@ -21,6 +21,7 @@ public class RhinoTest {
 	public final Map<String, Object> include;
 	private boolean shareScope;
 	public Scriptable sharedScope;
+	private boolean initialized;
 
 	public RhinoTest(String n) {
 		testName = n;
@@ -48,23 +49,27 @@ public class RhinoTest {
 			}
 
 			var scope = sharedScope != null ? sharedScope : cx.initStandardObjects();
-			var sharedData = cx.getSharedData(scope);
-			// context.setClassShutter((fullClassName, type) -> type != ClassShutter.TYPE_CLASS_IN_PACKAGE || isClassAllowed(fullClassName));
 
-			var typeWrappers = sharedData.getTypeWrappers();
-			typeWrappers.register(CompoundTag.class, NBTUtils::isTagCompound, NBTUtils::toTagCompound);
-			typeWrappers.register(CollectionTag.class, NBTUtils::isTagCollection, NBTUtils::toTagCollection);
-			typeWrappers.register(ListTag.class, NBTUtils::isTagCollection, NBTUtils::toTagList);
-			typeWrappers.register(Tag.class, NBTUtils::toTag);
+			if (!initialized) {
+				initialized = true;
+				var sharedData = cx.getSharedData(scope);
+				// context.setClassShutter((fullClassName, type) -> type != ClassShutter.TYPE_CLASS_IN_PACKAGE || isClassAllowed(fullClassName));
 
-			sharedData.addCustomJavaToJsWrapper(CompoundTag.class, CompoundTagWrapper::new);
-			sharedData.addCustomJavaToJsWrapper(CollectionTag.class, CollectionTagWrapper::new);
+				var typeWrappers = sharedData.getTypeWrappers();
+				typeWrappers.register(CompoundTag.class, NBTUtils::isTagCompound, NBTUtils::toTagCompound);
+				typeWrappers.register(CollectionTag.class, NBTUtils::isTagCollection, NBTUtils::toTagCollection);
+				typeWrappers.register(ListTag.class, NBTUtils::isTagCollection, NBTUtils::toTagList);
+				typeWrappers.register(Tag.class, NBTUtils::toTag);
 
-			for (var entry : include.entrySet()) {
-				if (entry.getValue() instanceof Class<?> c) {
-					ScriptableObject.putProperty(cx, scope, entry.getKey(), new NativeJavaClass(cx, scope, c));
-				} else {
-					ScriptableObject.putProperty(cx, scope, entry.getKey(), Context.javaToJS(cx, entry.getValue(), scope));
+				sharedData.addCustomJavaToJsWrapper(CompoundTag.class, CompoundTagWrapper::new);
+				sharedData.addCustomJavaToJsWrapper(CollectionTag.class, CollectionTagWrapper::new);
+
+				for (var entry : include.entrySet()) {
+					if (entry.getValue() instanceof Class<?> c) {
+						ScriptableObject.putProperty(cx, scope, entry.getKey(), new NativeJavaClass(scope, c));
+					} else {
+						ScriptableObject.putProperty(cx, scope, entry.getKey(), Context.javaToJS(cx, scope, entry.getValue()));
+					}
 				}
 			}
 

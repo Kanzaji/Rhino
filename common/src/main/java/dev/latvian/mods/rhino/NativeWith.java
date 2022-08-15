@@ -6,6 +6,8 @@
 
 package dev.latvian.mods.rhino;
 
+import dev.latvian.mods.rhino.js.TypeJS;
+
 /**
  * This class implements the object lookup required for the
  * <code>with</code> statement.
@@ -152,7 +154,7 @@ public class NativeWith implements Scriptable, SymbolScriptable, IdFunctionCall 
 	}
 
 	@Override
-	public Object getDefaultValue(Context cx, Class<?> typeHint) {
+	public Object getDefaultValue(ContextJS cx, TypeJS typeHint) {
 		return prototype.getDefaultValue(cx, typeHint);
 	}
 

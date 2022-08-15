@@ -20,12 +20,16 @@ public class ContextJS {
 		return scope;
 	}
 
+	public Scriptable getTopLevelScope() {
+		return ScriptableObject.getTopLevelScope(scope);
+	}
+
 	public void setFrame(Interpreter.CallFrame frame) {
 		this.scope = frame.scope;
 		this.sharedContextData = null;
 	}
 
-	public SharedContextData getSharedContextData() {
+	public SharedContextData getSharedData() {
 		if (sharedContextData == null) {
 			sharedContextData = context.getSharedData(getScope());
 		}

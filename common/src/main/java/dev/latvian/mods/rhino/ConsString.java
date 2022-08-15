@@ -24,7 +24,7 @@ import java.util.ArrayDeque;
  *
  * <p>Both the name and the concept are borrowed from V8.</p>
  */
-public class ConsString implements CharSequence {
+public class ConsString implements CharSequence, Wrapper {
 	private CharSequence left;
 	private CharSequence right;
 	private final int length;
@@ -82,13 +82,16 @@ public class ConsString implements CharSequence {
 
 	@Override
 	public char charAt(int index) {
-		String str = isFlat ? (String) left : flatten();
-		return str.charAt(index);
+		return toString().charAt(index);
 	}
 
 	@Override
 	public CharSequence subSequence(int start, int end) {
-		String str = isFlat ? (String) left : flatten();
-		return str.substring(start, end);
+		return toString().substring(start, end);
+	}
+
+	@Override
+	public Object unwrap() {
+		return toString();
 	}
 }

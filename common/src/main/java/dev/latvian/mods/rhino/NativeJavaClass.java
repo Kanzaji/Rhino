@@ -6,13 +6,13 @@
 
 package dev.latvian.mods.rhino;
 
-import dev.latvian.mods.rhino.classdata.ConstructorInfo;
 import dev.latvian.mods.rhino.classdata.MethodSignature;
 import dev.latvian.mods.rhino.js.NumberJS;
+import dev.latvian.mods.rhino.js.TypeJS;
 import dev.latvian.mods.rhino.js.UndefinedJS;
+import dev.latvian.mods.rhino.js.prototype.CastType;
 import dev.latvian.mods.rhino.js.prototype.PrototypeJS;
 
-import java.lang.reflect.Array;
 import java.lang.reflect.Modifier;
 
 /**
@@ -32,8 +32,8 @@ import java.lang.reflect.Modifier;
 public class NativeJavaClass extends NativeJavaObject implements Function {
 	// Special property for getting the underlying Java class object.
 
-	public NativeJavaClass(Context cx, Scriptable scope, Class<?> cl) {
-		super(cx, scope, cl, cl);
+	public NativeJavaClass(Scriptable scope, Class<?> cl) {
+		super(scope, cl, cl);
 	}
 
 	@Override
@@ -43,7 +43,7 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 
 	@Override
 	public boolean has(Context cx, String name, Scriptable start) {
-		return classData.getMember(name, true) != null;
+		return getPrototypeJS(new ContextJS(cx, start)).hasValue(new ContextJS(cx, start), null, name);
 	}
 
 	@Override
@@ -57,12 +57,12 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 		}
 
 		ContextJS cxjs = new ContextJS(cx, start);
-		PrototypeJS p = classData.getPrototype(cxjs);
+		PrototypeJS p = getPrototypeJS(cxjs);
 
-		Object value = p.getValue(cxjs, null, name);
+		Object value = p.getValue(cxjs, null, name, CastType.WRAP);
 
 		if (value != UndefinedJS.PROTOTYPE) {
-			return Context.javaToJS(cx, value, start);
+			return value;
 
 			/*
 			Scriptable scope = ScriptableObject.getTopLevelScope(start);
@@ -79,36 +79,24 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 			 */
 		}
 
-		throw classData.reportMemberNotFound(cx, name);
+		return Scriptable.NOT_FOUND;
 	}
 
 	@Override
 	public void put(Context cx, String name, Scriptable start, Object value) {
-		var m = classData.getMember(name, true);
-
-		if (m != null) {
-			m.setJS(new ContextJS(cx, start), null, value);
-		}
+		var cxjs = new ContextJS(cx, start);
+		getPrototypeJS(cxjs).setValue(cxjs, null, name, value, CastType.UNWRAP);
 	}
 
 	@Override
-	public Object[] getIds(Context cx) {
-		return classData.getMembers(true).keySet().toArray();
-	}
-
-	public Class<?> getClassObject() {
-		return (Class<?>) super.unwrap();
-	}
-
-	@Override
-	public Object getDefaultValue(Context cx, Class<?> hint) {
-		if (hint == null || hint == ScriptRuntime.StringClass) {
-			return this.toString();
+	public Object getDefaultValue(ContextJS cx, TypeJS hint) {
+		if (hint == null || hint == TypeJS.STRING) {
+			return staticType.getName();
 		}
-		if (hint == ScriptRuntime.BooleanClass) {
+		if (hint == TypeJS.BOOLEAN) {
 			return Boolean.TRUE;
 		}
-		if (hint == ScriptRuntime.NumberClass) {
+		if (hint == TypeJS.NUMBER) {
 			return NumberJS.NaN;
 		}
 		return this;
@@ -120,11 +108,10 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 		// walk the prototype chain to see if there's a wrapper of a
 		// object that's an instanceof this class.
 		if (args.length == 1 && args[0] instanceof Scriptable p) {
-			Class<?> c = getClassObject();
 			do {
 				if (p instanceof Wrapper) {
 					Object o = ((Wrapper) p).unwrap();
-					if (c.isInstance(o)) {
+					if (staticType.isInstance(o)) {
 						return p;
 					}
 				}
@@ -136,18 +123,21 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 
 	@Override
 	public Scriptable construct(Context cx, Scriptable scope, Object[] args) {
-		Class<?> classObject = getClassObject();
-		int modifiers = classObject.getModifiers();
+		int modifiers = staticType.getModifiers();
 		if (!(Modifier.isInterface(modifiers) || Modifier.isAbstract(modifiers))) {
-			var cp = classData.constructor(cx.getSharedData(scope), args, MethodSignature.ofArgs(args));
+			var cxjs = new ContextJS(cx, scope);
+			var cons = getPrototypeJS(cxjs).getConstructor();
 
-			if (cp.isSet()) {
-				// Found the constructor, so try invoking it.
-				return constructSpecific(cx, scope, args, cp.get());
-			} else {
-				String sig = MethodSignature.scriptSignature(args);
-				throw Context.reportRuntimeError2(cx, "msg.no.java.ctor", classObject.getName(), sig);
+			if (cons != null) {
+				var inst = cons.invoke(cxjs, null, "<init>", args, CastType.WRAP);
+
+				if (inst instanceof Scriptable s) {
+					return s;
+				}
 			}
+
+			String sig = MethodSignature.scriptSignature(args);
+			throw Context.reportRuntimeError2(cx, "msg.no.java.ctor", staticType.getName(), sig);
 		}
 		if (args.length == 0) {
 			throw Context.reportRuntimeError0(cx, "msg.adapter.zero.args");
@@ -171,72 +161,12 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 				msg = m;
 			}
 		}
-		throw Context.reportRuntimeError2(cx, "msg.cant.instantiate", msg, classObject.getName());
-	}
-
-	static Scriptable constructSpecific(Context cx, Scriptable scope, Object[] args, ConstructorInfo ctor) {
-		Object instance = constructInternal(cx, scope, args, ctor);
-		// we need to force this to be wrapped, because construct _has_
-		// to return a scriptable
-		Scriptable topLevel = ScriptableObject.getTopLevelScope(scope);
-		return cx.getWrapFactory().wrapNewObject(cx, topLevel, instance);
-	}
-
-	static Object constructInternal(Context cx, Scriptable scope, Object[] args, ConstructorInfo ctor) {
-		Class<?>[] argTypes = ctor.signature.types;
-
-		if (ctor.isVarArgs()) {
-			// marshall the explicit parameter
-			Object[] newArgs = new Object[argTypes.length];
-			for (int i = 0; i < argTypes.length - 1; i++) {
-				newArgs[i] = Context.jsToJava(cx, args[i], argTypes[i]);
-			}
-
-			Object varArgs;
-
-			// Handle special situation where a single variable parameter
-			// is given and it is a Java or ECMA array.
-			if (args.length == argTypes.length && (args[args.length - 1] == null || args[args.length - 1] instanceof NativeJavaList)) {
-				// convert the ECMA array into a native array
-				varArgs = Context.jsToJava(cx, args[args.length - 1], argTypes[argTypes.length - 1]);
-			} else {
-				// marshall the variable parameter
-				Class<?> componentType = argTypes[argTypes.length - 1].getComponentType();
-				varArgs = Array.newInstance(componentType, args.length - argTypes.length + 1);
-				for (int i = 0; i < Array.getLength(varArgs); i++) {
-					Object value = Context.jsToJava(cx, args[argTypes.length - 1 + i], componentType);
-					Array.set(varArgs, i, value);
-				}
-			}
-
-			// add varargs
-			newArgs[argTypes.length - 1] = varArgs;
-			// replace the original args with the new one
-			args = newArgs;
-		} else {
-			Object[] origArgs = args;
-			for (int i = 0; i < args.length; i++) {
-				Object arg = args[i];
-				Object x = Context.jsToJava(cx, arg, argTypes[i]);
-				if (x != arg) {
-					if (args == origArgs) {
-						args = origArgs.clone();
-					}
-					args[i] = x;
-				}
-			}
-		}
-
-		try {
-			return ctor.newInstance(args);
-		} catch (Exception ex) {
-			throw Context.throwAsScriptRuntimeEx(ex);
-		}
+		throw Context.reportRuntimeError2(cx, "msg.cant.instantiate", msg, staticType.getName());
 	}
 
 	@Override
 	public String toString() {
-		return "[JavaClass " + getClassObject().getName() + "]";
+		return "[JavaClass " + staticType.getName() + "]";
 	}
 
 	/**
@@ -248,12 +178,12 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 	 * static methods exposed by a JavaNativeClass.
 	 */
 	@Override
-	public boolean hasInstance(Context cx, Scriptable value) {
+	public boolean hasInstance(Context cx, Scriptable lhsScriptable) {
 
-		if (value instanceof Wrapper && !(value instanceof NativeJavaClass)) {
-			Object instance = ((Wrapper) value).unwrap();
+		if (lhsScriptable instanceof Wrapper && !(lhsScriptable instanceof NativeJavaClass)) {
+			Object instance = ((Wrapper) lhsScriptable).unwrap();
 
-			return getClassObject().isInstance(instance);
+			return staticType.isInstance(instance);
 		}
 
 		// value wasn't something we understand

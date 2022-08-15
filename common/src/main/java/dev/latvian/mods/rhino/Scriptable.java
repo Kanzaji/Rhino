@@ -8,6 +8,8 @@
 
 package dev.latvian.mods.rhino;
 
+import dev.latvian.mods.rhino.js.TypeJS;
+
 import java.util.function.Consumer;
 
 /**
@@ -297,7 +299,7 @@ public interface Scriptable extends IdEnumerationIterator {
 	 * @param hint the type hint
 	 * @return the default value
 	 */
-	Object getDefaultValue(Context cx, Class<?> hint);
+	Object getDefaultValue(ContextJS cx, TypeJS hint);
 
 	/**
 	 * The instanceof operator.
@@ -320,31 +322,31 @@ public interface Scriptable extends IdEnumerationIterator {
 	boolean hasInstance(Context cx, Scriptable instance);
 
 	@Override
-	default boolean enumerationIteratorHasNext(Context cx, Consumer<Object> currentId) {
-		Object v = ScriptableObject.getProperty(cx, this, ES6Iterator.NEXT_METHOD);
+	default boolean enumerationIteratorHasNext(ContextJS cx, Consumer<Object> currentId) {
+		Object v = ScriptableObject.getProperty(cx.context, this, ES6Iterator.NEXT_METHOD);
 
 		if (!(v instanceof Callable f)) {
-			throw ScriptRuntime.notFunctionError(cx, this, ES6Iterator.NEXT_METHOD);
+			throw ScriptRuntime.notFunctionError(cx.context, this, ES6Iterator.NEXT_METHOD);
 		}
 
 		Scriptable scope = getParentScope();
-		Object r = f.call(cx, scope, this, ScriptRuntime.EMPTY_OBJECTS);
-		Scriptable iteratorResult = ScriptRuntime.toObject(cx, scope, r);
-		currentId.accept(ScriptableObject.getProperty(cx, iteratorResult, ES6Iterator.VALUE_PROPERTY));
-		Object done = ScriptableObject.getProperty(cx, iteratorResult, ES6Iterator.DONE_PROPERTY);
-		return done == Scriptable.NOT_FOUND || !ScriptRuntime.toBoolean(cx, done);
+		Object r = f.call(cx.context, scope, this, ScriptRuntime.EMPTY_OBJECTS);
+		Scriptable iteratorResult = ScriptRuntime.toObject(cx.context, scope, r);
+		currentId.accept(ScriptableObject.getProperty(cx.context, iteratorResult, ES6Iterator.VALUE_PROPERTY));
+		Object done = ScriptableObject.getProperty(cx.context, iteratorResult, ES6Iterator.DONE_PROPERTY);
+		return done == Scriptable.NOT_FOUND || !cx.asBoolean(done);
 	}
 
 	@Override
-	default boolean enumerationIteratorNext(Context cx, Consumer<Object> currentId) throws JavaScriptException {
-		Object v = ScriptableObject.getProperty(cx, this, ES6Iterator.NEXT_METHOD);
+	default boolean enumerationIteratorNext(ContextJS cx, Consumer<Object> currentId) throws JavaScriptException {
+		Object v = ScriptableObject.getProperty(cx.context, this, ES6Iterator.NEXT_METHOD);
 
 		if (!(v instanceof Callable f)) {
 			return false;
 		}
 
 		Scriptable scope = getParentScope();
-		currentId.accept(f.call(cx, scope, this, ScriptRuntime.EMPTY_OBJECTS));
+		currentId.accept(f.call(cx.context, scope, this, ScriptRuntime.EMPTY_OBJECTS));
 		return true;
 	}
 

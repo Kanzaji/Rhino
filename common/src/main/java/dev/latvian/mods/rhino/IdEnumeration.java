@@ -31,7 +31,7 @@ public class IdEnumeration implements Consumer<Object> {
 	IdEnumerationIterator iterator;
 	public Object tempResult;
 
-	public Boolean next(Context cx) {
+	public Boolean next(ContextJS cx) {
 		if (iterator != null) {
 			if (enumType == ScriptRuntime.ENUMERATE_VALUES_IN_ORDER) {
 				if (iterator.enumerationIteratorHasNext(cx, this)) {
@@ -66,8 +66,8 @@ public class IdEnumeration implements Consumer<Object> {
 				return Boolean.FALSE;
 			}
 			if (index == ids.length) {
-				obj = obj.getPrototype(cx);
-				changeObject(cx);
+				obj = obj.getPrototype(cx.context);
+				changeObject(cx.context);
 				continue;
 			}
 			Object id = ids[index++];
@@ -77,13 +77,13 @@ public class IdEnumeration implements Consumer<Object> {
 			if (id instanceof Symbol) {
 				continue;
 			} else if (id instanceof String strId) {
-				if (!obj.has(cx, strId, obj)) {
+				if (!obj.has(cx.context, strId, obj)) {
 					continue;   // must have been deleted
 				}
 				currentId = strId;
 			} else {
 				int intId = ((Number) id).intValue();
-				if (!obj.has(cx, intId, obj)) {
+				if (!obj.has(cx.context, intId, obj)) {
 					continue;   // must have been deleted
 				}
 				currentId = enumNumbers ? Integer.valueOf(intId) : String.valueOf(intId);
@@ -146,15 +146,15 @@ public class IdEnumeration implements Consumer<Object> {
 		return result;
 	}
 
-	public Object nextExec(Context cx, Scriptable scope) {
+	public Object nextExec(ContextJS cx) {
 		Boolean b = next(cx);
 
 		if (!b) {
 			// Out of values. Throw StopIteration.
-			throw new JavaScriptException(cx, NativeIterator.getStopIterationObject(cx, scope), null, 0);
+			throw new JavaScriptException(cx.context, NativeIterator.getStopIterationObject(cx.context, cx.getScope()), null, 0);
 		}
 
-		return getId(cx);
+		return getId(cx.context);
 	}
 
 	@Override

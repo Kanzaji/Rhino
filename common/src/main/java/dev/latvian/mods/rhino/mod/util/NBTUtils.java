@@ -5,7 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import dev.latvian.mods.rhino.Undefined;
-import dev.latvian.mods.rhino.util.ValueUnwrapper;
+import dev.latvian.mods.rhino.js.prototype.CastType;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.handler.codec.EncoderException;
 import net.minecraft.nbt.ByteArrayTag;
@@ -42,7 +42,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface NBTUtils {
-	ValueUnwrapper VALUE_UNWRAPPER = (cx, scope, value) -> value instanceof Tag tag ? fromTag(tag) : value;
+	CastType VALUE_UNWRAPPER = (cx, value) -> value instanceof Tag tag ? fromTag(tag) : value;
 
 	@Nullable
 	static Object fromTag(@Nullable Tag t) {

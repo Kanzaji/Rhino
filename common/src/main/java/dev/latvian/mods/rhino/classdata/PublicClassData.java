@@ -1,9 +1,6 @@
 package dev.latvian.mods.rhino.classdata;
 
-import dev.latvian.mods.rhino.ContextJS;
 import dev.latvian.mods.rhino.ScriptRuntime;
-import dev.latvian.mods.rhino.js.prototype.PrototypeJS;
-import dev.latvian.mods.rhino.js.prototype.WithPrototype;
 import dev.latvian.mods.rhino.util.HideFromJS;
 import dev.latvian.mods.rhino.util.RemapPrefixForJS;
 import org.apache.commons.lang3.mutable.MutableBoolean;
@@ -12,21 +9,19 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class PublicClassData implements WithPrototype {
+public class PublicClassData {
 	public static final Set<Class<?>> EXCLUDED_PARENT_CLASSES = Set.of(Object.class, Comparable.class);
 	public static final PublicClassData[] EMPTY_ARRAY = new PublicClassData[0];
 
 	public static final PublicClassData OBJECT = new PublicClassData(Object.class);
-	public static final PublicClassData OBJECT_ARRAY = new PublicClassData(Object[].class);
-	public static final PublicClassData CLASS = new PublicClassData(Class.class);
 	private static final Object LOCK = new Object();
-	private static final Map<Class<?>, PublicClassData> CACHE = new HashMap<>();
+	private static final Map<Class<?>, PublicClassData> CACHE = new IdentityHashMap<>();
 
 	public static PublicClassData of(Class<?> type) {
 		if (type == null || type == Object.class) {
@@ -52,7 +47,6 @@ public class PublicClassData implements WithPrototype {
 	private ConstructorInfo[] constructors;
 	private FieldInfo[] fields;
 	private MethodInfo[] methods;
-	private MethodInfo[] declaredMethods;
 	private PublicClassData[] nestedClasses;
 
 	private PublicClassData(Class<?> type) {
@@ -188,22 +182,6 @@ public class PublicClassData implements WithPrototype {
 		return methods;
 	}
 
-	public MethodInfo[] getDeclaredMethods() {
-		if (declaredMethods == null) {
-			List<MethodInfo> declaredMethodList = new ArrayList<>();
-
-			for (var m : getMethods()) {
-				if (m.getDeclaringClass() == type) {
-					declaredMethodList.add(m);
-				}
-			}
-
-			declaredMethods = declaredMethodList.isEmpty() ? MethodInfo.EMPTY_ARRAY : declaredMethodList.toArray(MethodInfo.EMPTY_ARRAY);
-		}
-
-		return declaredMethods;
-	}
-
 	public PublicClassData[] getNestedClasses() {
 		if (nestedClasses == null) {
 			List<PublicClassData> nestedClassList = new ArrayList<>();
@@ -218,10 +196,5 @@ public class PublicClassData implements WithPrototype {
 		}
 
 		return nestedClasses;
-	}
-
-	@Override
-	public PrototypeJS getPrototype(ContextJS cx) {
-		return cx.getSharedContextData().getClassDataCache().of(type).getPrototype(cx);
 	}
 }

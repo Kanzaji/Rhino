@@ -106,19 +106,6 @@ public class ContextFactory {
 	private final Object listenersLock = new Object();
 	private volatile Object listeners;
 	private boolean disabledListening;
-	private SharedContextData sharedData;
-
-	public SharedContextData getSharedData(Scriptable scope) {
-		return getSharedData();
-	}
-
-	public SharedContextData getSharedData() {
-		if (sharedData == null) {
-			sharedData = new SharedContextData(this);
-		}
-
-		return sharedData;
-	}
 
 	/**
 	 * Listener of {@link Context} creation and release events.

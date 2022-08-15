@@ -8,16 +8,11 @@
 
 package dev.latvian.mods.rhino;
 
-import dev.latvian.mods.rhino.classdata.BaseMember;
-import dev.latvian.mods.rhino.classdata.ClassData;
-import dev.latvian.mods.rhino.classdata.ConstructorInfo;
-import dev.latvian.mods.rhino.classdata.DelegatedMember;
-import dev.latvian.mods.rhino.classdata.MethodInfo;
-import dev.latvian.mods.rhino.classdata.PublicClassData;
+import dev.latvian.mods.rhino.classdata.DelegatedMemberFunctions;
+import dev.latvian.mods.rhino.js.TypeJS;
+import dev.latvian.mods.rhino.js.prototype.MemberFunctions;
 import dev.latvian.mods.rhino.util.Deletable;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -654,10 +649,10 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * See ECMA 8.6.2.6.
 	 */
 	@Override
-	public Object getDefaultValue(Context cx, Class<?> typeHint) {
+	public Object getDefaultValue(ContextJS cx, TypeJS typeHint) {
 		for (int i = 0; i < 2; i++) {
 			boolean tryToString;
-			if (typeHint == ScriptRuntime.StringClass) {
+			if (typeHint == TypeJS.STRING) {
 				tryToString = (i == 0);
 			} else {
 				tryToString = (i == 1);
@@ -669,16 +664,16 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 			} else {
 				methodName = "valueOf";
 			}
-			Object v = getProperty(cx, this, methodName);
+			Object v = getProperty(cx.context, this, methodName);
 			if (!(v instanceof Function fun)) {
 				continue;
 			}
-			v = fun.call(cx, fun.getParentScope(), this, ScriptRuntime.EMPTY_OBJECTS);
+			v = fun.call(cx.context, fun.getParentScope(), this, ScriptRuntime.EMPTY_OBJECTS);
 			if (v != null) {
 				if (!(v instanceof Scriptable)) {
 					return v;
 				}
-				if (typeHint == ScriptRuntime.ScriptableClass || typeHint == ScriptRuntime.FunctionClass) {
+				if (typeHint == TypeJS.SCRIPTABLE || typeHint == TypeJS.FUNCTION) {
 					return v;
 				}
 				if (tryToString && v instanceof Wrapper) {
@@ -692,8 +687,7 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 			}
 		}
 		// fall through to error
-		String arg = (typeHint == null) ? "undefined" : typeHint.getName();
-		throw ScriptRuntime.typeError1("msg.default.value", arg);
+		throw ScriptRuntime.typeError1("msg.default.value", typeHint.name().toLowerCase());
 	}
 
 	/**
@@ -731,117 +725,6 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 		return (this == value) ? Boolean.TRUE : NOT_FOUND;
 	}
 
-	/**
-	 * Defines JavaScript objects from a Java class, optionally
-	 * allowing sealing and mapping of Java inheritance to JavaScript
-	 * prototype-based inheritance.
-	 * <p>
-	 * Similar to <code>defineClass(Scriptable scope, Class clazz)</code>
-	 * except that sealing and inheritance mapping are allowed. An object
-	 * that is sealed cannot have properties added or removed. Note that
-	 * sealing is not allowed in the current ECMA/ISO language specification,
-	 * but is likely for the next version.
-	 *
-	 * @param scope          The scope in which to define the constructor.
-	 * @param classData      The Java class to use to define the JavaScript objects
-	 *                       and properties. The class must implement Scriptable.
-	 * @param mapInheritance Whether or not to map Java inheritance to
-	 *                       JavaScript prototype-based inheritance.
-	 * @return the class name for the prototype of the specified class
-	 * @throws IllegalAccessException    if access is not available
-	 *                                   to a reflected class member
-	 * @throws InstantiationException    if unable to instantiate
-	 *                                   the named class
-	 * @throws InvocationTargetException if an exception is thrown
-	 *                                   during execution of methods of the named class
-	 * @since 1.6R2
-	 */
-	public static <T extends Scriptable> String defineClass(Context cx, Scriptable scope, ClassData classData, boolean mapInheritance) throws Exception {
-		BaseFunction ctor = buildClassCtor(cx, scope, classData, mapInheritance);
-		if (ctor == null) {
-			return null;
-		}
-		String name = ctor.getClassPrototype(cx).getClassName();
-		defineProperty(cx, scope, name, ctor, ScriptableObject.DONTENUM);
-		return name;
-	}
-
-	static <T extends Scriptable> BaseFunction buildClassCtor(Context cx, Scriptable scope, ClassData classData, boolean mapInheritance) throws Exception {
-		// If we got here, there isn't an "init" method with the right
-		// parameter types.
-
-		var ctors = classData.publicClassData.getConstructors();
-		ConstructorInfo protoCtor = null;
-		for (var constructor : ctors) {
-			if (constructor.signature.isEmpty()) {
-				protoCtor = constructor;
-				break;
-			}
-		}
-		if (protoCtor == null) {
-			throw Context.reportRuntimeError1(cx, "msg.zero.arg.ctor", classData.toString());
-		}
-
-		Scriptable proto = (Scriptable) protoCtor.newInstance(ScriptRuntime.EMPTY_OBJECTS);
-		String className = proto.getClassName();
-
-		// check for possible redefinition
-		Object existing = getProperty(cx, getTopLevelScope(scope), className);
-		if (existing instanceof BaseFunction) {
-			Object existingProto = ((BaseFunction) existing).getPrototypeProperty(cx);
-			if (existingProto != null && classData.publicClassData.type == existingProto.getClass()) {
-				return (BaseFunction) existing;
-			}
-		}
-
-		// Set the prototype's prototype, trying to map Java inheritance to JS
-		// prototype-based inheritance if requested to do so.
-		Scriptable superProto = null;
-		if (mapInheritance) {
-			Class<?> superClass = classData.publicClassData.type.getSuperclass();
-			if (ScriptRuntime.ScriptableClass.isAssignableFrom(superClass) && !Modifier.isAbstract(superClass.getModifiers())) {
-				Class<? extends Scriptable> superScriptable = extendsScriptable(superClass);
-				String name = ScriptableObject.defineClass(cx, scope, ClassData.of(cx, scope, superScriptable), mapInheritance);
-				if (name != null) {
-					superProto = ScriptableObject.getClassPrototype(cx, scope, name);
-				}
-			}
-		}
-		if (superProto == null) {
-			superProto = ScriptableObject.getObjectPrototype(cx, scope);
-		}
-		proto.setPrototype(cx, superProto);
-
-		ConstructorInfo ctorMember = null;
-
-		if (ctors.length == 1) {
-			ctorMember = ctors[0];
-		} else if (ctors.length == 2) {
-			if (ctors[0].signature.isEmpty()) {
-				ctorMember = ctors[1];
-			} else if (ctors[1].signature.isEmpty()) {
-				ctorMember = ctors[0];
-			}
-		}
-		if (ctorMember == null) {
-			throw Context.reportRuntimeError1(cx, "msg.ctor.multiple.parms", classData.publicClassData.type.getName());
-		}
-
-		FunctionObject ctor = new FunctionObject(cx, className, ctorMember, scope);
-		if (ctor.isVarArgsMethod()) {
-			throw Context.reportRuntimeError1(cx, "msg.varargs.ctor", ctorMember.getName());
-		}
-		ctor.initAsConstructor(cx, scope, proto);
-		return ctor;
-	}
-
-	@SuppressWarnings({"unchecked"})
-	private static <T extends Scriptable> Class<T> extendsScriptable(Class<?> c) {
-		if (ScriptRuntime.ScriptableClass.isAssignableFrom(c)) {
-			return (Class<T>) c;
-		}
-		return null;
-	}
 
 	/**
 	 * Define a JavaScript property.
@@ -907,48 +790,6 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	}
 
 	/**
-	 * Define a JavaScript property with getter and setter side effects.
-	 * <p>
-	 * If the setter is not found, the attribute READONLY is added to
-	 * the given attributes. <p>
-	 * <p>
-	 * The getter must be a method with zero parameters, and the setter, if
-	 * found, must be a method with one parameter.<p>
-	 *
-	 * @param propertyName the name of the property to define. This name
-	 *                     also affects the name of the setter and getter
-	 *                     to search for. If the propertyId is "foo", then
-	 *                     <code>clazz</code> will be searched for "getFoo"
-	 *                     and "setFoo" methods.
-	 * @param clazz        the Java class to search for the getter and setter
-	 * @param attributes   the attributes of the JavaScript property
-	 * @see Scriptable#put(Context, String, Scriptable, Object)
-	 */
-	public void defineProperty(Context cx, String propertyName, Class<?> clazz, int attributes) {
-		int length = propertyName.length();
-		if (length == 0) {
-			throw new IllegalArgumentException();
-		}
-		char[] buf = new char[3 + length];
-		propertyName.getChars(0, length, buf, 3);
-		buf[3] = Character.toUpperCase(buf[3]);
-		buf[0] = 'g';
-		buf[1] = 'e';
-		buf[2] = 't';
-		String getterName = new String(buf);
-		buf[0] = 's';
-		String setterName = new String(buf);
-
-		MethodInfo[] methods = PublicClassData.of(clazz).getDeclaredMethods();
-		MethodInfo getter = FunctionObject.findSingleMethod(cx, methods, getterName);
-		MethodInfo setter = FunctionObject.findSingleMethod(cx, methods, setterName);
-		if (setter == null) {
-			attributes |= ScriptableObject.READONLY;
-		}
-		defineProperty(cx, propertyName, null, getter, setter, attributes);
-	}
-
-	/**
 	 * Define a JavaScript property.
 	 * <p>
 	 * Use this method only if you wish to define getters and setters for
@@ -989,82 +830,28 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	 * @param setter       the method to invoke to set the value of the property
 	 * @param attributes   the attributes of the JavaScript property
 	 */
-	public void defineProperty(Context cx, String propertyName, Object delegateTo, BaseMember getter, BaseMember setter, int attributes) {
-		BaseMember getterBox = getter;
+	public void defineProperty(Context cx, String propertyName, Object delegateTo, MemberFunctions getter, MemberFunctions setter, int attributes) {
+		MemberFunctions getterBox = getter;
 		if (getter != null) {
 
-			boolean delegatedForm;
 			if (!getter.isStatic()) {
-				delegatedForm = (delegateTo != null);
-				getterBox = new DelegatedMember(delegateTo, getterBox);
+				getterBox = new DelegatedMemberFunctions(getterBox, delegateTo);
 			} else {
-				delegatedForm = true;
 				// Ignore delegateTo for static getter but store
 				// non-null delegateTo indicator.
-				getterBox = new DelegatedMember(Void.TYPE, getterBox);
-			}
-
-			String errorId = null;
-			Class<?>[] parmTypes = getter.getSignature().types;
-			if (parmTypes.length == 0) {
-				if (delegatedForm) {
-					errorId = "msg.obj.getter.parms";
-				}
-			} else if (parmTypes.length == 1) {
-				Object argType = parmTypes[0];
-				// Allow ScriptableObject for compatibility
-				if (!(argType == ScriptRuntime.ScriptableClass || argType == ScriptRuntime.ScriptableObjectClass)) {
-					errorId = "msg.bad.getter.parms";
-				} else if (!delegatedForm) {
-					errorId = "msg.bad.getter.parms";
-				}
-			} else {
-				errorId = "msg.bad.getter.parms";
-			}
-			if (errorId != null) {
-				throw Context.reportRuntimeError1(cx, errorId, getter.toString());
+				getterBox = new DelegatedMemberFunctions(getterBox, Void.TYPE);
 			}
 		}
 
-		BaseMember setterBox = setter;
+		MemberFunctions setterBox = setter;
 		if (setter != null) {
-			if (setter.getType() != Void.TYPE) {
-				throw Context.reportRuntimeError1(cx, "msg.setter.return", setter.toString());
-			}
-
-			boolean delegatedForm;
 			if (!setter.isStatic()) {
-				delegatedForm = (delegateTo != null);
-				setterBox = new DelegatedMember(delegateTo, setterBox);
+				setterBox = new DelegatedMemberFunctions(setterBox, delegateTo);
 			} else {
-				delegatedForm = true;
 				// Ignore delegateTo for static setter but store
 				// non-null delegateTo indicator.
-				setterBox = new DelegatedMember(Void.TYPE, setterBox);
+				setterBox = new DelegatedMemberFunctions(setterBox, Void.TYPE);
 			}
-
-			/* FIXME: param error checking
-			String errorId = null;
-			Class<?>[] parmTypes = setter.getSignature().types;
-			if (parmTypes.length == 1) {
-				if (delegatedForm) {
-					errorId = "msg.setter2.expected";
-				}
-			} else if (parmTypes.length == 2) {
-				Object argType = parmTypes[0];
-				// Allow ScriptableObject for compatibility
-				if (!(argType == ScriptRuntime.ScriptableClass || argType == ScriptRuntime.ScriptableObjectClass)) {
-					errorId = "msg.setter2.parms";
-				} else if (!delegatedForm) {
-					errorId = "msg.setter1.parms";
-				}
-			} else {
-				errorId = "msg.setter.parms";
-			}
-			if (errorId != null) {
-				throw Context.reportRuntimeError1(cx, errorId, setter.toString());
-			}
-			 */
 		}
 
 		GetterSlot gslot = (GetterSlot) slotMap.get(cx, propertyName, 0, SlotAccess.MODIFY_GETTER_SETTER);
@@ -1336,31 +1123,6 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	}
 
 	/**
-	 * Search for names in a class, adding the resulting methods
-	 * as properties.
-	 *
-	 * <p> Uses reflection to find the methods of the given names. Then
-	 * FunctionObjects are constructed from the methods found, and
-	 * are added to this object as properties with the given names.
-	 *
-	 * @param names      the names of the Methods to add as function properties
-	 * @param classData  the class to search for the Methods
-	 * @param attributes the attributes of the new properties
-	 * @see FunctionObject
-	 */
-	public void defineFunctionProperties(Context cx, String[] names, ClassData classData, int attributes) {
-		var methods = classData.publicClassData.getDeclaredMethods();
-		for (String name : names) {
-			MethodInfo m = FunctionObject.findSingleMethod(cx, methods, name);
-			if (m == null) {
-				throw Context.reportRuntimeError2(cx, "msg.method.not.found", name, classData.toString());
-			}
-			FunctionObject f = new FunctionObject(cx, name, m, this);
-			defineProperty(cx, name, f, attributes);
-		}
-	}
-
-	/**
 	 * Get the Object.prototype property.
 	 * See ECMA 15.2.4.
 	 *
@@ -1490,34 +1252,6 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 	}
 
 	/**
-	 * Gets an indexed property from an object or any object in its prototype
-	 * chain and coerces it to the requested Java type.
-	 * <p>
-	 * Searches the prototype chain for a property with integral index
-	 * <code>index</code>. Note that if you wish to look for properties with numerical
-	 * but non-integral indicies, you should use getProperty(Scriptable,String) with
-	 * the string value of the index.
-	 * <p>
-	 *
-	 * @param s     a JavaScript object
-	 * @param index an integral index
-	 * @param type  the required Java type of the result
-	 * @return the value of a property with name <code>name</code> found in
-	 * <code>obj</code> or any object in its prototype chain, or
-	 * null if not found. Note that it does not return
-	 * {@link Scriptable#NOT_FOUND} as it can ordinarily not be
-	 * converted to most of the types.
-	 * @since 1.7R3
-	 */
-	public static <T> T getTypedProperty(Context cx, Scriptable s, int index, Class<T> type) {
-		Object val = getProperty(cx, s, index);
-		if (val == NOT_FOUND) {
-			val = null;
-		}
-		return type.cast(Context.jsToJava(cx, val, type));
-	}
-
-	/**
 	 * Gets an indexed property from an object or any object in its prototype chain.
 	 * <p>
 	 * Searches the prototype chain for a property with integral index
@@ -1544,31 +1278,6 @@ public abstract class ScriptableObject implements Scriptable, SymbolScriptable, 
 			obj = obj.getPrototype(cx);
 		} while (obj != null);
 		return result;
-	}
-
-	/**
-	 * Gets a named property from an object or any object in its prototype chain
-	 * and coerces it to the requested Java type.
-	 * <p>
-	 * Searches the prototype chain for a property named <code>name</code>.
-	 * <p>
-	 *
-	 * @param s    a JavaScript object
-	 * @param name a property name
-	 * @param type the required Java type of the result
-	 * @return the value of a property with name <code>name</code> found in
-	 * <code>obj</code> or any object in its prototype chain, or
-	 * null if not found. Note that it does not return
-	 * {@link Scriptable#NOT_FOUND} as it can ordinarily not be
-	 * converted to most of the types.
-	 * @since 1.7R3
-	 */
-	public static <T> T getTypedProperty(Context cx, Scriptable s, String name, Class<T> type) {
-		Object val = getProperty(cx, s, name);
-		if (val == NOT_FOUND) {
-			val = null;
-		}
-		return type.cast(Context.jsToJava(cx, val, type));
 	}
 
 	/**

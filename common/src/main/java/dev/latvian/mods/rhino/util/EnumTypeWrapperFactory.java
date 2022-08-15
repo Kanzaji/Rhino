@@ -24,8 +24,8 @@ public class EnumTypeWrapperFactory<T> implements TypeWrapperFactory<T> {
 			var classData = PublicClassData.of(enumType);
 
 			for (var field : classData.getFields()) {
-				if (field.getName().equals(name)) {
-					String s = data.getRemapper().remapField(data, classData, field);
+				if (field.javaField.getName().equals(name)) {
+					String s = data.getRemapper().remapField(classData, field);
 
 					if (!s.isEmpty()) {
 						return s;

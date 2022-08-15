@@ -2,61 +2,60 @@ package dev.latvian.mods.rhino.classdata;
 
 import dev.latvian.mods.rhino.Context;
 import dev.latvian.mods.rhino.ContextJS;
+import dev.latvian.mods.rhino.js.prototype.CastType;
+import dev.latvian.mods.rhino.js.prototype.MemberFunctions;
 import dev.latvian.mods.rhino.util.RemapForJS;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
-public class FieldInfo extends MemberInfo implements BaseMember {
+public class FieldInfo implements MemberFunctions {
 	public static final FieldInfo[] EMPTY_ARRAY = new FieldInfo[0];
 
+	public final transient Field javaField;
 	public final String remappedName;
 
-	FieldInfo(Field field, String[] remapPrefixes) {
-		super(field);
-		var ra = field.getAnnotation(RemapForJS.class);
+	FieldInfo(Field javaField, String[] remapPrefixes) {
+		this.javaField = javaField;
+		var ra = javaField.getAnnotation(RemapForJS.class);
 
-		String _remappedName = ra == null ? "" : ra.value();
+		String remappedName = ra == null ? "" : ra.value();
 
-		if (_remappedName.isEmpty()) {
+		if (remappedName.isEmpty()) {
 			for (String s : remapPrefixes) {
-				if (field.getName().startsWith(s)) {
-					_remappedName = field.getName().substring(s.length());
+				if (javaField.getName().startsWith(s)) {
+					remappedName = javaField.getName().substring(s.length());
 					break;
 				}
 			}
 		}
 
-		remappedName = _remappedName;
-	}
-
-	public boolean isFinal() {
-		return Modifier.isFinal(member.getModifiers());
+		this.remappedName = remappedName;
 	}
 
 	@Override
-	public Class<?> getType() {
-		return ((Field) member).getType();
+	public boolean isStatic() {
+		return Modifier.isStatic(javaField.getModifiers());
 	}
 
 	@Override
-	public boolean isMethod() {
-		return false;
+	public Object getValue(ContextJS cx, @Nullable Object self, Object key, CastType returnType) {
+		try {
+			return returnType.cast(cx, javaField.get(self));
+		} catch (Exception ex) {
+			throw Context.throwAsScriptRuntimeEx(ex);
+		}
 	}
 
 	@Override
-	public Object get(ContextJS cx, @Nullable Object self) throws Exception {
-		return ((Field) member).get(nullIfStatic(self));
-	}
-
-	@Override
-	public boolean set(ContextJS cx, @Nullable Object self, Object value) throws Exception {
-		if (isFinal()) {
-			throw new IllegalStateException("Cannot set final field " + member.getName());
+	public boolean setValue(ContextJS cx, @Nullable Object self, Object key, Object value, CastType valueType) {
+		try {
+			javaField.set(self, valueType.cast(cx, value));
+		} catch (Exception ex) {
+			throw Context.throwAsScriptRuntimeEx(ex);
 		}
 
-		((Field) member).set(nullIfStatic(self), Context.jsToJava(cx.context, value, getType()));
 		return true;
 	}
 }

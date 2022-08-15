@@ -13,7 +13,6 @@ import dev.latvian.mods.rhino.util.JavaSetWrapper;
 import dev.latvian.mods.rhino.util.NativeArrayWrapper;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -60,48 +59,20 @@ public class WrapFactory {
 			return obj;
 		}
 
-		if (!isJavaPrimitiveWrap()) {
-			if (obj instanceof String || obj instanceof Boolean || obj instanceof Integer || obj instanceof Short || obj instanceof Long || obj instanceof Float || obj instanceof Double) {
-				return obj;
-			} else if (obj instanceof Character) {
-				return String.valueOf(((Character) obj).charValue());
-			}
-		}
-
 		Class<?> cls = obj.getClass();
 
 		if (cls.isArray()) {
-			return new NativeJavaList(cx, scope, obj, NativeArrayWrapper.of(obj));
+			return new NativeJavaList(scope, NativeArrayWrapper.of(obj));
 		}
 
 		return wrapAsJavaObject(cx, scope, obj, staticType);
 	}
 
 	/**
-	 * Wrap an object newly created by a constructor call.
-	 *
-	 * @param cx    the current Context for this thread
-	 * @param scope the scope of the executing script
-	 * @param obj   the object to be wrapped
-	 * @return the wrapped value.
-	 */
-	public Scriptable wrapNewObject(Context cx, Scriptable scope, Object obj) {
-		if (obj instanceof Scriptable) {
-			return (Scriptable) obj;
-		}
-		Class<?> cls = obj.getClass();
-		if (cls.isArray()) {
-			return new NativeJavaList(cx, scope, obj, NativeArrayWrapper.of(obj));
-		}
-		return wrapAsJavaObject(cx, scope, obj, null);
-	}
-
-	/**
 	 * Wrap Java object as Scriptable instance to allow full access to its
 	 * methods and fields from JavaScript.
 	 * <p>
-	 * {@link #wrap(Context, Scriptable, Object, Class)} and
-	 * {@link #wrapNewObject(Context, Scriptable, Object)} call this method
+	 * {@link #wrap(Context, Scriptable, Object, Class)} call this method
 	 * when they can not convert <code>javaObject</code> to JavaScript primitive
 	 * value or JavaScript array.
 	 * <p>
@@ -120,47 +91,20 @@ public class WrapFactory {
 			return w.convertJavaToJs(cx, scope, staticType);
 		}
 
-		CustomJavaToJsWrapper w = cx.getSharedData().wrapCustomJavaToJs(javaObject);
+		CustomJavaToJsWrapper w = cx.getSharedData(scope).wrapCustomJavaToJs(javaObject);
 
 		if (w != null) {
 			return w.convertJavaToJs(cx, scope, staticType);
 		}
 
-		if (javaObject instanceof Map map) {
-			return new NativeJavaMap(cx, scope, map, map);
-		} else if (javaObject instanceof List list) {
-			return new NativeJavaList(cx, scope, list, list);
+		if (javaObject instanceof List list) {
+			return new NativeJavaList(scope, list);
 		} else if (javaObject instanceof Set<?> set) {
-			return new NativeJavaList(cx, scope, set, new JavaSetWrapper<>(set));
+			return new NativeJavaList(scope, new JavaSetWrapper<>(set));
 		}
 
 		// TODO: Wrap Gson
 
-		return new NativeJavaObject(cx, scope, javaObject, javaObject.getClass());
+		return new NativeJavaObject(scope, javaObject, javaObject.getClass());
 	}
-
-	/**
-	 * Return <code>false</code> if result of Java method, which is instance of
-	 * <code>String</code>, <code>Number</code>, <code>Boolean</code> and
-	 * <code>Character</code>, should be used directly as JavaScript primitive
-	 * type.
-	 * By default the method returns true to indicate that instances of
-	 * <code>String</code>, <code>Number</code>, <code>Boolean</code> and
-	 * <code>Character</code> should be wrapped as any other Java object and
-	 * scripts can access any Java method available in these objects.
-	 * Use {@link #setJavaPrimitiveWrap(boolean)} to change this.
-	 */
-	public final boolean isJavaPrimitiveWrap() {
-		return javaPrimitiveWrap;
-	}
-
-	/**
-	 * @see #isJavaPrimitiveWrap()
-	 */
-	public final void setJavaPrimitiveWrap(boolean value) {
-		javaPrimitiveWrap = value;
-	}
-
-	private boolean javaPrimitiveWrap = true;
-
 }

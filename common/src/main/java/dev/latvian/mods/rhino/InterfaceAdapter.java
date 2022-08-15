@@ -30,7 +30,7 @@ public class InterfaceAdapter {
 		}
 
 		Scriptable topScope = ScriptRuntime.getTopCallScope(cx);
-		ClassCache cache = ClassCache.get(cx, topScope);
+		var cache = SharedContextData.get(cx, topScope);
 		InterfaceAdapter adapter;
 		adapter = (InterfaceAdapter) cache.getInterfaceAdapter(cl);
 		ContextFactory cf = cx.getFactory();
@@ -107,7 +107,7 @@ public class InterfaceAdapter {
 				if (resultType == Void.TYPE) {
 					return null;
 				}
-				return Context.jsToJava(cx, null, resultType);
+				return Context.jsToJava(cx, topScope, null, resultType);
 			}
 			if (!(value instanceof Callable)) {
 				throw Context.reportRuntimeError1(cx, "msg.not.function.interface", methodName);
@@ -133,7 +133,7 @@ public class InterfaceAdapter {
 		if (javaResultType == Void.TYPE) {
 			result = null;
 		} else {
-			result = Context.jsToJava(cx, result, javaResultType);
+			result = Context.jsToJava(cx, topScope, result, javaResultType);
 		}
 		return result;
 	}

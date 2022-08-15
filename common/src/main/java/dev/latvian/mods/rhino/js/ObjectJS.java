@@ -1,6 +1,7 @@
 package dev.latvian.mods.rhino.js;
 
 import dev.latvian.mods.rhino.ContextJS;
+import dev.latvian.mods.rhino.js.prototype.MapMemberFunctions;
 import dev.latvian.mods.rhino.js.prototype.PrototypeJS;
 
 /**
@@ -8,6 +9,7 @@ import dev.latvian.mods.rhino.js.prototype.PrototypeJS;
  */
 public class ObjectJS {
 	public static PrototypeJS PROTOTYPE = PrototypeJS.DEFAULT.create("Object")
+			.selfMembers(MapMemberFunctions.INSTANCE)
 			.staticFunction("getPrototypeOf", ObjectJS::unimpl)
 			.staticFunction("setPrototypeOf", ObjectJS::unimpl)
 			.staticFunction("keys", ObjectJS::unimpl)
@@ -21,12 +23,10 @@ public class ObjectJS {
 			.staticFunction("preventExtensions", ObjectJS::unimpl)
 			.staticFunction("defineProperties", ObjectJS::unimpl)
 			.staticFunction("create", ObjectJS::unimpl)
-			.staticFunction("isSealed", ObjectJS::unimpl)
 			.staticFunction("isFrozen", ObjectJS::unimpl)
-			.staticFunction("seal", ObjectJS::unimpl)
-			.staticFunction("freeze", ObjectJS::unimpl)
 			.staticFunction("assign", ObjectJS::unimpl)
-			.staticFunction("is", ObjectJS::unimpl);
+			.staticFunction("is", ObjectJS::unimpl)
+			.function("hasOwnProperty", ObjectJS::unimpl);
 
 	private static String unimpl(ContextJS cx, Object[] args) {
 		throw new IllegalStateException("This function is not yet implemented!");

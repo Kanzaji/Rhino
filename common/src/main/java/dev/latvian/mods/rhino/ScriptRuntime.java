@@ -8,6 +8,7 @@ package dev.latvian.mods.rhino;
 
 import dev.latvian.mods.rhino.ast.FunctionNode;
 import dev.latvian.mods.rhino.js.NumberJS;
+import dev.latvian.mods.rhino.js.TypeJS;
 import dev.latvian.mods.rhino.js.UndefinedJS;
 import dev.latvian.mods.rhino.regexp.NativeRegExp;
 import dev.latvian.mods.rhino.regexp.RegExp;
@@ -94,8 +95,10 @@ public class ScriptRuntime {
 		if (scope == null) {
 			scope = new NativeObject();
 		}
+
+		cx.topLevelScope = scope;
 		scope.associateValue(LIBRARY_SCOPE_KEY, scope);
-		(new ClassCache()).associate(scope);
+		scope.associateValue(SharedContextData.KEY, new SharedContextData(scope));
 
 		BaseFunction.init(cx, scope);
 		NativeObject.init(cx, scope);
@@ -270,7 +273,7 @@ public class ScriptRuntime {
 			throw typeError0("msg.not.a.number");
 		}
 		if (val instanceof Scriptable) {
-			val = ((Scriptable) val).getDefaultValue(cx, NumberClass);
+			val = ((Scriptable) val).getDefaultValue(new ContextJS(cx), TypeJS.NUMBER);
 			if ((val instanceof Scriptable) && !isSymbol(val)) {
 				throw errorWithClassName(cx, "msg.primitive.expected", val);
 			}
@@ -694,7 +697,7 @@ public class ScriptRuntime {
 			throw typeError0("msg.not.a.string");
 		}
 		if (val instanceof Scriptable) {
-			val = ((Scriptable) val).getDefaultValue(cx, StringClass);
+			val = ((Scriptable) val).getDefaultValue(new ContextJS(cx), TypeJS.STRING);
 			if ((val instanceof Scriptable) && !isSymbol(val)) {
 				throw errorWithClassName(cx, "msg.primitive.expected", val);
 			}
@@ -1884,7 +1887,7 @@ public class ScriptRuntime {
 		if (thisObj instanceof Callable) {
 			function = (Callable) thisObj;
 		} else {
-			Object value = thisObj.getDefaultValue(cx, FunctionClass);
+			Object value = thisObj.getDefaultValue(new ContextJS(cx, thisObj), TypeJS.FUNCTION);
 			if (!(value instanceof Callable)) {
 				throw notFunctionError(cx, value, thisObj);
 			}
@@ -1979,7 +1982,7 @@ public class ScriptRuntime {
 	// implement the '~' operator inline in the caller
 	// as "~toInt32(val)"
 
-	public static Object add(Object val1, Object val2, Context cx) {
+	public static Object add(Object val1, Object val2, ContextJS cx) {
 		if (val1 instanceof Number && val2 instanceof Number) {
 			return wrapNumber(((Number) val1).doubleValue() + ((Number) val2).doubleValue());
 		}
@@ -1996,9 +1999,9 @@ public class ScriptRuntime {
 			if ((val1 instanceof Number) && (val2 instanceof Number)) {
 				return wrapNumber(((Number) val1).doubleValue() + ((Number) val2).doubleValue());
 			}
-			return wrapNumber(toNumber(cx, val1) + toNumber(cx, val2));
+			return wrapNumber(cx.asNumber(val1) + cx.asNumber(val2));
 		}
-		return new ConsString(toCharSequence(cx, val1), toCharSequence(cx, val2));
+		return new ConsString(toCharSequence(cx.context, val1), toCharSequence(cx.context, val2));
 	}
 
 	public static CharSequence add(Context cx, CharSequence val1, Object val2) {
@@ -2105,14 +2108,14 @@ public class ScriptRuntime {
 	}
 
 	public static Object toPrimitive(Context cx, Object val) {
-		return toPrimitive(cx, val, null);
+		return toPrimitive(cx, val, TypeJS.UNDEFINED);
 	}
 
-	public static Object toPrimitive(Context cx, Object val, Class<?> typeHint) {
+	public static Object toPrimitive(Context cx, Object val, TypeJS typeHint) {
 		if (!(val instanceof Scriptable s)) {
 			return val;
 		}
-		Object result = s.getDefaultValue(cx, typeHint);
+		Object result = s.getDefaultValue(new ContextJS(cx), typeHint);
 		if ((result instanceof Scriptable) && !isSymbol(result)) {
 			throw typeError0("msg.bad.default.value");
 		}
@@ -2414,7 +2417,7 @@ public class ScriptRuntime {
 		return hasObjectElem(cx, (Scriptable) b, a);
 	}
 
-	public static boolean cmp_LT(Context cx, Object val1, Object val2) {
+	public static boolean cmp_LT(ContextJS cx, Object val1, Object val2) {
 		double d1, d2;
 		if (val1 instanceof Number && val2 instanceof Number) {
 			d1 = ((Number) val1).doubleValue();
@@ -2424,21 +2427,21 @@ public class ScriptRuntime {
 				throw typeError0("msg.compare.symbol");
 			}
 			if (val1 instanceof Scriptable) {
-				val1 = ((Scriptable) val1).getDefaultValue(cx, NumberClass);
+				val1 = ((Scriptable) val1).getDefaultValue(cx, TypeJS.NUMBER);
 			}
 			if (val2 instanceof Scriptable) {
-				val2 = ((Scriptable) val2).getDefaultValue(cx, NumberClass);
+				val2 = ((Scriptable) val2).getDefaultValue(cx, TypeJS.NUMBER);
 			}
 			if (val1 instanceof CharSequence && val2 instanceof CharSequence) {
 				return val1.toString().compareTo(val2.toString()) < 0;
 			}
-			d1 = toNumber(cx, val1);
-			d2 = toNumber(cx, val2);
+			d1 = cx.asNumber(val1);
+			d2 = cx.asNumber(val2);
 		}
 		return d1 < d2;
 	}
 
-	public static boolean cmp_LE(Context cx, Object val1, Object val2) {
+	public static boolean cmp_LE(ContextJS cx, Object val1, Object val2) {
 		double d1, d2;
 		if (val1 instanceof Number && val2 instanceof Number) {
 			d1 = ((Number) val1).doubleValue();
@@ -2448,16 +2451,16 @@ public class ScriptRuntime {
 				throw typeError0("msg.compare.symbol");
 			}
 			if (val1 instanceof Scriptable) {
-				val1 = ((Scriptable) val1).getDefaultValue(cx, NumberClass);
+				val1 = ((Scriptable) val1).getDefaultValue(cx, TypeJS.NUMBER);
 			}
 			if (val2 instanceof Scriptable) {
-				val2 = ((Scriptable) val2).getDefaultValue(cx, NumberClass);
+				val2 = ((Scriptable) val2).getDefaultValue(cx, TypeJS.NUMBER);
 			}
 			if (val1 instanceof CharSequence && val2 instanceof CharSequence) {
 				return val1.toString().compareTo(val2.toString()) <= 0;
 			}
-			d1 = toNumber(cx, val1);
-			d2 = toNumber(cx, val2);
+			d1 = cx.asNumber(val1);
+			d2 = cx.asNumber(val2);
 		}
 		return d1 <= d2;
 	}
@@ -2673,7 +2676,7 @@ public class ScriptRuntime {
 			// Add special Rhino object __exception__ defined in the catch
 			// scope that can be used to retrieve the Java exception associated
 			// with the JavaScript exception (to get stack trace info, etc.)
-			catchScopeObject.defineProperty(cx, "__exception__", Context.javaToJS(cx, t, scope), ScriptableObject.PERMANENT | ScriptableObject.DONTENUM);
+			catchScopeObject.defineProperty(cx, "__exception__", Context.javaToJS(cx, scope, t), ScriptableObject.PERMANENT | ScriptableObject.DONTENUM);
 		}
 
 		if (cacheObj) {

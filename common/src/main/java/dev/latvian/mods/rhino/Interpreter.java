@@ -775,7 +775,7 @@ public final class Interpreter extends Icode implements Evaluator {
 							case Token.LE:
 							case Token.GT:
 							case Token.LT: {
-								stackTop = doCompare(cx, frame, op, stack, sDbl, stackTop);
+								stackTop = doCompare(cxjs, frame, op, stack, sDbl, stackTop);
 								continue;
 							}
 							case Token.IN:
@@ -918,7 +918,7 @@ public final class Interpreter extends Icode implements Evaluator {
 								stackTop = doNullishCoalescing(frame, stack, sDbl, stackTop);
 								continue;
 							case Token.URSH: {
-								double lDbl = stack_double(cx, frame, stackTop - 1);
+								double lDbl = stack_double(cxjs, frame, stackTop - 1);
 								int rIntValue = stack_int32(cx, frame, stackTop) & 0x1F;
 								stack[--stackTop] = DBL_MRK;
 								sDbl[stackTop] = ScriptRuntime.toUint32(lDbl) >>> rIntValue;
@@ -926,7 +926,7 @@ public final class Interpreter extends Icode implements Evaluator {
 							}
 							case Token.NEG:
 							case Token.POS: {
-								double rDbl = stack_double(cx, frame, stackTop);
+								double rDbl = stack_double(cxjs, frame, stackTop);
 								stack[stackTop] = DBL_MRK;
 								if (op == Token.NEG) {
 									rDbl = -rDbl;
@@ -936,14 +936,14 @@ public final class Interpreter extends Icode implements Evaluator {
 							}
 							case Token.ADD:
 								--stackTop;
-								doAdd(stack, sDbl, stackTop, cx);
+								doAdd(stack, sDbl, stackTop, cxjs);
 								continue;
 							case Token.SUB:
 							case Token.MUL:
 							case Token.DIV:
 							case Token.MOD:
 							case Token.POW: {
-								stackTop = doArithmetic(cx, frame, op, stack, sDbl, stackTop);
+								stackTop = doArithmetic(cxjs, frame, op, stack, sDbl, stackTop);
 								continue;
 							}
 							case Token.NOT:
@@ -1335,7 +1335,7 @@ public final class Interpreter extends Icode implements Evaluator {
 								indexReg += frame.localShift;
 								IdEnumeration val = (IdEnumeration) stack[indexReg];
 								++stackTop;
-								stack[stackTop] = (op == Token.ENUM_NEXT) ? val.next(cx) : val.getId(cx);
+								stack[stackTop] = (op == Token.ENUM_NEXT) ? val.next(cxjs) : val.getId(cx);
 								continue;
 							}
 							case Icode_SCOPE_LOAD:
@@ -1670,7 +1670,7 @@ public final class Interpreter extends Icode implements Evaluator {
 		return stackTop;
 	}
 
-	private static int doCompare(Context cx, CallFrame frame, int op, Object[] stack, double[] sDbl, int stackTop) {
+	private static int doCompare(ContextJS cx, CallFrame frame, int op, Object[] stack, double[] sDbl, int stackTop) {
 		--stackTop;
 		Object rhs = stack[stackTop + 1];
 		Object lhs = stack[stackTop];
@@ -1684,7 +1684,7 @@ public final class Interpreter extends Icode implements Evaluator {
 					rDbl = sDbl[stackTop + 1];
 					lDbl = stack_double(cx, frame, stackTop);
 				} else if (lhs == UniqueTag.DOUBLE_MARK) {
-					rDbl = ScriptRuntime.toNumber(cx, rhs);
+					rDbl = cx.asNumber(rhs);
 					lDbl = sDbl[stackTop];
 				} else {
 					break number_compare;
@@ -2164,10 +2164,10 @@ public final class Interpreter extends Icode implements Evaluator {
 		return ScriptRuntime.toInt32(cx, x);
 	}
 
-	private static double stack_double(Context cx, CallFrame frame, int i) {
+	private static double stack_double(ContextJS cx, CallFrame frame, int i) {
 		Object x = frame.stack[i];
 		if (x != UniqueTag.DOUBLE_MARK) {
-			return ScriptRuntime.toNumber(cx, x);
+			return cx.asNumber(x);
 		}
 		return frame.sDbl[i];
 	}
@@ -2192,7 +2192,7 @@ public final class Interpreter extends Icode implements Evaluator {
 		}
 	}
 
-	private static void doAdd(Object[] stack, double[] sDbl, int stackTop, Context cx) {
+	private static void doAdd(Object[] stack, double[] sDbl, int stackTop, ContextJS cx) {
 		Object rhs = stack[stackTop + 1];
 		Object lhs = stack[stackTop];
 		double d;
@@ -2220,14 +2220,14 @@ public final class Interpreter extends Icode implements Evaluator {
 				if (rhs instanceof CharSequence) {
 					stack[stackTop] = new ConsString((CharSequence) lhs, (CharSequence) rhs);
 				} else {
-					stack[stackTop] = new ConsString((CharSequence) lhs, ScriptRuntime.toCharSequence(cx, rhs));
+					stack[stackTop] = new ConsString((CharSequence) lhs, ScriptRuntime.toCharSequence(cx.context, rhs));
 				}
 			} else if (rhs instanceof CharSequence) {
-				stack[stackTop] = new ConsString(ScriptRuntime.toCharSequence(cx, lhs), (CharSequence) rhs);
+				stack[stackTop] = new ConsString(ScriptRuntime.toCharSequence(cx.context, lhs), (CharSequence) rhs);
 
 			} else {
-				double lDbl = (lhs instanceof Number) ? ((Number) lhs).doubleValue() : ScriptRuntime.toNumber(cx, lhs);
-				double rDbl = (rhs instanceof Number) ? ((Number) rhs).doubleValue() : ScriptRuntime.toNumber(cx, rhs);
+				double lDbl = (lhs instanceof Number) ? ((Number) lhs).doubleValue() : cx.asNumber(lhs);
+				double rDbl = (rhs instanceof Number) ? ((Number) rhs).doubleValue() : cx.asNumber(rhs);
 				stack[stackTop] = UniqueTag.DOUBLE_MARK;
 				sDbl[stackTop] = lDbl + rDbl;
 			}
@@ -2244,20 +2244,20 @@ public final class Interpreter extends Icode implements Evaluator {
 			}
 			stack[stackTop] = ScriptRuntime.add(lhs, rhs, cx);
 		} else if (lhs instanceof CharSequence) {
-			CharSequence rstr = ScriptRuntime.numberToString(cx, d, 10);
+			CharSequence rstr = ScriptRuntime.numberToString(cx.context, d, 10);
 			if (leftRightOrder) {
 				stack[stackTop] = new ConsString((CharSequence) lhs, rstr);
 			} else {
 				stack[stackTop] = new ConsString(rstr, (CharSequence) lhs);
 			}
 		} else {
-			double lDbl = (lhs instanceof Number) ? ((Number) lhs).doubleValue() : ScriptRuntime.toNumber(cx, lhs);
+			double lDbl = (lhs instanceof Number) ? ((Number) lhs).doubleValue() : cx.asNumber(lhs);
 			stack[stackTop] = UniqueTag.DOUBLE_MARK;
 			sDbl[stackTop] = lDbl + d;
 		}
 	}
 
-	private static int doArithmetic(Context cx, CallFrame frame, int op, Object[] stack, double[] sDbl, int stackTop) {
+	private static int doArithmetic(ContextJS cx, CallFrame frame, int op, Object[] stack, double[] sDbl, int stackTop) {
 		double rDbl = stack_double(cx, frame, stackTop);
 		--stackTop;
 		double lDbl = stack_double(cx, frame, stackTop);

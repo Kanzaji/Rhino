@@ -6,6 +6,8 @@
 
 package dev.latvian.mods.rhino;
 
+import dev.latvian.mods.rhino.js.UndefinedJS;
+
 import java.lang.reflect.Proxy;
 
 /**
@@ -48,6 +50,6 @@ public class Undefined {
 	}
 
 	public static boolean isUndefined(Object obj) {
-		return Undefined.instance == obj || Undefined.SCRIPTABLE_UNDEFINED == obj;
+		return Undefined.instance == obj || Undefined.SCRIPTABLE_UNDEFINED == obj || obj == UndefinedJS.PROTOTYPE;
 	}
 }

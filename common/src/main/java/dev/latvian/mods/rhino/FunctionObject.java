@@ -8,10 +8,81 @@
 
 package dev.latvian.mods.rhino;
 
-import dev.latvian.mods.rhino.classdata.BaseMember;
-import dev.latvian.mods.rhino.classdata.MethodInfo;
+import dev.latvian.mods.rhino.js.prototype.CastType;
+import dev.latvian.mods.rhino.js.prototype.MemberFunctions;
 
 public class FunctionObject extends BaseFunction {
+	private static final short VARARGS_METHOD = -1;
+	private static final short VARARGS_CTOR = -2;
+
+	public static final int JAVA_UNSUPPORTED_TYPE = 0;
+	public static final int JAVA_STRING_TYPE = 1;
+	public static final int JAVA_INT_TYPE = 2;
+	public static final int JAVA_BOOLEAN_TYPE = 3;
+	public static final int JAVA_DOUBLE_TYPE = 4;
+	public static final int JAVA_SCRIPTABLE_TYPE = 5;
+	public static final int JAVA_OBJECT_TYPE = 6;
+
+	MemberFunctions member;
+	private final String functionName;
+
+	public static int getTypeTag(Class<?> type) {
+		if (type == ScriptRuntime.StringClass) {
+			return JAVA_STRING_TYPE;
+		}
+		if (type == ScriptRuntime.IntegerClass || type == Integer.TYPE) {
+			return JAVA_INT_TYPE;
+		}
+		if (type == ScriptRuntime.BooleanClass || type == Boolean.TYPE) {
+			return JAVA_BOOLEAN_TYPE;
+		}
+		if (type == ScriptRuntime.DoubleClass || type == Double.TYPE) {
+			return JAVA_DOUBLE_TYPE;
+		}
+		if (ScriptRuntime.ScriptableClass.isAssignableFrom(type)) {
+			return JAVA_SCRIPTABLE_TYPE;
+		}
+		if (type == ScriptRuntime.ObjectClass) {
+			return JAVA_OBJECT_TYPE;
+		}
+
+		// Note that the long type is not supported; see the javadoc for
+		// the constructor for this class
+
+		return JAVA_UNSUPPORTED_TYPE;
+	}
+
+	public static Object convertArg(Context cx, Scriptable scope, Object arg, int typeTag) {
+		switch (typeTag) {
+			case JAVA_STRING_TYPE:
+				if (arg instanceof String) {
+					return arg;
+				}
+				return ScriptRuntime.toString(cx, arg);
+			case JAVA_INT_TYPE:
+				if (arg instanceof Integer) {
+					return arg;
+				}
+				return ScriptRuntime.toInt32(cx, arg);
+			case JAVA_BOOLEAN_TYPE:
+				if (arg instanceof Boolean) {
+					return arg;
+				}
+				return ScriptRuntime.toBoolean(cx, arg) ? Boolean.TRUE : Boolean.FALSE;
+			case JAVA_DOUBLE_TYPE:
+				if (arg instanceof Double) {
+					return arg;
+				}
+				return ScriptRuntime.toNumber(cx, arg);
+			case JAVA_SCRIPTABLE_TYPE:
+				return ScriptRuntime.toObjectOrNull(cx, arg, scope);
+			case JAVA_OBJECT_TYPE:
+				return arg;
+			default:
+				throw new IllegalArgumentException();
+		}
+	}
+
 	/**
 	 * Create a JavaScript function object from a Java method.
 	 *
@@ -74,11 +145,12 @@ public class FunctionObject extends BaseFunction {
 	 * @param scope enclosing scope of function
 	 * @see Scriptable
 	 */
-	public FunctionObject(Context cx, String name, BaseMember info, Scriptable scope) {
-		member = info;
-		isStatic = info.isStatic();
-		String methodName = member.getName();
+	public FunctionObject(Context cx, String name, MemberFunctions info, Scriptable scope) {
 		this.functionName = name;
+		this.member = info;
+		/*
+		boolean isStatic = info.isStatic();
+		String methodName = member.getName();
 		Class<?>[] types = member.getSignature().types;
 		int arity = types.length;
 		if (arity == 4 && (types[1].isArray() || types[2].isArray())) {
@@ -121,70 +193,8 @@ public class FunctionObject extends BaseFunction {
 				throw Context.reportRuntimeError1(cx, "msg.bad.ctor.return", ctorType.getName());
 			}
 		}
-
+*/
 		ScriptRuntime.setFunctionProtoAndParent(cx, this, scope);
-	}
-
-	/**
-	 * @return One of <code>JAVA_*_TYPE</code> constants to indicate desired type
-	 * or {@link #JAVA_UNSUPPORTED_TYPE} if the convertion is not
-	 * possible
-	 */
-	public static int getTypeTag(Class<?> type) {
-		if (type == ScriptRuntime.StringClass) {
-			return JAVA_STRING_TYPE;
-		}
-		if (type == ScriptRuntime.IntegerClass || type == Integer.TYPE) {
-			return JAVA_INT_TYPE;
-		}
-		if (type == ScriptRuntime.BooleanClass || type == Boolean.TYPE) {
-			return JAVA_BOOLEAN_TYPE;
-		}
-		if (type == ScriptRuntime.DoubleClass || type == Double.TYPE) {
-			return JAVA_DOUBLE_TYPE;
-		}
-		if (ScriptRuntime.ScriptableClass.isAssignableFrom(type)) {
-			return JAVA_SCRIPTABLE_TYPE;
-		}
-		if (type == ScriptRuntime.ObjectClass) {
-			return JAVA_OBJECT_TYPE;
-		}
-
-		// Note that the long type is not supported; see the javadoc for
-		// the constructor for this class
-
-		return JAVA_UNSUPPORTED_TYPE;
-	}
-
-	public static Object convertArg(Context cx, Scriptable scope, Object arg, int typeTag) {
-		switch (typeTag) {
-			case JAVA_STRING_TYPE:
-				if (arg instanceof String) {
-					return arg;
-				}
-				return ScriptRuntime.toString(cx, arg);
-			case JAVA_INT_TYPE:
-				if (arg instanceof Integer) {
-					return arg;
-				}
-				return ScriptRuntime.toInt32(cx, arg);
-			case JAVA_BOOLEAN_TYPE:
-				if (arg instanceof Boolean) {
-					return arg;
-				}
-				return ScriptRuntime.toBoolean(cx, arg) ? Boolean.TRUE : Boolean.FALSE;
-			case JAVA_DOUBLE_TYPE:
-				if (arg instanceof Double) {
-					return arg;
-				}
-				return ScriptRuntime.toNumber(cx, arg);
-			case JAVA_SCRIPTABLE_TYPE:
-				return ScriptRuntime.toObjectOrNull(cx, arg, scope);
-			case JAVA_OBJECT_TYPE:
-				return arg;
-			default:
-				throw new IllegalArgumentException();
-		}
 	}
 
 	/**
@@ -194,7 +204,7 @@ public class FunctionObject extends BaseFunction {
 	 */
 	@Override
 	public int getArity() {
-		return parmsLength < 0 ? 1 : parmsLength;
+		return 1;
 	}
 
 	/**
@@ -207,52 +217,7 @@ public class FunctionObject extends BaseFunction {
 
 	@Override
 	public String getFunctionName() {
-		return (functionName == null) ? "" : functionName;
-	}
-
-	static MethodInfo findSingleMethod(Context cx, MethodInfo[] methods, String name) {
-		MethodInfo found = null;
-		for (int i = 0, N = methods.length; i != N; ++i) {
-			MethodInfo method = methods[i];
-			if (method != null && name.equals(method.getName())) {
-				if (found != null) {
-					throw Context.reportRuntimeError2(cx, "msg.no.overload", name, method.getDeclaringClass().getName());
-				}
-				found = method;
-			}
-		}
-		return found;
-	}
-
-	/**
-	 * Define this function as a JavaScript constructor.
-	 * <p>
-	 * Sets up the "prototype" and "constructor" properties. Also
-	 * calls setParent and setPrototype with appropriate values.
-	 * Then adds the function object as a property of the given scope, using
-	 * <code>prototype.getClassName()</code>
-	 * as the name of the property.
-	 *
-	 * @param scope     the scope in which to define the constructor (typically
-	 *                  the global object)
-	 * @param prototype the prototype object
-	 * @see Scriptable#setParentScope
-	 * @see Scriptable#setPrototype
-	 * @see Scriptable#getClassName
-	 */
-	public void addAsConstructor(Context cx, Scriptable scope, Scriptable prototype) {
-		initAsConstructor(cx, scope, prototype);
-		defineProperty(cx, scope, prototype.getClassName(), this, DONTENUM);
-	}
-
-	void initAsConstructor(Context cx, Scriptable scope, Scriptable prototype) {
-		ScriptRuntime.setFunctionProtoAndParent(cx, this, scope);
-		setImmunePrototypeProperty(prototype);
-
-		prototype.setParentScope(this);
-
-		defineProperty(cx, prototype, "constructor", this, DONTENUM | PERMANENT | READONLY);
-		setParentScope(scope);
+		return functionName;
 	}
 
 	/**
@@ -266,6 +231,8 @@ public class FunctionObject extends BaseFunction {
 	 */
 	@Override
 	public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
+		return member.invoke(new ContextJS(cx, scope), null, functionName, args, CastType.WRAP);
+/*
 		Object result;
 		boolean checkMethodResult = false;
 		int argsLength = args.length;
@@ -357,6 +324,8 @@ public class FunctionObject extends BaseFunction {
 		}
 
 		return result;
+
+ */
 	}
 
 	/**
@@ -367,12 +336,10 @@ public class FunctionObject extends BaseFunction {
 	 */
 	@Override
 	public Scriptable createObject(Context cx, Scriptable scope) {
-		if (!member.isMethod() || parmsLength == VARARGS_CTOR) {
-			return null;
-		}
 		Scriptable result;
+
 		try {
-			result = (Scriptable) member.getDeclaringClass().newInstance();
+			result = (Scriptable) member.invoke(new ContextJS(cx, scope), null, "", ScriptRuntime.EMPTY_OBJECTS, CastType.WRAP);
 		} catch (Exception ex) {
 			throw Context.throwAsScriptRuntimeEx(ex);
 		}
@@ -381,33 +348,4 @@ public class FunctionObject extends BaseFunction {
 		result.setParentScope(getParentScope());
 		return result;
 	}
-
-	boolean isVarArgsMethod() {
-		return parmsLength == VARARGS_METHOD;
-	}
-
-	boolean isVarArgsConstructor() {
-		return parmsLength == VARARGS_CTOR;
-	}
-
-	private static final short VARARGS_METHOD = -1;
-	private static final short VARARGS_CTOR = -2;
-
-	private static boolean sawSecurityException;
-
-	public static final int JAVA_UNSUPPORTED_TYPE = 0;
-	public static final int JAVA_STRING_TYPE = 1;
-	public static final int JAVA_INT_TYPE = 2;
-	public static final int JAVA_BOOLEAN_TYPE = 3;
-	public static final int JAVA_DOUBLE_TYPE = 4;
-	public static final int JAVA_SCRIPTABLE_TYPE = 5;
-	public static final int JAVA_OBJECT_TYPE = 6;
-
-	BaseMember member;
-	private final String functionName;
-	private transient byte[] typeTags;
-	private final int parmsLength;
-	private transient boolean hasVoidReturn;
-	private transient int returnTypeTag;
-	private final boolean isStatic;
 }
