@@ -38,6 +38,7 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 	private ListSupplier keyList;
 	private ListSupplier valueList;
 	private ListSupplier entryList;
+	private boolean immutable;
 
 	private PrototypeJS(TypeJS type, String name) {
 		this.type = type;
@@ -48,6 +49,7 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 		this.keyList = ListSupplier.DEFAULT_KEYS;
 		this.valueList = ListSupplier.DEFAULT_VALUES;
 		this.entryList = ListSupplier.DEFAULT_ENTRIES;
+		this.immutable = false;
 	}
 
 	private PrototypeJS(TypeJS type, String name, PrototypeJS p) {
@@ -79,9 +81,16 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 		return create(type, name);
 	}
 
+	private void checkImmutable() {
+		if (immutable) {
+			throw new IllegalStateException("Prototype for '" + name + "' can no longer be modified!");
+		}
+	}
+
 	// Builder methods //
 
 	public PrototypeJS constructorMember(MemberFunctions constructor) {
+		checkImmutable();
 		this.constructor = constructor;
 		return this;
 	}
@@ -91,6 +100,8 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 	}
 
 	public PrototypeJS member(String name, MemberFunctions member) {
+		checkImmutable();
+
 		if (members == null) {
 			members = new HashMap<>();
 		}
@@ -100,6 +111,8 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 	}
 
 	public PrototypeJS staticMember(String name, MemberFunctions member) {
+		checkImmutable();
+
 		if (staticMembers == null) {
 			staticMembers = new HashMap<>();
 		}
@@ -137,36 +150,43 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 	}
 
 	public PrototypeJS asString(AsString asString) {
+		checkImmutable();
 		this.asString = asString;
 		return this;
 	}
 
 	public PrototypeJS asNumber(AsNumber asNumber) {
+		checkImmutable();
 		this.asNumber = asNumber;
 		return this;
 	}
 
 	public PrototypeJS asBoolean(AsBoolean asBoolean) {
+		checkImmutable();
 		this.asBoolean = asBoolean;
 		return this;
 	}
 
 	public PrototypeJS keyList(ListSupplier supplier) {
+		checkImmutable();
 		this.keyList = supplier;
 		return this;
 	}
 
 	public PrototypeJS valueList(ListSupplier supplier) {
+		checkImmutable();
 		this.valueList = supplier;
 		return this;
 	}
 
 	public PrototypeJS entryList(ListSupplier supplier) {
+		checkImmutable();
 		this.entryList = supplier;
 		return this;
 	}
 
 	public PrototypeJS selfMembers(MemberFunctions selfMembers) {
+		checkImmutable();
 		this.selfMembers = selfMembers;
 		return this;
 	}
@@ -416,6 +436,7 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 	}
 
 	public void fill(RemappedClassData classData) {
+		checkImmutable();
 		classData.members.forEach(this::member);
 		classData.staticMembers.forEach(this::staticMember);
 
@@ -427,8 +448,37 @@ public final class PrototypeJS implements WithPrototype, MemberFunctions {
 	}
 
 	public void optimize() {
-		// Map.Entry[] entries = new Map.Entry[m.size()];
-		// System.arraycopy(m.entrySet().toArray(), 0, entries, 0, entries.length);
-		// m = Map.ofEntries(entries);
+		if (immutable) {
+			return;
+		}
+
+		immutable = true;
+
+		if (members != null) {
+			if (members.isEmpty()) {
+				members = null;
+			} else {
+				members = optimizeMap(members);
+			}
+		}
+
+		if (staticMembers != null) {
+			if (staticMembers.isEmpty()) {
+				staticMembers = null;
+			} else {
+				staticMembers = optimizeMap(staticMembers);
+			}
+		}
+	}
+
+	private static <K, V> Map<K, V> optimizeMap(Map<K, V> m) {
+		if (m.isEmpty()) {
+			return Map.of();
+		} else if (m.size() == 1) {
+			var entry = m.entrySet().iterator().next();
+			return Map.of(entry.getKey(), entry.getValue());
+		} else {
+			return m;
+		}
 	}
 }
